@@ -1,7 +1,6 @@
 import { fetchSetting } from "@/lib/nezha-api"
 import { useQuery } from "@tanstack/react-query"
 import React from "react"
-import { useTranslation } from "react-i18next"
 
 const Footer: React.FC = () => {
   const isMac = /macintosh|mac os x/i.test(navigator.userAgent)
