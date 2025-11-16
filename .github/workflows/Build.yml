@@ -2,9 +2,10 @@ name: Build and release static export
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
-
 jobs:
   release:
     runs-on: ubuntu-latest
