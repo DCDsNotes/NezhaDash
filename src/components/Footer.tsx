@@ -4,7 +4,6 @@ import React from "react"
 import { useTranslation } from "react-i18next"
 
 const Footer: React.FC = () => {
-  const { t } = useTranslation()
   const isMac = /macintosh|mac os x/i.test(navigator.userAgent)
 
   const { data: settingData } = useQuery({
