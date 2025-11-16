@@ -6,6 +6,7 @@ on:
       - main
     tags:
       - "v*"
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -26,18 +27,23 @@ jobs:
         run: bun install
 
       - name: Build static export
-        run: |
-          bun run build
+        run: bun run build
 
       - name: Compress dist folder
         run: zip -r dist.zip dist
+
+      - name: Create Git tag
+        id: tag
+        run: |
+          # 基于时间戳或版本号创建标签
+          TAG_NAME="v$(date +%Y%m%d%H%M%S)"
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          git tag $TAG_NAME
+          git push origin $TAG_NAME
 
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           files: dist.zip
-
-      - name: Changelog
-        run: bun x changelogithub
-        env:
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          tag_name: ${{ steps.tag.outputs.tag_name }}
+          generate_release_notes: true
