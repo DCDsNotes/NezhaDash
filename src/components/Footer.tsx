@@ -32,7 +32,7 @@ const Footer: React.FC = () => {
             <section>
               Version:
               <a href={"https://github.com/hamster1963/nezha-dash"} target="_blank">
-                {settingData?.data?.version || ""}
+                v1.14.9
               </a>
               {import.meta.env.VITE_GIT_HASH && (
                 <a href={"https://github.com/hamster1963/nezha-dash-v1/commit/" + import.meta.env.VITE_GIT_HASH} className="ml-1">
