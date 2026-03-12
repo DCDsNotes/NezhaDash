@@ -2,6 +2,7 @@ import ServerFlag from "@/components/ServerFlag"
 import ServerUsageBar from "@/components/ServerUsageBar"
 import { formatBytes } from "@/lib/format"
 import { GetFontLogoClass, GetOsName, MageMicrosoftWindows } from "@/lib/logo-class"
+import { formatNazhuaCpuMemDiskSummary } from "@/lib/nazhua"
 import { cn, formatNezhaInfo, parsePublicNote } from "@/lib/utils"
 import { NezhaServer } from "@/types/nezha-api"
 import { useTranslation } from "react-i18next"
@@ -15,10 +16,8 @@ import { Card } from "./ui/card"
 export default function ServerCard({ now, serverInfo }: { now: number; serverInfo: NezhaServer }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { name, country_code, online, cpu, up, down, mem, stg, net_in_transfer, net_out_transfer, public_note, platform } = formatNezhaInfo(
-    now,
-    serverInfo,
-  )
+  const { name, country_code, online, cpu, up, down, mem, stg, net_in_transfer, net_out_transfer, public_note, platform, cpu_info, mem_total, disk_total } =
+    formatNezhaInfo(now, serverInfo)
 
   const cardClick = () => {
     sessionStorage.setItem("fromMainPage", "true")
@@ -37,49 +36,43 @@ export default function ServerCard({ now, serverInfo }: { now: number; serverInf
 
   const parsedData = parsePublicNote(public_note)
 
+  const cpuMemDiskSummary = formatNazhuaCpuMemDiskSummary({
+    cpuText: cpu_info?.[0],
+    memTotal: mem_total,
+    diskTotal: disk_total,
+  })
+
   return online ? (
     <Card
       className={cn(
-        "flex flex-col items-center justify-start gap-3 p-3 md:px-5 cursor-pointer hover:bg-accent/50 transition-colors",
-        {
-          "flex-col": fixedTopServerName,
-          "lg:flex-row": !fixedTopServerName,
-        },
-        {
-          "bg-card/70": customBackgroundImage,
-        },
+        "cursor-pointer overflow-hidden p-0 transition-colors hover:bg-accent/40",
+        { "bg-card/70": customBackgroundImage },
       )}
       onClick={cardClick}
     >
-      <section
-        className={cn("grid items-center gap-2", {
-          "lg:w-40": !fixedTopServerName,
-        })}
-        style={{ gridTemplateColumns: "auto auto 1fr" }}
-      >
-        <span className="h-2 w-2 shrink-0 rounded-full bg-green-500 self-center"></span>
-        <div className={cn("flex items-center justify-center", showFlag ? "min-w-[17px]" : "min-w-0")}>
-          {showFlag ? <ServerFlag country_code={country_code} /> : null}
-        </div>
-        <div className="relative flex flex-col">
-          <p className={cn("break-normal font-bold tracking-tight", showFlag ? "text-xs " : "text-sm")}>{name}</p>
-          <div
-            className={cn("hidden lg:block", {
-              "lg:hidden": fixedTopServerName,
-            })}
-          >
-            {parsedData?.billingDataMod && <BillingInfo parsedData={parsedData} />}
+      <div className="flex items-center justify-between gap-3 px-4 py-2 nazhua-dot-bg bg-black/10 dark:bg-black/25">
+        <section className="flex min-w-0 items-center gap-2">
+          <span className="h-2 w-2 shrink-0 rounded-full bg-green-500 self-center"></span>
+          <div className={cn("flex items-center justify-center", showFlag ? "min-w-[17px]" : "min-w-0")}>
+            {showFlag ? <ServerFlag country_code={country_code} /> : null}
           </div>
-        </div>
-      </section>
-      <div
-        className={cn("flex items-center gap-2 -mt-2 lg:hidden", {
-          "lg:flex": fixedTopServerName,
-        })}
-      >
-        {parsedData?.billingDataMod && <BillingInfo parsedData={parsedData} />}
+          <div className="min-w-0 flex flex-col">
+            <p className="truncate text-[13px] font-bold tracking-tight text-white">{name}</p>
+            {parsedData?.billingDataMod && (
+              <div className="mt-0.5">
+                <BillingInfo parsedData={parsedData} />
+              </div>
+            )}
+          </div>
+        </section>
+        <section className="hidden sm:flex items-center gap-2 whitespace-nowrap text-[12px] font-bold text-white/80">
+          <span className="text-[11px]">
+            {platform.includes("Windows") ? <MageMicrosoftWindows className="size-[12px]" /> : <p className={`fl-${GetFontLogoClass(platform.toLowerCase())}`} />}
+          </span>
+          {cpuMemDiskSummary && <span>{cpuMemDiskSummary}</span>}
+        </section>
       </div>
-      <div className="flex flex-col lg:items-start items-center gap-2">
+      <div className={cn("flex flex-col items-center justify-start gap-3 p-3 md:px-5", { "pt-3": true })}>
         <section
           className={cn("grid grid-cols-5 items-center gap-3", {
             "lg:grid-cols-6 lg:gap-4": fixedTopServerName,
@@ -150,47 +143,36 @@ export default function ServerCard({ now, serverInfo }: { now: number; serverInf
   ) : (
     <Card
       className={cn(
-        "flex flex-col items-center justify-start gap-3 sm:gap-0 p-3 md:px-5 cursor-pointer hover:bg-accent/50 transition-colors",
-        showNetTransfer ? "lg:min-h-[91px] min-h-[123px]" : "lg:min-h-[61px] min-h-[93px]",
-        {
-          "flex-col": fixedTopServerName,
-          "lg:flex-row": !fixedTopServerName,
-        },
-        {
-          "bg-card/70": customBackgroundImage,
-        },
+        "cursor-pointer overflow-hidden p-0 transition-colors hover:bg-accent/40 grayscale",
+        { "bg-card/70": customBackgroundImage },
       )}
       onClick={cardClick}
     >
-      <section
-        className={cn("grid items-center gap-2", {
-          "lg:w-40": !fixedTopServerName,
-        })}
-        style={{ gridTemplateColumns: "auto auto 1fr" }}
-      >
-        <span className="h-2 w-2 shrink-0 rounded-full bg-red-500 self-center"></span>
-        <div className={cn("flex items-center justify-center", showFlag ? "min-w-[17px]" : "min-w-0")}>
-          {showFlag ? <ServerFlag country_code={country_code} /> : null}
-        </div>
-        <div className="relative flex flex-col">
-          <p className={cn("break-normal font-bold tracking-tight max-w-[108px]", showFlag ? "text-xs" : "text-sm")}>{name}</p>
-          <div
-            className={cn("hidden lg:block", {
-              "lg:hidden": fixedTopServerName,
-            })}
-          >
-            {parsedData?.billingDataMod && <BillingInfo parsedData={parsedData} />}
+      <div className="flex items-center justify-between gap-3 px-4 py-2 nazhua-dot-bg bg-black/10 dark:bg-black/25">
+        <section className="flex min-w-0 items-center gap-2">
+          <span className="h-2 w-2 shrink-0 rounded-full bg-red-500 self-center"></span>
+          <div className={cn("flex items-center justify-center", showFlag ? "min-w-[17px]" : "min-w-0")}>
+            {showFlag ? <ServerFlag country_code={country_code} /> : null}
           </div>
-        </div>
-      </section>
-      <div
-        className={cn("flex items-center gap-2 lg:hidden", {
-          "lg:flex": fixedTopServerName,
-        })}
-      >
-        {parsedData?.billingDataMod && <BillingInfo parsedData={parsedData} />}
+          <div className="min-w-0 flex flex-col">
+            <p className="truncate text-[13px] font-bold tracking-tight text-[#666] dark:text-[#888]">{name}</p>
+            {parsedData?.billingDataMod && (
+              <div className="mt-0.5">
+                <BillingInfo parsedData={parsedData} />
+              </div>
+            )}
+          </div>
+        </section>
+        <section className="hidden sm:flex items-center gap-2 whitespace-nowrap text-[12px] font-bold text-white/50">
+          <span className="text-[11px]">
+            {platform.includes("Windows") ? <MageMicrosoftWindows className="size-[12px]" /> : <p className={`fl-${GetFontLogoClass(platform.toLowerCase())}`} />}
+          </span>
+          {cpuMemDiskSummary && <span>{cpuMemDiskSummary}</span>}
+        </section>
       </div>
-      {parsedData?.planDataMod && <PlanInfo parsedData={parsedData} />}
+      <div className="p-3 md:px-5">
+        {parsedData?.planDataMod && <PlanInfo parsedData={parsedData} />}
+      </div>
     </Card>
   )
 }

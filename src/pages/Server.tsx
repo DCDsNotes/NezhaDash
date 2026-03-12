@@ -235,7 +235,7 @@ export default function Servers() {
         upSpeed={upSpeed}
         downSpeed={downSpeed}
       />
-      <div className="flex mt-6 items-center justify-between gap-2 server-overview-controls">
+      <div className="flex mt-4 items-center justify-between gap-2 server-overview-controls">
         <section className="flex items-center gap-2 w-full overflow-hidden">
           <button
             onClick={() => {

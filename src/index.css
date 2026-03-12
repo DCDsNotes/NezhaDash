@@ -60,6 +60,11 @@
 
     --list-container-width: 1300px;
     --detail-container-width: 900px;
+
+    --transfer-in-color: #f9ed69;
+    --transfer-out-color: #90f2ff;
+    --net-speed-in-color: #f5b199;
+    --net-speed-out-color: #89c3eb;
   }
 
   .dark {
