@@ -1,178 +1,57 @@
+import DotBox from "@/components/nazhua/DotBox"
+import ServerRealTime from "@/components/nazhua/ServerRealTime"
+import ServerStatusDonut from "@/components/nazhua/ServerStatusDonut"
 import ServerFlag from "@/components/ServerFlag"
-import ServerUsageBar from "@/components/ServerUsageBar"
-import { formatBytes } from "@/lib/format"
-import { GetFontLogoClass, GetOsName, MageMicrosoftWindows } from "@/lib/logo-class"
-import { formatNazhuaCpuMemDiskSummary } from "@/lib/nazhua"
-import { cn, formatNezhaInfo, parsePublicNote } from "@/lib/utils"
+import { formatNazhuaCpuMemDiskSummary, getNazhuaStatusList } from "@/lib/nazhua/server-status"
+import { serverPath } from "@/lib/routes"
+import { GetFontLogoClass, MageMicrosoftWindows } from "@/lib/logo-class"
+import { cn, formatNezhaInfo } from "@/lib/utils"
 import { NezhaServer } from "@/types/nezha-api"
-import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
 
-import PlanInfo from "./PlanInfo"
-import BillingInfo from "./billingInfo"
-import { Badge } from "./ui/badge"
-import { Card } from "./ui/card"
-
 export default function ServerCard({ now, serverInfo }: { now: number; serverInfo: NezhaServer }) {
-  const { t } = useTranslation()
   const navigate = useNavigate()
-  const { name, country_code, online, cpu, up, down, mem, stg, net_in_transfer, net_out_transfer, public_note, platform, cpu_info, mem_total, disk_total } =
-    formatNezhaInfo(now, serverInfo)
+  const { name, country_code, online, platform } = formatNezhaInfo(now, serverInfo)
 
   const cardClick = () => {
     sessionStorage.setItem("fromMainPage", "true")
-    navigate(`/server/${serverInfo.id}`)
+    navigate(serverPath(serverInfo.id))
   }
 
-  const showFlag = true
+  const cpuMemDisk = formatNazhuaCpuMemDiskSummary(serverInfo)
+  const statusList = getNazhuaStatusList({ server: serverInfo, tpl: ["cpu", "mem", "disk"], withContent: false })
 
-  const customBackgroundImage = (window.CustomBackgroundImage as string) !== "" ? window.CustomBackgroundImage : undefined
-
-  // @ts-expect-error ShowNetTransfer is a global variable
-  const showNetTransfer = window.ShowNetTransfer as boolean
-
-  // @ts-expect-error FixedTopServerName is a global variable
-  const fixedTopServerName = window.FixedTopServerName as boolean
-
-  const parsedData = parsePublicNote(public_note)
-
-  const cpuMemDiskSummary = formatNazhuaCpuMemDiskSummary({
-    cpuText: cpu_info?.[0],
-    memTotal: mem_total,
-    diskTotal: disk_total,
-  })
-
-  return online ? (
-    <Card
-      className={cn(
-        "cursor-pointer overflow-hidden p-0 transition-colors hover:bg-accent/40",
-        { "bg-card/70": customBackgroundImage },
-      )}
-      onClick={cardClick}
-    >
-      <div className="flex items-center justify-between gap-3 px-4 py-2 nazhua-dot-bg bg-black/10 dark:bg-black/25">
-        <section className="flex min-w-0 items-center gap-2">
-          <span className="h-2 w-2 shrink-0 rounded-full bg-green-500 self-center"></span>
-          <div className={cn("flex items-center justify-center", showFlag ? "min-w-[17px]" : "min-w-0")}>
-            {showFlag ? <ServerFlag country_code={country_code} /> : null}
+  return (
+    <DotBox className={cn("nazhua-server-list-item", { "nazhua-server-list-item--offline": !online })} padding={0} onClick={cardClick}>
+      <div className="nazhua-server-info-group nazhua-server-list-item-head">
+        <div className="nazhua-left-box">
+          <div className="nazhua-server-flag">
+            <ServerFlag country_code={country_code} />
           </div>
-          <div className="min-w-0 flex flex-col">
-            <p className="truncate text-[13px] font-bold tracking-tight text-white">{name}</p>
-            {parsedData?.billingDataMod && (
-              <div className="mt-0.5">
-                <BillingInfo parsedData={parsedData} />
-              </div>
-            )}
-          </div>
-        </section>
-        <section className="hidden sm:flex items-center gap-2 whitespace-nowrap text-[12px] font-bold text-white/80">
-          <span className="text-[11px]">
-            {platform.includes("Windows") ? <MageMicrosoftWindows className="size-[12px]" /> : <p className={`fl-${GetFontLogoClass(platform.toLowerCase())}`} />}
-          </span>
-          {cpuMemDiskSummary && <span>{cpuMemDiskSummary}</span>}
-        </section>
-      </div>
-      <div className={cn("flex flex-col items-center justify-start gap-3 p-3 md:px-5", { "pt-3": true })}>
-        <section
-          className={cn("grid grid-cols-5 items-center gap-3", {
-            "lg:grid-cols-6 lg:gap-4": fixedTopServerName,
-          })}
-        >
-          {fixedTopServerName && (
-            <div className={"hidden col-span-1 items-center lg:flex lg:flex-row gap-2"}>
-              <div className="text-xs font-semibold">
-                {platform.includes("Windows") ? (
-                  <MageMicrosoftWindows className="size-[10px]" />
-                ) : (
-                  <p className={`fl-${GetFontLogoClass(platform)}`} />
-                )}
-              </div>
-              <div className={"flex w-14 flex-col"}>
-                <p className="text-xs text-muted-foreground">{t("serverCard.system")}</p>
-                <div className="flex items-center text-[10.5px] font-semibold">{platform.includes("Windows") ? "Windows" : GetOsName(platform)}</div>
-              </div>
+          <span className="nazhua-server-name">{name}</span>
+        </div>
+        <div className="nazhua-right-box">
+          {cpuMemDisk ? (
+            <div className="nazhua-cpu-mem-group">
+              <span className="nazhua-system-os-icon">
+                {platform.includes("Windows") ? <MageMicrosoftWindows className="nazhua-os-win" /> : <span className={`fl-${GetFontLogoClass(platform)}`} />}
+              </span>
+              <span className="nazhua-core-mem">{cpuMemDisk}</span>
             </div>
-          )}
-          <div className={"flex w-14 flex-col"}>
-            <p className="text-xs text-muted-foreground">{"CPU"}</p>
-            <div className="flex items-center text-xs font-semibold">{cpu.toFixed(2)}%</div>
-            <ServerUsageBar value={cpu} />
-          </div>
-          <div className={"flex w-14 flex-col"}>
-            <p className="text-xs text-muted-foreground">{t("serverCard.mem")}</p>
-            <div className="flex items-center text-xs font-semibold">{mem.toFixed(2)}%</div>
-            <ServerUsageBar value={mem} />
-          </div>
-          <div className={"flex w-14 flex-col"}>
-            <p className="text-xs text-muted-foreground">{t("serverCard.stg")}</p>
-            <div className="flex items-center text-xs font-semibold">{stg.toFixed(2)}%</div>
-            <ServerUsageBar value={stg} />
-          </div>
-          <div className={"flex w-14 flex-col"}>
-            <p className="text-xs text-muted-foreground">{t("serverCard.upload")}</p>
-            <div className="flex items-center text-xs font-semibold">
-              {up >= 1024 ? `${(up / 1024).toFixed(2)}G/s` : up >= 1 ? `${up.toFixed(2)}M/s` : `${(up * 1024).toFixed(2)}K/s`}
-            </div>
-          </div>
-          <div className={"flex w-14 flex-col"}>
-            <p className="text-xs text-muted-foreground">{t("serverCard.download")}</p>
-            <div className="flex items-center text-xs font-semibold">
-              {down >= 1024 ? `${(down / 1024).toFixed(2)}G/s` : down >= 1 ? `${down.toFixed(2)}M/s` : `${(down * 1024).toFixed(2)}K/s`}
-            </div>
-          </div>
-        </section>
-        {showNetTransfer && (
-          <section className={"flex items-center w-full justify-between gap-1"}>
-            <Badge
-              variant="secondary"
-              className="items-center flex-1 justify-center rounded-[8px] text-nowrap text-[11px] border-muted-50 shadow-md shadow-neutral-200/30 dark:shadow-none"
-            >
-              {t("serverCard.upload")}:{formatBytes(net_out_transfer)}
-            </Badge>
-            <Badge
-              variant="outline"
-              className="items-center flex-1 justify-center rounded-[8px] text-nowrap text-[11px] shadow-md shadow-neutral-200/30 dark:shadow-none"
-            >
-              {t("serverCard.download")}:{formatBytes(net_in_transfer)}
-            </Badge>
-          </section>
-        )}
-        {parsedData?.planDataMod && <PlanInfo parsedData={parsedData} />}
+          ) : null}
+        </div>
       </div>
-    </Card>
-  ) : (
-    <Card
-      className={cn(
-        "cursor-pointer overflow-hidden p-0 transition-colors hover:bg-accent/40 grayscale",
-        { "bg-card/70": customBackgroundImage },
-      )}
-      onClick={cardClick}
-    >
-      <div className="flex items-center justify-between gap-3 px-4 py-2 nazhua-dot-bg bg-black/10 dark:bg-black/25">
-        <section className="flex min-w-0 items-center gap-2">
-          <span className="h-2 w-2 shrink-0 rounded-full bg-red-500 self-center"></span>
-          <div className={cn("flex items-center justify-center", showFlag ? "min-w-[17px]" : "min-w-0")}>
-            {showFlag ? <ServerFlag country_code={country_code} /> : null}
+
+      {online ? (
+        <div className="nazhua-server-list-item-main">
+          <div className="nazhua-server-list-item-status">
+            {statusList.map((item) => (
+              <ServerStatusDonut key={item.type} item={item} size={110} />
+            ))}
           </div>
-          <div className="min-w-0 flex flex-col">
-            <p className="truncate text-[13px] font-bold tracking-tight text-[#666] dark:text-[#888]">{name}</p>
-            {parsedData?.billingDataMod && (
-              <div className="mt-0.5">
-                <BillingInfo parsedData={parsedData} />
-              </div>
-            )}
-          </div>
-        </section>
-        <section className="hidden sm:flex items-center gap-2 whitespace-nowrap text-[12px] font-bold text-white/50">
-          <span className="text-[11px]">
-            {platform.includes("Windows") ? <MageMicrosoftWindows className="size-[12px]" /> : <p className={`fl-${GetFontLogoClass(platform.toLowerCase())}`} />}
-          </span>
-          {cpuMemDiskSummary && <span>{cpuMemDiskSummary}</span>}
-        </section>
-      </div>
-      <div className="p-3 md:px-5">
-        {parsedData?.planDataMod && <PlanInfo parsedData={parsedData} />}
-      </div>
-    </Card>
+          <ServerRealTime server={serverInfo} />
+        </div>
+      ) : null}
+    </DotBox>
   )
 }

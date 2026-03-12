@@ -1,7 +1,7 @@
+import { Card, CardContent } from "@/components/ui/card"
 import { useStatus } from "@/hooks/use-status"
 import { formatBytes } from "@/lib/format"
 import { cn } from "@/lib/utils"
-import { Card, CardContent } from "@/components/ui/card"
 import { ArrowDownCircleIcon, ArrowUpCircleIcon } from "@heroicons/react/20/solid"
 import { useTranslation } from "react-i18next"
 
@@ -19,77 +19,118 @@ export default function ServerOverview({ online, offline, total, up, down, upSpe
   const { t } = useTranslation()
   const { status, setStatus } = useStatus()
 
+  // @ts-expect-error CustomIllustration is a global variable
+  const customIllustration = window.CustomIllustration || ""
+
   const customBackgroundImage = (window.CustomBackgroundImage as string) !== "" ? window.CustomBackgroundImage : undefined
 
   return (
     <>
-      <Card
-        className={cn("overflow-hidden", {
-          "bg-card/70": customBackgroundImage,
-        })}
-      >
-        <CardContent className="p-0">
-          <section className="flex flex-wrap items-center justify-between gap-x-8 gap-y-2 px-4 py-3 md:px-6 nazhua-dot-bg bg-black/10 dark:bg-black/20">
-            <section className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] md:text-[13px]">
-              <button
-                type="button"
-                onClick={() => setStatus("all")}
-                className={cn("flex items-center gap-1.5 text-white/80 hover:text-white transition-colors", {
-                  "text-white": status === "all",
-                })}
-              >
-                <span>{t("serverOverview.totalServers")}</span>
-                <span className="font-bold text-[#70f3ff]">{total}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatus("online")}
-                className={cn("flex items-center gap-1.5 text-white/80 hover:text-white transition-colors", {
-                  "text-white": status === "online",
-                })}
-              >
-                <span>{t("serverOverview.onlineServers")}</span>
-                <span className="font-bold text-[#00ff00]">{online}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatus("offline")}
-                className={cn("flex items-center gap-1.5 text-white/80 hover:text-white transition-colors", {
-                  "text-white": status === "offline",
-                })}
-              >
-                <span>{t("serverOverview.offlineServers")}</span>
-                <span className="font-bold text-[#ff0000]">{offline}</span>
-              </button>
+      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4 server-overview">
+        <Card
+          onClick={() => {
+            setStatus("all")
+          }}
+          className={cn("hover:border-blue-500 cursor-pointer transition-all", {
+            "bg-card/70": customBackgroundImage,
+          })}
+        >
+          <CardContent className="flex h-full items-center px-6 py-3">
+            <section className="flex flex-col gap-1">
+              <p className="text-sm font-medium md:text-base">{t("serverOverview.totalServers")}</p>
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500"></span>
+                </span>
+                <div className="text-lg font-semibold">{total}</div>
+              </div>
+            </section>
+          </CardContent>
+        </Card>
+        <Card
+          onClick={() => {
+            setStatus("online")
+          }}
+          className={cn(
+            "cursor-pointer hover:ring-green-500 ring-1 ring-transparent transition-all",
+            {
+              "bg-card/70": customBackgroundImage,
+            },
+            {
+              "ring-green-500 ring-2 border-transparent": status === "online",
+            },
+          )}
+        >
+          <CardContent className="flex h-full items-center px-6 py-3">
+            <section className="flex flex-col gap-1">
+              <p className="text-sm font-medium md:text-base">{t("serverOverview.onlineServers")}</p>
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75"></span>
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
+                </span>
+
+                <div className="text-lg font-semibold">{online}</div>
+              </div>
+            </section>
+          </CardContent>
+        </Card>
+        <Card
+          onClick={() => {
+            setStatus("offline")
+          }}
+          className={cn(
+            "cursor-pointer hover:ring-red-500 ring-1 ring-transparent transition-all",
+            {
+              "bg-card/70": customBackgroundImage,
+            },
+            {
+              "ring-red-500 ring-2 border-transparent": status === "offline",
+            },
+          )}
+        >
+          <CardContent className="flex h-full items-center px-6 py-3">
+            <section className="flex flex-col gap-1">
+              <p className="text-sm font-medium md:text-base">{t("serverOverview.offlineServers")}</p>
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75"></span>
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500"></span>
+                </span>
+                <div className="text-lg font-semibold">{offline}</div>
+              </div>
+            </section>
+          </CardContent>
+        </Card>
+        <Card
+          className={cn("hover:ring-purple-500 ring-1 ring-transparent transition-all", {
+            "bg-card/70": customBackgroundImage,
+          })}
+        >
+          <CardContent className="flex h-full items-center relative px-6 py-3">
+            <section className="flex flex-col gap-1 w-full">
+              <div className="flex items-center w-full justify-between">
+                <p className="text-sm font-medium md:text-base">{t("serverOverview.network")}</p>
+              </div>
+              <section className="flex items-start flex-row z-10 pr-0 gap-1">
+                <p className="sm:text-[12px] text-[10px] text-blue-800 dark:text-blue-400   text-nowrap font-medium">↑{formatBytes(up)}</p>
+                <p className="sm:text-[12px] text-[10px]  text-purple-800 dark:text-purple-400  text-nowrap font-medium">↓{formatBytes(down)}</p>
+              </section>
+              <section className="flex flex-col sm:flex-row -mr-1 sm:items-center items-start gap-1">
+                <p className="text-[11px] flex items-center text-nowrap font-semibold">
+                  <ArrowUpCircleIcon className="size-3 mr-0.5 sm:mb-[1px]" />
+                  {formatBytes(upSpeed)}/s
+                </p>
+                <p className="text-[11px] flex items-center  text-nowrap font-semibold">
+                  <ArrowDownCircleIcon className="size-3 mr-0.5" />
+                  {formatBytes(downSpeed)}/s
+                </p>
+              </section>
             </section>
 
-            <section className="flex flex-col sm:flex-row gap-x-6 gap-y-1 text-[12px] md:text-[13px] text-white/80">
-              <section className="flex items-center gap-2">
-                <span className="text-white/70">{t("serverOverview.totalBandwidth")}</span>
-                <span className="flex items-center gap-1 text-[color:var(--transfer-out-color)] font-semibold">
-                  <ArrowUpCircleIcon className="size-3" />
-                  {formatBytes(up)}
-                </span>
-                <span className="flex items-center gap-1 text-[color:var(--transfer-in-color)] font-semibold">
-                  <ArrowDownCircleIcon className="size-3" />
-                  {formatBytes(down)}
-                </span>
-              </section>
-              <section className="flex items-center gap-2">
-                <span className="text-white/70">{t("serverOverview.speed")}</span>
-                <span className="flex items-center gap-1 text-[color:var(--net-speed-out-color)] font-semibold">
-                  <ArrowUpCircleIcon className="size-3" />
-                  {formatBytes(upSpeed)}/s
-                </span>
-                <span className="flex items-center gap-1 text-[color:var(--net-speed-in-color)] font-semibold">
-                  <ArrowDownCircleIcon className="size-3" />
-                  {formatBytes(downSpeed)}/s
-                </span>
-              </section>
-            </section>
-          </section>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </section>
     </>
   )
 }

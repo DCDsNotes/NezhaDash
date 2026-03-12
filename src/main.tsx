@@ -4,8 +4,6 @@ import ReactDOM from "react-dom/client"
 import { Toaster } from "sonner"
 
 import App from "./App"
-import { ThemeColorManager } from "./components/ThemeColorManager"
-import { ThemeProvider } from "./components/ThemeProvider"
 import { MotionProvider } from "./components/motion/motion-provider"
 import { CommandProvider } from "./context/command-provider"
 import { SortProvider } from "./context/sort-provider"
@@ -17,35 +15,36 @@ import "./index.css"
 
 const queryClient = new QueryClient()
 
+// Dark-only: force html.dark and a stable theme-color.
+document.documentElement.classList.add("dark")
+document.documentElement.classList.remove("light")
+document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#252748")
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <MotionProvider>
-    <ThemeProvider storageKey="vite-ui-theme">
-      <ThemeColorManager />
-      <QueryClientProvider client={queryClient}>
-        <WebSocketProvider url="/api/v1/ws/server">
-          <CommandProvider>
-            <StatusProvider>
-              <SortProvider>
-                <TooltipProvider>
-                  <App />
-                  <Toaster
-                    duration={1000}
-                    toastOptions={{
-                      classNames: {
-                        default:
-                          "w-fit rounded-full px-2.5 py-1.5 bg-white/80 text-black/80 border border-black/10 backdrop-blur-xl shadow-none dark:bg-black/30 dark:text-white/90 dark:border-white/10",
-                      },
-                    }}
-                    position="top-center"
-                    className={"flex items-center justify-center"}
-                  />
-                  <ReactQueryDevtools />
-                </TooltipProvider>
-              </SortProvider>
-            </StatusProvider>
-          </CommandProvider>
-        </WebSocketProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <WebSocketProvider url="/api/v1/ws/server">
+        <CommandProvider>
+          <StatusProvider>
+            <SortProvider>
+              <TooltipProvider>
+                <App />
+                <Toaster
+                  duration={1000}
+                  toastOptions={{
+                    classNames: {
+                      default: "w-fit rounded-full px-2.5 py-1.5 bg-black/70 border border-white/10 text-white backdrop-blur-xl shadow-none",
+                    },
+                  }}
+                  position="top-center"
+                  className={"flex items-center justify-center"}
+                />
+                <ReactQueryDevtools />
+              </TooltipProvider>
+            </SortProvider>
+          </StatusProvider>
+        </CommandProvider>
+      </WebSocketProvider>
+    </QueryClientProvider>
   </MotionProvider>,
 )

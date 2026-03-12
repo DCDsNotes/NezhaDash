@@ -1,14 +1,13 @@
 import { useQuery } from "@tanstack/react-query"
 import React, { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Route, BrowserRouter as Router, Routes, useLocation } from "react-router-dom"
+import { Route, BrowserRouter as Router, Routes } from "react-router-dom"
 
 import { DashCommand } from "./components/DashCommand"
 import ErrorBoundary from "./components/ErrorBoundary"
 import Footer from "./components/Footer"
 import Header, { RefreshToast } from "./components/Header"
 import { useBackground } from "./hooks/use-background"
-import { useTheme } from "./hooks/use-theme"
 import { InjectContext } from "./lib/inject"
 import { fetchSetting } from "./lib/nezha-api"
 import { cn } from "./lib/utils"
@@ -23,7 +22,6 @@ const RouteChecker: React.FC = () => {
 }
 
 const MainApp: React.FC = () => {
-  const location = useLocation()
   const { data: settingData, error } = useQuery({
     queryKey: ["setting"],
     queryFn: () => fetchSetting(),
@@ -31,7 +29,6 @@ const MainApp: React.FC = () => {
     refetchOnWindowFocus: true,
   })
   const { i18n } = useTranslation()
-  const { setTheme } = useTheme()
   const [isCustomCodeInjected, setIsCustomCodeInjected] = useState(false)
   const { backgroundImage: customBackgroundImage } = useBackground()
 
@@ -41,17 +38,6 @@ const MainApp: React.FC = () => {
       setIsCustomCodeInjected(true)
     }
   }, [settingData?.data?.config?.custom_code])
-
-  // 检测是否强制指定了主题颜色
-  const forceTheme =
-    // @ts-expect-error ForceTheme is a global variable
-    (window.ForceTheme as string) !== "" ? window.ForceTheme : undefined
-
-  useEffect(() => {
-    if (forceTheme === "dark" || forceTheme === "light") {
-      setTheme(forceTheme)
-    }
-  }, [forceTheme])
 
   if (error) {
     return <ErrorPage code={500} message={error.message} />
@@ -71,13 +57,10 @@ const MainApp: React.FC = () => {
 
   const customMobileBackgroundImage = window.CustomMobileBackgroundImage !== "" ? window.CustomMobileBackgroundImage : undefined
 
-  const isDetailPage = location.pathname.startsWith("/server/")
-  const layoutContainerWidth = isDetailPage ? "var(--detail-container-width)" : "var(--list-container-width)"
-
   return (
     <ErrorBoundary>
-      {/* 固定定位的背景层 */}
-      {!customBackgroundImage && <div className="fixed inset-0 z-0 nazhua-layout-bg dark:brightness-90" />}
+      {/* Fixed background layer (nazhua-like). */}
+      <div className="nazhua-layout-bg" />
       {customBackgroundImage && (
         <div
           className={cn("fixed inset-0 z-0 bg-cover min-h-lvh bg-no-repeat bg-center dark:brightness-75", {
@@ -93,21 +76,22 @@ const MainApp: React.FC = () => {
         />
       )}
       <div
-        style={{ ["--layout-container-width" as any]: layoutContainerWidth } as React.CSSProperties}
-        className="relative z-10 flex min-h-screen w-full flex-col bg-[var(--layout-main-bg-color)]"
+        className={cn("nazhua-layout-main", {
+          "bg-background": false,
+        })}
       >
-        <RefreshToast />
-        <Header />
-        <DashCommand />
-        <main className="flex z-20 flex-1 flex-col px-4 pb-4 pt-6 md:px-6 md:pb-6 md:pt-8">
+        <main className="flex z-20 flex-1 flex-col gap-4">
+          <RefreshToast />
+          <Header />
+          <DashCommand />
           <Routes>
             <Route path="/" element={<Server />} />
             <Route path="/server/:id" element={<ServerDetail />} />
             <Route path="/error" element={<ErrorPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <Footer />
         </main>
-        <Footer />
       </div>
     </ErrorBoundary>
   )

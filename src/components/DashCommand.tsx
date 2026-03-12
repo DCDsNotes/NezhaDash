@@ -2,11 +2,11 @@
 
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
 import { useCommand } from "@/hooks/use-command"
-import { useTheme } from "@/hooks/use-theme"
 import { useWebSocketContext } from "@/hooks/use-websocket-context"
+import { serverPath } from "@/lib/routes"
 import { formatNezhaInfo } from "@/lib/utils"
 import { NezhaWebsocketResponse } from "@/types/nezha-api"
-import { Home, Moon, Sun, SunMoon } from "lucide-react"
+import { Home } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
@@ -16,7 +16,6 @@ export function DashCommand() {
   const [search, setSearch] = useState("")
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { setTheme } = useTheme()
 
   const { lastMessage, connected } = useWebSocketContext()
 
@@ -43,24 +42,6 @@ export function DashCommand() {
       label: t("Home"),
       action: () => navigate("/"),
     },
-    {
-      keywords: ["light", "theme", "lightmode"],
-      icon: <Sun />,
-      label: t("ToggleLightMode"),
-      action: () => setTheme("light"),
-    },
-    {
-      keywords: ["dark", "theme", "darkmode"],
-      icon: <Moon />,
-      label: t("ToggleDarkMode"),
-      action: () => setTheme("dark"),
-    },
-    {
-      keywords: ["system", "theme", "systemmode"],
-      icon: <SunMoon />,
-      label: t("ToggleSystemMode"),
-      action: () => setTheme("system"),
-    },
   ].map((item) => ({
     ...item,
     value: `${item.keywords.join(" ")} ${item.label}`,
@@ -80,7 +61,7 @@ export function DashCommand() {
                     key={server.id}
                     value={server.name}
                     onSelect={() => {
-                      navigate(`/server/${server.id}`)
+                      navigate(serverPath(server.id))
                       closeCommand()
                     }}
                   >

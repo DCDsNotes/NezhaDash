@@ -244,6 +244,7 @@ interface PlanData {
 export interface PublicNoteData {
   billingDataMod?: BillingData
   planDataMod?: PlanData
+  customData?: Record<string, unknown>
 }
 
 export function parsePublicNote(publicNote: string): PublicNoteData | null {
@@ -252,11 +253,16 @@ export function parsePublicNote(publicNote: string): PublicNoteData | null {
       return null
     }
     const data = JSON.parse(publicNote)
-    if (!data.billingDataMod && !data.planDataMod) {
+    if (!data.billingDataMod && !data.planDataMod && !data.customData) {
       return null
+    }
+    const base: PublicNoteData = {}
+    if (data.customData && typeof data.customData === "object") {
+      base.customData = data.customData
     }
     if (data.billingDataMod && !data.planDataMod) {
       return {
+        ...base,
         billingDataMod: {
           startDate: data.billingDataMod.startDate || "",
           endDate: data.billingDataMod.endDate,
@@ -268,6 +274,7 @@ export function parsePublicNote(publicNote: string): PublicNoteData | null {
     }
     if (!data.billingDataMod && data.planDataMod) {
       return {
+        ...base,
         planDataMod: {
           bandwidth: data.planDataMod.bandwidth || "",
           trafficVol: data.planDataMod.trafficVol || "",
@@ -281,6 +288,7 @@ export function parsePublicNote(publicNote: string): PublicNoteData | null {
     }
 
     return {
+      ...base,
       billingDataMod: {
         startDate: data.billingDataMod.startDate || "",
         endDate: data.billingDataMod.endDate,
