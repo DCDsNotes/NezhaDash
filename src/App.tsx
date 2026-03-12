@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import React, { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Route, BrowserRouter as Router, Routes } from "react-router-dom"
+import { Route, BrowserRouter as Router, Routes, useLocation } from "react-router-dom"
 
 import { DashCommand } from "./components/DashCommand"
 import ErrorBoundary from "./components/ErrorBoundary"
@@ -23,6 +23,7 @@ const RouteChecker: React.FC = () => {
 }
 
 const MainApp: React.FC = () => {
+  const location = useLocation()
   const { data: settingData, error } = useQuery({
     queryKey: ["setting"],
     queryFn: () => fetchSetting(),
@@ -70,9 +71,13 @@ const MainApp: React.FC = () => {
 
   const customMobileBackgroundImage = window.CustomMobileBackgroundImage !== "" ? window.CustomMobileBackgroundImage : undefined
 
+  const isDetailPage = location.pathname.startsWith("/server/")
+  const layoutContainerWidth = isDetailPage ? "var(--detail-container-width)" : "var(--list-container-width)"
+
   return (
     <ErrorBoundary>
       {/* 固定定位的背景层 */}
+      {!customBackgroundImage && <div className="fixed inset-0 z-0 nazhua-layout-bg dark:brightness-90" />}
       {customBackgroundImage && (
         <div
           className={cn("fixed inset-0 z-0 bg-cover min-h-lvh bg-no-repeat bg-center dark:brightness-75", {
@@ -88,22 +93,21 @@ const MainApp: React.FC = () => {
         />
       )}
       <div
-        className={cn("flex min-h-screen w-full flex-col", {
-          "bg-background": !customBackgroundImage,
-        })}
+        style={{ ["--layout-container-width" as any]: layoutContainerWidth } as React.CSSProperties}
+        className="relative z-10 flex min-h-screen w-full flex-col bg-[var(--layout-main-bg-color)]"
       >
-        <main className="flex z-20 min-h-[calc(100vh-calc(var(--spacing)*16))] flex-1 flex-col gap-4 p-4 md:p-10 md:pt-8">
-          <RefreshToast />
-          <Header />
-          <DashCommand />
+        <RefreshToast />
+        <Header />
+        <DashCommand />
+        <main className="flex z-20 flex-1 flex-col px-4 pb-4 pt-6 md:px-6 md:pb-6 md:pt-8">
           <Routes>
             <Route path="/" element={<Server />} />
             <Route path="/server/:id" element={<ServerDetail />} />
             <Route path="/error" element={<ErrorPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
-          <Footer />
         </main>
+        <Footer />
       </div>
     </ErrorBoundary>
   )

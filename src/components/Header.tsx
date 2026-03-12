@@ -77,72 +77,99 @@ function Header() {
   const customBackgroundImage = backgroundImage
 
   return (
-    <div className="mx-auto w-full max-w-5xl">
-      <section className="flex items-center justify-between header-top">
-        <section
-          onClick={() => {
-            sessionStorage.removeItem("selectedGroup")
-            navigate("/")
-          }}
-          className="cursor-pointer flex items-center sm:text-base text-sm font-medium"
-        >
-          <div className="mr-1 flex flex-row items-center justify-start header-logo">
-            <img
-              width={40}
-              height={40}
-              alt="apple-touch-icon"
-              src={customLogo}
-              className="relative m-0! border-2 border-transparent h-6 w-6 object-cover object-top p-0!"
-            />
-          </div>
-          {isLoading ? <Skeleton className="h-6 w-20 rounded-[5px] bg-muted-foreground/10 animate-none" /> : siteName || "NEZHA"}
-          <Separator orientation="vertical" className="mx-2 hidden h-4 w-[1px] md:block" />
-          <p className="hidden text-sm font-medium opacity-40 md:block">Nezha Monitoring</p>
-        </section>
-        <section className="flex items-center gap-2 header-handles">
-          <div className="hidden sm:flex items-center gap-2">
-            <Links />
-            <DashboardLink />
-          </div>
-          <SearchButton />
-          <LanguageSwitcher />
-          <ModeToggle />
-          {(customBackgroundImage || sessionStorage.getItem("savedBackgroundImage")) && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleBackgroundToggle}
-              className={cn("rounded-full px-[9px] bg-white dark:bg-black", {
-                "bg-white/70 dark:bg-black/70": customBackgroundImage,
-                "hidden sm:block": customMobileBackgroundImage,
-              })}
+    <>
+      <header className="sticky top-0 z-50 nazhua-dot-bg-strong backdrop-blur-[3px] backdrop-saturate-50 shadow-[0_2px_4px_rgba(0,0,0,0.2)]">
+        <div className="mx-auto w-full max-w-[var(--layout-container-width)] px-4 py-2.5 md:px-6">
+          <section className="flex flex-wrap items-center justify-between gap-x-5 gap-y-2 header-top">
+            <section
+              onClick={() => {
+                sessionStorage.removeItem("selectedGroup")
+                navigate("/")
+              }}
+              className="cursor-pointer flex items-center gap-2"
             >
-              <ImageMinus className="w-4 h-4" />
-            </Button>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            className={cn("hover:bg-white dark:hover:bg-black cursor-default rounded-full flex items-center px-[9px] bg-white dark:bg-black", {
-              "bg-white/70 dark:bg-black/70": customBackgroundImage,
-            })}
-          >
-            {connected ? onlineCount : <Loader visible={true} />}
-            <p className="text-muted-foreground">{connected ? t("online") : t("offline")}</p>
-            <span
-              className={cn("h-2 w-2 rounded-full bg-green-500", {
-                "bg-red-500": !connected,
-              })}
-            ></span>
-          </Button>
-        </section>
-      </section>
-      <div className="w-full flex justify-between sm:hidden mt-1">
-        <DashboardLink />
-        <Links />
+              <div className="flex flex-row items-center justify-start header-logo">
+                <img
+                  width={40}
+                  height={40}
+                  alt="apple-touch-icon"
+                  src={customLogo}
+                  className="relative m-0! border-2 border-transparent h-7 w-7 object-cover object-top p-0!"
+                />
+              </div>
+              {isLoading ? (
+                <Skeleton className="h-7 w-28 rounded-[6px] bg-muted-foreground/10 animate-none" />
+              ) : (
+                <span className="text-[22px] font-bold leading-[1] tracking-tight text-white [text-shadow:2px_2px_4px_rgba(0,0,0,0.5)]">
+                  {siteName || "NEZHA"}
+                </span>
+              )}
+              <Separator orientation="vertical" className="mx-2 hidden h-5 w-[1px] opacity-40 md:block" />
+              <p className="hidden text-sm font-medium text-white/70 md:block">{customDesc}</p>
+            </section>
+            <section className="flex items-center gap-2 header-handles text-[13px] text-white/80">
+              <div className="hidden sm:flex items-center gap-3">
+                <Links />
+                <DashboardLink />
+              </div>
+              <SearchButton />
+              <LanguageSwitcher />
+              <ModeToggle />
+              {(customBackgroundImage || sessionStorage.getItem("savedBackgroundImage")) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBackgroundToggle}
+                  className={cn(
+                    "rounded-full px-[9px] bg-white/80 hover:bg-white dark:bg-black/30 dark:hover:bg-black/40 border-black/5 dark:border-white/10",
+                    {
+                      "bg-white/60 dark:bg-black/25": customBackgroundImage,
+                      "hidden sm:block": customMobileBackgroundImage,
+                    },
+                  )}
+                >
+                  <ImageMinus className="w-4 h-4" />
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "cursor-default rounded-full flex items-center gap-1 px-[9px] bg-white/80 hover:bg-white dark:bg-black/30 dark:hover:bg-black/40 border-black/5 dark:border-white/10",
+                  {
+                    "bg-white/60 dark:bg-black/25": customBackgroundImage,
+                    "hidden sm:flex": customMobileBackgroundImage,
+                  },
+                )}
+              >
+                {connected ? (
+                  <p className="text-[10px] font-bold whitespace-nowrap text-black/70 dark:text-white/80">
+                    {t("online")} {onlineCount}
+                  </p>
+                ) : (
+                  <>
+                    <Loader visible={true} />
+                    <p className="text-[10px] font-bold whitespace-nowrap text-black/70 dark:text-white/80">{t("offline")}</p>
+                  </>
+                )}
+                <span
+                  className={cn("h-2 w-2 rounded-full bg-green-500", {
+                    "bg-red-500": !connected,
+                  })}
+                ></span>
+              </Button>
+            </section>
+          </section>
+          <div className="w-full flex justify-between sm:hidden mt-1">
+            <DashboardLink />
+            <Links />
+          </div>
+        </div>
+      </header>
+      <div className="mx-auto w-full max-w-[var(--layout-container-width)] px-4 md:px-6">
+        <Overview />
       </div>
-      <Overview />
-    </div>
+    </>
   )
 }
 
@@ -168,7 +195,7 @@ function Links() {
             href={link.link}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 text-sm font-medium opacity-50 transition-opacity hover:opacity-100"
+            className="flex items-center gap-1 text-[13px] font-medium text-white/80 transition-colors hover:text-white"
           >
             {link.name}
           </a>
@@ -258,7 +285,7 @@ function DashboardLink() {
       <a
         href={"/dashboard"}
         rel="noopener noreferrer"
-        className="flex items-center text-nowrap gap-1 text-sm font-medium opacity-50 transition-opacity hover:opacity-100"
+        className="flex items-center text-nowrap gap-1 text-[13px] font-medium text-white/80 transition-colors hover:text-white"
       >
         {!isLogin && t("login")}
         {isLogin && t("dashboard")}
