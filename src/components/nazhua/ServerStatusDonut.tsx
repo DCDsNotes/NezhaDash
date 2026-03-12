@@ -19,7 +19,7 @@ export default function ServerStatusDonut({
         <Donut used={used} size={size} strokeWidth={Math.ceil((size / 100) * 10)} colors={item.colors.used} trackColor={item.colors.total}>
           <div
             className="nazhua-donut-label"
-            title={item.valPercent || `${(item.used || 0).toFixed(1) * 1}%`}
+            title={item.valPercent || `${Number((item.used || 0).toFixed(1))}%`}
             style={{ transform: "scale(var(--nazhua-server-status-label-scale, 1))" }}
           >
             <div className="nazhua-server-status-val-text">
@@ -39,4 +39,3 @@ export default function ServerStatusDonut({
     </div>
   )
 }
-

@@ -22,7 +22,10 @@ export default function DotBox({
     ...(style || {}),
     color,
   }
-  if (borderRadius !== undefined) mergedStyle["--nazhua-border-radius" as never] = typeof borderRadius === "number" ? `${borderRadius}px` : borderRadius
+  const styleWithVars = mergedStyle as CSSProperties & Record<string, string>
+  if (borderRadius !== undefined) {
+    styleWithVars["--nazhua-border-radius"] = typeof borderRadius === "number" ? `${borderRadius}px` : borderRadius
+  }
   if (padding !== undefined) mergedStyle.padding = typeof padding === "number" ? `${padding}px` : padding
 
   return (
@@ -31,4 +34,3 @@ export default function DotBox({
     </div>
   )
 }
-

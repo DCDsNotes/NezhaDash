@@ -1,6 +1,7 @@
 import type { NezhaServer } from "@/types/nezha-api"
 
 type ColorMode = "linear" | "default"
+type ColorValue = string | [string, string]
 
 function calcBinary(bytes: number) {
   const k = bytes / 1024
@@ -19,20 +20,20 @@ function parseCpuCores(cpuText?: string): number | null {
   return null
 }
 
-function getColor(type: "cpu" | "mem" | "swap" | "disk", mode: ColorMode) {
-  const colors = {
+function getColor(type: "cpu" | "mem" | "swap" | "disk", mode: ColorMode): ColorValue {
+  const colors: Record<"cpu" | "mem" | "swap" | "disk", { linear: [string, string]; default: string }> = {
     cpu: { linear: ["#0088FF", "#72B7FF"], default: "#0088FF" },
     mem: { linear: ["#2B6939", "#0AA344"], default: "#0AA344" },
     swap: { linear: ["#FF8C00", "#F38100"], default: "#FF8C00" },
     disk: { linear: ["#00848F", "#70F3FF"], default: "#70F3FF" },
-  } as const
+  }
   return colors[type][mode]
 }
 
 export type NazhuaStatusItem = {
   type: "cpu" | "mem" | "swap" | "disk"
   used: number
-  colors: { used: string | [string, string]; total: string }
+  colors: { used: ColorValue; total: string }
   valText: string
   valPercent: string
   label: string
@@ -71,13 +72,12 @@ export function getNazhuaStatusList(params: {
   const diskTotalBinary = calcBinary(diskTotal)
   const diskPercent = ((diskUsed / diskTotal) * 100)
 
-  const list = tpl
-    .map((i) => {
+  const list: Array<NazhuaStatusItem | null> = tpl.map((i) => {
       switch (i) {
         case "cpu": {
-          const used = (server.state.cpu || 0).toFixed(1) * 1
+          const used = Number((server.state.cpu || 0).toFixed(1))
           const valPercent = `${used}%`
-          return {
+          const item: NazhuaStatusItem = {
             type: "cpu",
             used,
             colors: { used: getColor("cpu", mode), total: totalColor },
@@ -90,19 +90,20 @@ export function getNazhuaStatusList(params: {
                   mobile: coresVal,
                 }
               : undefined,
-          } satisfies NazhuaStatusItem
+          }
+          return item
         }
         case "mem": {
           const used = (Number.isFinite(memPercent) ? memPercent : 0) || 0
           const valText =
-            memUsedBinary.g >= 10 && memTotalBinary.g >= 10 ? `${(memUsedBinary.g).toFixed(1) * 1}G` : `${Math.ceil(memUsedBinary.m)}M`
-          const contentVal = memTotalBinary.g > 4 ? `${(memTotalBinary.g).toFixed(1) * 1}G` : `${Math.ceil(memTotalBinary.m)}M`
-          return {
+            memUsedBinary.g >= 10 && memTotalBinary.g >= 10 ? `${Number(memUsedBinary.g.toFixed(1))}G` : `${Math.ceil(memUsedBinary.m)}M`
+          const contentVal = memTotalBinary.g > 4 ? `${Number(memTotalBinary.g.toFixed(1))}G` : `${Math.ceil(memTotalBinary.m)}M`
+          const item: NazhuaStatusItem = {
             type: "mem",
             used,
             colors: { used: getColor("mem", mode), total: totalColor },
             valText,
-            valPercent: `${(used).toFixed(1) * 1}%`,
+            valPercent: `${Number(used.toFixed(1))}%`,
             label: "内存",
             content: withContent
               ? {
@@ -110,20 +111,21 @@ export function getNazhuaStatusList(params: {
                   mobile: `内存${contentVal}`,
                 }
               : undefined,
-          } satisfies NazhuaStatusItem
+          }
+          return item
         }
         case "swap": {
           if (!swapTotal) return null
           const used = (Number.isFinite(swapPercent) ? swapPercent : 0) || 0
           const valText =
-            swapUsedBinary.g >= 10 && swapTotalBinary.g >= 10 ? `${(swapUsedBinary.g).toFixed(1) * 1}G` : `${Math.ceil(swapUsedBinary.m)}M`
-          const contentVal = swapTotalBinary.g > 4 ? `${(swapTotalBinary.g).toFixed(1) * 1}G` : `${Math.ceil(swapTotalBinary.m)}M`
-          return {
+            swapUsedBinary.g >= 10 && swapTotalBinary.g >= 10 ? `${Number(swapUsedBinary.g.toFixed(1))}G` : `${Math.ceil(swapUsedBinary.m)}M`
+          const contentVal = swapTotalBinary.g > 4 ? `${Number(swapTotalBinary.g.toFixed(1))}G` : `${Math.ceil(swapTotalBinary.m)}M`
+          const item: NazhuaStatusItem = {
             type: "swap",
             used,
             colors: { used: getColor("swap", mode), total: totalColor },
             valText,
-            valPercent: `${(used).toFixed(1) * 1}%`,
+            valPercent: `${Number(used.toFixed(1))}%`,
             label: "交换",
             content: withContent
               ? {
@@ -131,20 +133,21 @@ export function getNazhuaStatusList(params: {
                   mobile: `交换${contentVal}`,
                 }
               : undefined,
-          } satisfies NazhuaStatusItem
+          }
+          return item
         }
         case "disk": {
           const used = (Number.isFinite(diskPercent) ? diskPercent : 0) || 0
           const valText =
-            diskUsedBinary.t >= 1 && diskTotalBinary.t >= 1 ? `${(diskUsedBinary.t).toFixed(1) * 1}T` : `${Math.ceil(diskUsedBinary.g)}G`
+            diskUsedBinary.t >= 1 && diskTotalBinary.t >= 1 ? `${Number(diskUsedBinary.t.toFixed(1))}T` : `${Math.ceil(diskUsedBinary.g)}G`
           const contentValue =
-            diskTotalBinary.t >= 1 ? `${(diskTotalBinary.t).toFixed(1) * 1}T` : `${Math.ceil(diskTotalBinary.g)}G`
-          return {
+            diskTotalBinary.t >= 1 ? `${Number(diskTotalBinary.t.toFixed(1))}T` : `${Math.ceil(diskTotalBinary.g)}G`
+          const item: NazhuaStatusItem = {
             type: "disk",
             used,
             colors: { used: getColor("disk", mode), total: totalColor },
             valText,
-            valPercent: `${(used).toFixed(1) * 1}%`,
+            valPercent: `${Number(used.toFixed(1))}%`,
             label: "磁盘",
             content: withContent
               ? {
@@ -152,15 +155,15 @@ export function getNazhuaStatusList(params: {
                   mobile: `磁盘${contentValue}`,
                 }
               : undefined,
-          } satisfies NazhuaStatusItem
+          }
+          return item
         }
         default:
           return null
       }
     })
-    .filter((v): v is NazhuaStatusItem => Boolean(v))
 
-  return list
+  return list.filter((v): v is NazhuaStatusItem => v !== null)
 }
 
 export function formatNazhuaCpuMemDiskSummary(server: NezhaServer): string {

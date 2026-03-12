@@ -2,7 +2,7 @@ import worldMapSvgUrl from "@/assets/images/world-map.svg"
 import { alias2code, count2size, findIntersectingGroups, locationCode2Info, type WorldMapPointBox } from "@/lib/nazhua/world-map"
 import { cn, parsePublicNote } from "@/lib/utils"
 import type { NezhaServer } from "@/types/nezha-api"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 type Location = {
   key: string
@@ -157,9 +157,9 @@ export default function WorldMap({
       className={cn("nazhua-world-map-group", className)}
       style={
         {
-          ["--world-map-width" as never]: `${computed.width}px`,
-          ["--world-map-height" as never]: `${computed.height}px`,
-        } as React.CSSProperties
+          ["--world-map-width"]: `${computed.width}px`,
+          ["--world-map-height"]: `${computed.height}px`,
+        } as CSSProperties & Record<string, string>
       }
     >
       <div className="nazhua-world-map-img" style={{ backgroundImage: `url(${worldMapSvgUrl})` }} />
@@ -171,10 +171,10 @@ export default function WorldMap({
             className={cn("nazhua-world-map-point", `nazhua-world-map-point--${p.type}`)}
             style={
               {
-                ["--map-point-left" as never]: `${p.left}px`,
-                ["--map-point-top" as never]: `${p.top}px`,
-                ["--map-point-size" as never]: `${p.size}px`,
-              } as React.CSSProperties
+                ["--map-point-left"]: `${p.left}px`,
+                ["--map-point-top"]: `${p.top}px`,
+                ["--map-point-size"]: `${p.size}px`,
+              } as CSSProperties & Record<string, string>
             }
             onClick={() => onPointTap(p)}
             aria-label={p.label}

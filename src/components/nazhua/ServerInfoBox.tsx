@@ -12,7 +12,7 @@ function formatDate(tsSeconds?: number) {
 export default function ServerInfoBox({ server, className }: { server: NezhaServer; className?: string }) {
   const cpuList = server.host.cpu || []
   const gpuList = server.host.gpu || []
-  const load = `${(server.state.load_1 || 0).toFixed(2) * 1}, ${(server.state.load_5 || 0).toFixed(2) * 1}, ${(server.state.load_15 || 0).toFixed(2) * 1}`
+  const load = `${Number((server.state.load_1 || 0).toFixed(2))}, ${Number((server.state.load_5 || 0).toFixed(2))}, ${Number((server.state.load_15 || 0).toFixed(2))}`
   const transferIn = server.state.net_in_transfer || 0
   const transferOut = server.state.net_out_transfer || 0
   const transferTotal = transferIn + transferOut
@@ -147,4 +147,3 @@ export default function ServerInfoBox({ server, className }: { server: NezhaServ
     </DotBox>
   )
 }
-
