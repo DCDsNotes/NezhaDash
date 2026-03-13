@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - "v*.*.*"
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       version:
@@ -44,18 +46,36 @@ jobs:
               version="${input_version}"
             fi
           else
-            tag="v${pkg_version}"
-            version="${pkg_version}"
+            # For push to default branch: publish an auto build with timestamp tag.
+            if [[ "${{ github.ref_type }}" == "branch" ]]; then
+              build_ts="$(TZ=Asia/Shanghai date +%Y%m%d-%H%M%S)"
+              tag="v${build_ts}"
+              version="${build_ts}"
+              is_auto="true"
+            else
+              tag="v${pkg_version}"
+              version="${pkg_version}"
+              is_auto="false"
+            fi
           fi
 
           # When triggered by a tag push, prefer the actual ref tag.
           if [[ "${{ github.ref_type }}" == "tag" && -n "${{ github.ref_name }}" ]]; then
             tag="${{ github.ref_name }}"
             version="${tag#v}"
+            is_auto="false"
           fi
 
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
           echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "is_auto=${is_auto:-false}" >> "$GITHUB_OUTPUT"
+          if [[ "${is_auto:-false}" == "true" ]]; then
+            echo "draft=false" >> "$GITHUB_OUTPUT"
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "draft=true" >> "$GITHUB_OUTPUT"
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Generate release notes
         shell: bash
@@ -79,13 +99,20 @@ jobs:
         shell: bash
         run: zip -r dist.zip dist
 
+      - name: Upload dist.zip (workflow artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ steps.version.outputs.tag }}
+          path: dist.zip
+          if-no-files-found: error
+
       - name: Create draft release and upload asset
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: Release ${{ steps.version.outputs.tag }}
-          draft: true
-          prerelease: false
+          target_commitish: ${{ github.sha }}
+          draft: ${{ steps.version.outputs.draft }}
+          prerelease: ${{ steps.version.outputs.prerelease }}
           body_path: release_notes.md
           files: dist.zip
-
