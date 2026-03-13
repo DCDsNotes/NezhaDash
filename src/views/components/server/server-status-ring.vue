@@ -98,8 +98,6 @@ const ringStyle = computed(() => {
 
 <style lang="scss" scoped>
 .server-status-ring {
-  --ring-size: 64px;
-  --ring-thickness: 10px;
   --ring-color: #08f;
   --ring-track: rgba(255, 255, 255, 0.18);
   display: flex;
@@ -108,14 +106,9 @@ const ringStyle = computed(() => {
   gap: 6px;
   cursor: default;
 
-  @media screen and (max-width: 480px) {
-    --ring-size: 56px;
-    --ring-thickness: 9px;
-  }
-
   .ring {
-    width: var(--ring-size);
-    height: var(--ring-size);
+    width: var(--ring-size, 72px);
+    height: var(--ring-size, 72px);
     border-radius: 50%;
     background:
       conic-gradient(
@@ -128,7 +121,7 @@ const ringStyle = computed(() => {
   .ring::before {
     content: '';
     position: absolute;
-    inset: var(--ring-thickness);
+    inset: var(--ring-thickness, 11px);
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.25);
     box-shadow: inset 0 1px 0 rgba(#fff, 0.06);
@@ -136,7 +129,7 @@ const ringStyle = computed(() => {
 
   .ring-center {
     position: absolute;
-    inset: var(--ring-thickness);
+    inset: var(--ring-thickness, 11px);
     display: flex;
     align-items: center;
     justify-content: center;

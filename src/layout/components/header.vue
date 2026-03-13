@@ -49,11 +49,7 @@ const router = useRouter();
 
 const headerStyle = computed(() => {
   const style = {};
-  if (route.name === 'ServerDetail') {
-    style['--layout-header-container-width'] = 'var(--detail-container-width)';
-  } else {
-    style['--layout-header-container-width'] = 'var(--list-container-width)';
-  }
+  style['--layout-header-container-width'] = 'var(--list-container-width)';
   return style;
 });
 
@@ -113,6 +109,10 @@ const showDashboardBtn = computed(() => true);
     color: #fff;
     text-shadow: 2px 2px 4px rgba(#000, 0.5);
     cursor: pointer;
+
+    @media screen and (max-width: 720px) {
+      font-size: 18px;
+    }
   }
 
   .layer-header-container {

@@ -5,7 +5,7 @@ import {
 const config = reactive({
   init: true,
   nazhua: {
-    title: '哪吒监控',
+    title: '哪吒探针',
     disableSarasaTermSC: import.meta.env.VITE_DISABLE_SARASA_TERM_SC === '1',
 
     v1ApiMonitorPath: '/api/v1/server/{id}/service',

@@ -63,11 +63,15 @@ const statusClassNames = computed(() => {
   padding: 6px 0 0;
 
   &.type--ring {
+    --ring-size: 76px;
+    --ring-thickness: 11px;
     gap: 8px;
     width: 100%;
     justify-content: space-around;
 
     @media screen and (max-width: 400px) {
+      --ring-size: 68px;
+      --ring-thickness: 10px;
       padding: 10px 6px 0;
     }
   }

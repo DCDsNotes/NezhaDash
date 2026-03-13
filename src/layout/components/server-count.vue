@@ -63,21 +63,11 @@ const serverCount = computed(() => store.state.serverCount);
     }
 
     &.server-count--online {
-      .value {
-        color: #0f0;
-      }
-      .icon {
-        color: #0f0;
-      }
+      color: var(--server-online-color);
     }
 
     &.server-count--offline {
-      .value {
-        color: #f00;
-      }
-      .icon {
-        color: #f00;
-      }
+      color: var(--server-offline-color);
     }
   }
 }

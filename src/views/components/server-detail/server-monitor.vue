@@ -627,6 +627,7 @@ onUnmounted(() => {
 
     display: flex;
     align-items: center;
+    justify-content: space-between;
     width: var(--cate-item-width);
     height: var(--cate-item-height);
     gap: 6px;
@@ -637,6 +638,7 @@ onUnmounted(() => {
 
     @media screen and (max-width: 768px) {
       cursor: default;
+      width: 100%;
     }
 
     .cate-legend {
@@ -833,6 +835,17 @@ onUnmounted(() => {
   flex-wrap: wrap;
   gap: var(--gap-size);
   margin-right: calc(var(--gap-size) * -1);
+
+  @media screen and (max-width: 768px) {
+    --gap-size: 8px;
+    gap: var(--gap-size);
+    margin-right: 0;
+
+    > * {
+      flex: 0 0 calc(50% - (var(--gap-size) / 2));
+      min-width: 0;
+    }
+  }
 }
 
 .monitor-chart-group {

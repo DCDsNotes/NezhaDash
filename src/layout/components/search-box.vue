@@ -48,7 +48,7 @@
     @click="activeSearchBox"
   >
     <span class="icon">
-      <i class="ri-search-eye-line" />
+      <i class="ri-search-line" />
     </span>
   </div>
 </template>

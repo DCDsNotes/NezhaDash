@@ -250,7 +250,7 @@ const show = computed(() => {
     gap: 6px;
     padding-right: 10px;
     line-height: var(--list-item-bill-height);
-    color: #ddd;
+    color: var(--server-status-value-color);
     flex: 0 0 auto;
     white-space: nowrap;
 
@@ -262,11 +262,12 @@ const show = computed(() => {
   .server-spec-icon {
     font-size: var(--list-item-bill-icon-font-size);
     opacity: 0.9;
+    color: inherit;
   }
 
   .server-spec-text {
     font-weight: 700;
-    color: #a1eafb;
+    color: inherit;
     letter-spacing: 0.2px;
   }
 

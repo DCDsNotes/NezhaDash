@@ -62,7 +62,7 @@ export function getThreshold(data) {
     tolerancePercent = 0.15; // 15%
   }
 
-  const min = sortedData[0];
+  const [min] = sortedData;
   const max = sortedData[len - 1];
 
   // console.log(min, max, median, sortedData);
