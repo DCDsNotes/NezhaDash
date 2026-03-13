@@ -25,15 +25,15 @@
           />
         </div>
         <div class="right-box">
-          <server-sort-box
-            v-if="showSort"
-            v-model="sortData"
-            :options="sortOptions"
-          />
           <server-option-box
             v-if="onlineOptions.length"
             v-model="filterFormData.online"
             :options="onlineOptions"
+          />
+          <server-sort-box
+            v-if="showSort"
+            v-model="sortData"
+            :options="sortOptions"
           />
         </div>
       </div>
@@ -101,7 +101,16 @@ import {
 } from './composable/server-sort';
 
 const store = useStore();
-const worldMapWidth = ref();
+function computeListContainerWidth() {
+  const w = window.innerWidth;
+  if (w <= 720) return w;
+  if (w <= 800) return 720;
+  if (w <= 1024) return 800;
+  if (w <= 1280) return 1024;
+  if (w <= 1440) return 1120;
+  return 1300;
+}
+const worldMapWidth = ref(Math.max(computeListContainerWidth() - 40, 300));
 
 const showTransition = computed(() => {
   // 安卓设备不开启 -> 部分安卓浏览器渲染动画会卡顿

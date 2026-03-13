@@ -67,6 +67,13 @@ const boxPadding = 0;
 
 // 计算地图大小 保持1280:621的比例 保证地图不变形
 const computedSize = computed(() => {
+  if (validate.isEmpty(props.width) && validate.isEmpty(props.height)) {
+    return {
+      width: 1280,
+      height: 621,
+    };
+  }
+
   // 考虑内边距，从总宽高中减去padding
   const adjustedWidth = Number(props.width) - (boxPadding * 2);
   const adjustedHeight = Number(props.height) - (boxPadding * 2);

@@ -250,7 +250,7 @@ const show = computed(() => {
     gap: 6px;
     padding-right: 10px;
     line-height: var(--list-item-bill-height);
-    color: var(--server-status-value-color);
+    color: #ddd;
     flex: 0 0 auto;
     white-space: nowrap;
 

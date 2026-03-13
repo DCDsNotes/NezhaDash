@@ -82,7 +82,14 @@ const store = useStore();
 const router = useRouter();
 
 const detailContainerRef = ref(null);
-const worldMapWidth = ref(900);
+function computeDetailContainerWidth() {
+  const w = window.innerWidth;
+  if (w <= 720) return w;
+  if (w <= 800) return 720;
+  if (w <= 1024) return 800;
+  return 900;
+}
+const worldMapWidth = ref(Math.max(computeDetailContainerWidth() - 40, 300));
 const info = computed(() => store.state?.serverMapByKey?.[props.serverKey]);
 const dataInit = computed(() => store.state.init);
 
