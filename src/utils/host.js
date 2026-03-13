@@ -55,7 +55,8 @@ export function getCPUInfo(text = '') {
     const modelNumReg = /Ryzen\s*(?:\d|(?:TR))\s*(?:\d{4}(?:[A-Z]{1,2})?)/;
     const modelNumMatch = text.match(modelNumReg);
     if (modelNumMatch) {
-      cpuInfo.modelNum = modelNumMatch[0].replace(/Ryzen\s*(?:\d|(?:TR))\s*/, '');
+      const [modelNum] = modelNumMatch;
+      cpuInfo.modelNum = modelNum.replace(/Ryzen\s*(?:\d|(?:TR))\s*/, '');
     } else {
       // 备用正则表达式，尝试匹配其他可能的格式
       const altModelNumReg = /Ryzen.*?(\d{3,4}(?:[A-Z]{0,2}))/;

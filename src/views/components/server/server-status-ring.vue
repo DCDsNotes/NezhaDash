@@ -84,7 +84,10 @@ const ringStyle = computed(() => {
   const trackColor = props.colors?.total || 'rgba(255, 255, 255, 0.18)';
 
   if (Array.isArray(usedColor)) {
-    style['--ring-color'] = usedColor[0];
+    const [ringColor] = usedColor;
+    if (ringColor) {
+      style['--ring-color'] = ringColor;
+    }
   } else if (usedColor) {
     style['--ring-color'] = usedColor;
   }
