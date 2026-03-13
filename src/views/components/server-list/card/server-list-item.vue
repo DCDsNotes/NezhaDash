@@ -60,7 +60,6 @@ import {
 import {
   useRouter,
 } from 'vue-router';
-import config from '@/config';
 import * as hostUtils from '@/utils/host';
 import { getServerKey } from '@/utils/server-key';
 
