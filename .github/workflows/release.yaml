@@ -1,0 +1,91 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g. 0.9.1 or v0.9.1)"
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Resolve version/tag
+        id: version
+        shell: bash
+        run: |
+          pkg_version="$(node -p "require('./package.json').version")"
+          input_version="${{ github.event.inputs.version }}"
+
+          if [[ -n "${input_version}" ]]; then
+            if [[ "${input_version}" == v* ]]; then
+              tag="${input_version}"
+              version="${input_version#v}"
+            else
+              tag="v${input_version}"
+              version="${input_version}"
+            fi
+          else
+            tag="v${pkg_version}"
+            version="${pkg_version}"
+          fi
+
+          # When triggered by a tag push, prefer the actual ref tag.
+          if [[ "${{ github.ref_type }}" == "tag" && -n "${{ github.ref_name }}" ]]; then
+            tag="${{ github.ref_name }}"
+            version="${tag#v}"
+          fi
+
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate release notes
+        shell: bash
+        run: |
+          {
+            echo "#### Changes"
+            git log -20 --pretty=format:"- %s"
+            echo
+            echo "-----------"
+            echo "Artifact:"
+            echo "- dist.zip (v1-only, local assets)"
+          } > release_notes.md
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Package dist.zip
+        shell: bash
+        run: zip -r dist.zip dist
+
+      - name: Create draft release and upload asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          draft: true
+          prerelease: false
+          body_path: release_notes.md
+          files: dist.zip
+

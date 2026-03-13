@@ -1,0 +1,159 @@
+import uniqolor from 'uniqolor';
+
+/**
+ * 计算数据的统计信息，使用截尾中位数作为基准值
+ * 根据平均延迟的不同范围，使用不同的容差百分比进行削峰
+ *
+ * @param {number[]} data - 要计算的数据数组
+ * @returns {{median: number, tolerancePercent: number, min: number, max: number}}
+ *          返回包含统计信息的对象
+ * @property {number} median - 截尾中位数(去掉极端值后的中位数)
+ * @property {number} tolerancePercent - 根据中位数计算的容差百分比
+ * @property {number} min - 最小值
+ * @property {number} max - 最大值
+ */
+export function getThreshold(data) {
+  // 过滤掉null和0的数据，只对有效延迟值计算统计量
+  const filteredData = data.filter((value) => value !== 0 && value !== null);
+
+  if (filteredData.length === 0) {
+    return {
+      median: 0,
+      tolerancePercent: 0.2,
+      min: 0,
+      max: 0,
+    };
+  }
+
+  // 排序数据
+  const sortedData = [...filteredData].sort((a, b) => Math.ceil(a) - Math.ceil(b));
+  const len = sortedData.length;
+
+  // 计算需要裁剪的数量（10%）
+  const trimCount = Math.floor(len * 0.1);
+
+  // 用于计算中位数的数据：如果10%的数量>=1，则去掉最大和最小的10%
+  let dataForMedian;
+  if (trimCount >= 1) {
+    // 截尾：去掉最小的10%和最大的10%
+    dataForMedian = sortedData.slice(trimCount, len - trimCount);
+  } else {
+    // 数据量太少，不裁剪
+    dataForMedian = sortedData;
+  }
+
+  // 计算截尾中位数
+  const medianLen = dataForMedian.length;
+  const median = medianLen % 2 === 0
+    ? (dataForMedian[medianLen / 2 - 1] + dataForMedian[medianLen / 2]) / 2
+    : dataForMedian[Math.floor(medianLen / 2)];
+
+  // 根据中位数确定容差百分比，延迟越小容差越大
+  let tolerancePercent;
+  if (median <= 10) {
+    tolerancePercent = 0.50; // 50%
+  } else if (median <= 30) {
+    tolerancePercent = 0.35; // 35%
+  } else if (median <= 50) {
+    tolerancePercent = 0.25; // 25%
+  } else if (median <= 100) {
+    tolerancePercent = 0.20; // 20%
+  } else {
+    tolerancePercent = 0.15; // 15%
+  }
+
+  const min = sortedData[0];
+  const max = sortedData[len - 1];
+
+  // console.log(min, max, median, sortedData);
+
+  return {
+    median,
+    tolerancePercent,
+    min,
+    max,
+  };
+}
+
+/**
+ * - 处理相对固定折线的颜色
+ */
+const lineColorMap = {};
+const lineColors = [];
+const defaultColors = [
+  '#5470C6', '#91CC75', '#FAC858', '#EE6666',
+  '#73C0DE', '#3BA272', '#FC8452', '#9A60B4',
+  '#EA7CCC', '#C23531', '#2F4554', '#61A0A8',
+  '#D48265', '#91C7AE', '#749F83', '#CA8622',
+  '#BDA29A', '#6E7074', '#546570', '#C4CCD3',
+];
+
+/**
+ * 将十六进制颜色转换为 RGB 数组
+ * @param {string} hex - 十六进制颜色字符串
+ * @returns {number[]} 返回包含 RGB 数组的对象
+ */
+function hexToRgb(hex) {
+  // 去掉可能的前缀 "#"
+  hex = hex.replace(/^#/, '');
+  // 将字符串拆分为 r, g, b 三个部分
+  const bigint = parseInt(hex, 16);
+  const r = Math.floor(bigint / (256 * 256)) % 256;
+  const g = Math.floor(bigint / 256) % 256;
+  const b = bigint % 256;
+  return [r, g, b];
+}
+
+/**
+ * 计算两个 RGB 颜色之间的距离
+ * @param {number[]} color1 - 第一个颜色的 RGB 数组
+ * @param {number[]} color2 - 第二个颜色的 RGB 数组
+ * @returns {number} 返回两个颜色之间的距离
+ */
+function rgbDistance(color1, color2) {
+  const [r1, g1, b1] = color1;
+  const [r2, g2, b2] = color2;
+  return Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs(b1 - b2);
+}
+
+/**
+ * 获取一个随机颜色
+ * @returns {string} 返回一个随机颜色的字符串
+ */
+function getColor(count = 0, len = 0) {
+  // 如果尝试次数超过 3 次，返回固定颜色组里面的颜色
+  if (count > 3) {
+    return defaultColors[len % defaultColors.length];
+  }
+  const { color } = uniqolor.random({
+    saturation: [75, 90],
+    lightness: [65, 70],
+    differencePoint: 100,
+  });
+  if (lineColors.includes(color)) {
+    return getColor(count + 1, len);
+  }
+  if (lineColors.some((i) => rgbDistance(
+    hexToRgb(i),
+    hexToRgb(color),
+  ) < 50)) {
+    return getColor(count + 1, len);
+  }
+  return color;
+}
+
+/**
+ * 获取线的颜色
+ * @param {string} name - 线的名称
+ * @returns {string} 返回线的颜色
+ */
+export function getLineColor(name) {
+  // 如果已经有了对应的颜色，直接返回
+  if (lineColorMap[name]) {
+    return lineColorMap[name];
+  }
+  const color = getColor(0, lineColors.length);
+  lineColorMap[name] = color;
+  lineColors.push(color);
+  return color;
+}
