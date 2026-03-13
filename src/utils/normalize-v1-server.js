@@ -21,6 +21,16 @@ function parsePublicNote(publicNote) {
   return null;
 }
 
+function normalizeToArray(value) {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  if (validate.isSet(value)) {
+    return [value];
+  }
+  return [];
+}
+
 /**
  * Normalize Nezha v1 server payload into a stable UI-friendly shape.
  * This project is v1-only, but the UI expects a few legacy field names.
@@ -39,7 +49,7 @@ export default function normalizeV1Server(v1Server, groupName) {
     Host: {
       Platform: host?.platform,
       PlatformVersion: host?.platform_version,
-      CPU: Array.isArray(host?.cpu) ? host.cpu : (validate.isSet(host?.cpu) ? [host.cpu] : []),
+      CPU: normalizeToArray(host?.cpu),
       MemTotal: toFiniteNumber(host?.mem_total, 0),
       DiskTotal: toFiniteNumber(host?.disk_total, 0),
       SwapTotal: toFiniteNumber(host?.swap_total, 0),
@@ -48,7 +58,7 @@ export default function normalizeV1Server(v1Server, groupName) {
       BootTime: toFiniteNumber(host?.boot_time, 0),
       CountryCode: v1Server?.country_code,
       Version: host?.version,
-      GPU: Array.isArray(host?.gpu) ? host.gpu : (validate.isSet(host?.gpu) ? [host.gpu] : []),
+      GPU: normalizeToArray(host?.gpu),
     },
     State: {
       CPU: toFiniteNumber(state?.cpu, 0),
