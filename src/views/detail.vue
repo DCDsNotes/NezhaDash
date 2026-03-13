@@ -1,6 +1,7 @@
 <template>
   <div
     v-if="info"
+    ref="detailContainerRef"
     class="detail-container"
     :class="{
       'server--offline': info?.online !== 1,
@@ -47,6 +48,7 @@ import {
   computed,
   onMounted,
   onUnmounted,
+  nextTick,
   watch,
 } from 'vue';
 import {
@@ -79,6 +81,7 @@ const props = defineProps({
 const store = useStore();
 const router = useRouter();
 
+const detailContainerRef = ref(null);
 const worldMapWidth = ref(900);
 const info = computed(() => store.state?.serverMapByKey?.[props.serverKey]);
 const dataInit = computed(() => store.state.init);
@@ -100,15 +103,19 @@ const locations = computed(() => {
       y,
       name,
     } = locationCode2Info(code) || {};
-    arr.push({
-      key: code,
-      x,
-      y,
-      code,
-      size: 4,
-      label: `${name}`,
-      servers: [info.value],
-    });
+    const xx = Number(x);
+    const yy = Number(y);
+    if (Number.isFinite(xx) && Number.isFinite(yy)) {
+      arr.push({
+        key: code,
+        x: xx,
+        y: yy,
+        code,
+        size: 4,
+        label: `${name}`,
+        servers: [info.value],
+      });
+    }
   }
   return arr;
 });
@@ -134,19 +141,26 @@ const worldMapPosition = computed(() => {
 });
 
 function handleWorldMapWidth() {
+  const containerWidth = detailContainerRef.value?.clientWidth;
+  const width = Number(containerWidth);
+  if (!Number.isFinite(width) || width <= 0) {
+    worldMapWidth.value = 900;
+    return;
+  }
   worldMapWidth.value = Math.max(
     Math.min(
-      document.querySelector('.detail-container')?.offsetWidth - 40,
+      width - 40,
       window.innerWidth - 40,
-      900,
+      1280,
     ),
     300, // 防止奇葩情况
   );
 }
 
-watch(() => info.value, (newValue, oldValue) => {
+watch(() => info.value, async (newValue, oldValue) => {
   if (!oldValue && newValue && router.currentRoute.value.name === 'ServerDetail') {
     pageTitle(newValue?.Name, '节点详情');
+    await nextTick();
     handleWorldMapWidth();
   }
 });
@@ -162,7 +176,9 @@ watch(() => dataInit.value, () => {
 onMounted(() => {
   if (info.value) {
     pageTitle(info.value?.Name, '节点详情');
-    handleWorldMapWidth();
+    nextTick(() => {
+      handleWorldMapWidth();
+    });
   }
   window.addEventListener('resize', handleWorldMapWidth);
 });

@@ -1,5 +1,5 @@
 /**
- * V1版数据加载
+ * 数据加载
  */
 import config from '@/config';
 import request from '@/utils/request';

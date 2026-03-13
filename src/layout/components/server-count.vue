@@ -3,25 +3,20 @@
     v-if="serverCount?.total"
     class="server-count-group"
   >
-    <span class="server-count server-count--total">
-      <span class="text">共</span>
-      <span class="value">{{ serverCount.total }}</span>
-      <span class="text">台服务器</span>
+    <span
+      class="server-count server-count--online"
+      title="在线"
+    >
+      <span class="icon ri-checkbox-circle-line" />
+      <span class="value">{{ serverCount.online }}</span>
     </span>
-    <template v-if="serverCount.online !== serverCount.total">
-      <span
-        class="server-count server-count--online"
-      >
-        <span class="text">在线</span>
-        <span class="value">{{ serverCount.online }}</span>
-      </span>
-      <span
-        class="server-count server-count--offline"
-      >
-        <span class="text">离线</span>
-        <span class="value">{{ serverCount.offline }}</span>
-      </span>
-    </template>
+    <span
+      class="server-count server-count--offline"
+      title="离线"
+    >
+      <span class="icon ri-close-circle-line" />
+      <span class="value">{{ serverCount.offline }}</span>
+    </span>
   </div>
 </template>
 
@@ -53,24 +48,34 @@ const serverCount = computed(() => store.state.serverCount);
     color: #ddd;
     line-height: 30px;
 
-    .value {
-      font-weight: bold;
+    .icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      line-height: 1;
+      font-size: 18px;
     }
 
-    &.server-count--total {
-      .value {
-        color: #70f3ff;
-      }
+    .value {
+      font-weight: bold;
     }
 
     &.server-count--online {
       .value {
         color: #0f0;
       }
+      .icon {
+        color: #0f0;
+      }
     }
 
     &.server-count--offline {
       .value {
+        color: #f00;
+      }
+      .icon {
         color: #f00;
       }
     }

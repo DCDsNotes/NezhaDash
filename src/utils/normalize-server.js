@@ -32,10 +32,9 @@ function normalizeToArray(value) {
 }
 
 /**
- * Normalize Nezha v1 server payload into a stable UI-friendly shape.
- * This project is v1-only, but the UI expects a few legacy field names.
+ * Normalize Nezha server payload into a stable UI-friendly shape.
  */
-export default function normalizeV1Server(v1Server, groupName) {
+export default function normalizeServer(v1Server, groupName) {
   const id = v1Server?.id;
   const host = v1Server?.host || {};
   const state = v1Server?.state || {};

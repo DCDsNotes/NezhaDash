@@ -26,7 +26,7 @@
         </span>
       </div>
       <div
-        v-else-if="tagList"
+        v-else-if="tagList.length"
         class="tag-list"
       >
         <span
@@ -39,6 +39,17 @@
         >
           {{ tagItem }}
         </span>
+      </div>
+      <div
+        v-if="showServerSpec"
+        class="server-spec"
+      >
+        <span
+          v-if="props.platformLogoIconClassName"
+          :class="props.platformLogoIconClassName"
+          class="server-spec-icon"
+        />
+        <span class="server-spec-text">{{ props.cpuMemDiskText }}</span>
       </div>
     </div>
     <div class="billing-and-order-link">
@@ -84,6 +95,14 @@ const props = defineProps({
   info: {
     type: Object,
     default: () => ({}),
+  },
+  platformLogoIconClassName: {
+    type: String,
+    default: '',
+  },
+  cpuMemDiskText: {
+    type: String,
+    default: '',
   },
 });
 
@@ -142,12 +161,15 @@ const tagList = computed(() => {
   return list.slice(0, 5);
 });
 
+const showServerSpec = computed(() => !!props.cpuMemDiskText);
+
 const show = computed(() => {
   const checks = [
     billAndPlan.value.remainingTime,
     billAndPlan.value.billing,
     tagList.value.length > 0,
     showBuyBtn.value,
+    showServerSpec.value,
   ];
   return checks.some((item) => item);
 });
@@ -179,12 +201,19 @@ const show = computed(() => {
 
   .left-box {
     display: flex;
+    flex: 1;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
   }
 
   .remaining-time-info {
     display: flex;
     align-items: center;
     padding-left: 8px;
+    flex: 0 1 auto;
+    min-width: 0;
 
     .icon {
       display: flex;
@@ -202,6 +231,7 @@ const show = computed(() => {
       align-items: center;
       line-height: var(--list-item-bill-height);
       color: #ddd;
+      min-width: 0;
     }
 
     .value-text {
@@ -211,6 +241,33 @@ const show = computed(() => {
     @media screen and (max-width: 720px) {
       padding-left: 6px;
     }
+  }
+
+  .server-spec {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    padding-right: 10px;
+    line-height: var(--list-item-bill-height);
+    color: #ddd;
+    flex: 0 0 auto;
+    white-space: nowrap;
+
+    @media screen and (max-width: 360px) {
+      display: none;
+    }
+  }
+
+  .server-spec-icon {
+    font-size: var(--list-item-bill-icon-font-size);
+    opacity: 0.9;
+  }
+
+  .server-spec-text {
+    font-weight: 700;
+    color: #a1eafb;
+    letter-spacing: 0.2px;
   }
 
   .tag-list {
@@ -240,6 +297,7 @@ const show = computed(() => {
   .billing-and-order-link {
     display: flex;
     align-items: center;
+    flex: 0 0 auto;
     height: 40px;
     padding-right: 15px;
     gap: 10px;

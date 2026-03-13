@@ -4,11 +4,11 @@ import {
 import dayjs from 'dayjs';
 import config from '@/config';
 import {
-  loadServerGroup as loadNezhaV1ServerGroup,
-  loadSetting as loadNezhaV1Setting,
-  loadProfile as loadNezhaV1Profile,
-} from '@/utils/load-nezha-v1-config';
-import normalizeV1Server from '@/utils/normalize-v1-server';
+  loadServerGroup as loadNezhaServerGroup,
+  loadSetting as loadNezhaSetting,
+  loadProfile as loadNezhaProfile,
+} from '@/utils/load-nezha-config';
+import normalizeServer from '@/utils/normalize-server';
 
 import {
   msg,
@@ -139,12 +139,12 @@ const store = createStore({
       const {
         route,
       } = params || {};
-      loadNezhaV1ServerGroup().then((res) => {
+      loadNezhaServerGroup().then((res) => {
         if (res) {
           commit('SET_SERVER_GROUP', res);
         }
       });
-      loadNezhaV1Setting().then((res) => {
+      loadNezhaSetting().then((res) => {
         if (res) {
           commit('SET_SETTING', res);
           const title = res.config?.site_name || res.site_name;
@@ -156,7 +156,7 @@ const store = createStore({
           }
         }
       });
-      loadNezhaV1Profile().then((res) => {
+      loadNezhaProfile().then((res) => {
         if (res) {
           commit('SET_PROFILE', res);
         }
@@ -175,8 +175,8 @@ const store = createStore({
             commit('SET_SERVER_TIME', res.now);
           }
 
-          const servers = res.servers?.map?.((v1Server) => {
-            const normalized = normalizeV1Server(v1Server, state.serverGroupNameById?.[v1Server?.id]);
+          const servers = res.servers?.map?.((server) => {
+            const normalized = normalizeServer(server, state.serverGroupNameById?.[server?.id]);
             normalized.online = computeOnlineStatus(normalized.LastActive, res.now);
             return normalized;
           }) || [];

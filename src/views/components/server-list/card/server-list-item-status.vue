@@ -4,12 +4,13 @@
     :class="statusClassNames"
   >
     <component
-      :is="componentMaps.progress"
+      :is="componentMaps.ring"
       v-for="item in serverStatusList"
       :key="item.type"
       :type="item.type"
       :used="item.used"
       :colors="item.colors"
+      :val-percent="item.valPercent"
       :val-text="item.valText"
       :label="item.label"
     />
@@ -26,7 +27,7 @@ import {
 } from 'vue';
 
 import handleServerStatus from '@/views/composable/server-status';
-import ServerStatusProgress from '@/views/components/server/server-status-progress.vue';
+import ServerStatusRing from '@/views/components/server/server-status-ring.vue';
 
 const props = defineProps({
   info: {
@@ -36,7 +37,7 @@ const props = defineProps({
 });
 
 const componentMaps = {
-  progress: ServerStatusProgress,
+  ring: ServerStatusRing,
 };
 
 const {
@@ -49,7 +50,7 @@ const {
 
 const statusClassNames = computed(() => {
   const names = {};
-  names['type--progress'] = true;
+  names['type--ring'] = true;
   names[`len--${serverStatusList.value?.length}`] = true;
   return names;
 });
@@ -59,22 +60,15 @@ const statusClassNames = computed(() => {
 .server-list-item-status {
   display: flex;
   justify-content: space-between;
-  padding: 0 5px;
+  padding: 6px 0 0;
 
-  &.type--progress {
-    flex-wrap: wrap;
-    gap: 10px;
-
-    --progress-bar-width: calc(50% - 5px);
-    --progress-bar-height: 20px;
+  &.type--ring {
+    gap: 8px;
+    width: 100%;
+    justify-content: space-around;
 
     @media screen and (max-width: 400px) {
-      --progress-bar-height: 16px;
-      padding: 0 10px;
-    }
-
-    &.len--3 {
-      --progress-bar-width: calc((100% - 20px) / 3);
+      padding: 10px 6px 0;
     }
   }
 }

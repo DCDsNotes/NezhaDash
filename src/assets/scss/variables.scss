@@ -5,7 +5,7 @@
 
   --list-container-width: 1300px;
 
-  --detail-container-width: 900px;
+  --detail-container-width: var(--list-container-width);
 
   --global-background-color: #392f41;
   --global-text-color: #ddd;
@@ -58,17 +58,14 @@
 
   @media screen and (max-width: 1024px) {
     --list-container-width: 800px;
-    --detail-container-width: 800px;
   }
 
   @media screen and (max-width: 800px) {
     --list-container-width: 720px;
-    --detail-container-width: 720px;
   }
 
   @media screen and (max-width: 720px) {
     --list-container-width: 100vw;
-    --detail-container-width: 100vw;
   }
 }
 

@@ -17,15 +17,6 @@
           {{ info.Name }}
         </span>
       </div>
-      <div class="right-box">
-        <div
-          v-if="cpuAndMemAndDisk"
-          class="cpu-mem-group"
-        >
-          <span :class="platformLogoIconClassName" />
-          <span class="core-mem">{{ cpuAndMemAndDisk }}</span>
-        </div>
-      </div>
     </div>
     <div
       v-if="$config.nazhua.hideListItemStatusDonut !== true && $config.nazhua.hideListItemStat !== true"
@@ -45,6 +36,8 @@
     <server-list-item-bill
       v-if="$config.nazhua.hideListItemBill !== true"
       :info="info"
+      :platform-logo-icon-class-name="platformLogoIconClassName"
+      :cpu-mem-disk-text="cpuAndMemAndDisk"
     />
   </dot-dot-box>
 </template>
@@ -129,8 +122,7 @@ function openDetail() {
       height: var(--list-item-head-height, 50px);
     }
 
-    .left-box,
-    .right-box {
+    .left-box {
       display: flex;
       align-items: center;
       gap: 8px;
@@ -152,17 +144,6 @@ function openDetail() {
       font-weight: bold;
     }
 
-    .cpu-mem-group {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .core-mem {
-      height: 30px;
-      line-height: 32px;
-      font-weight: bold;
-    }
   }
 
   &.server-list-item--offline {
