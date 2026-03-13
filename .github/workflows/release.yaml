@@ -71,7 +71,9 @@ jobs:
           echo "is_auto=${is_auto:-false}" >> "$GITHUB_OUTPUT"
           if [[ "${is_auto:-false}" == "true" ]]; then
             echo "draft=false" >> "$GITHUB_OUTPUT"
-            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+            # Auto builds are published as official releases (not pre-releases),
+            # so GitHub will mark the newest one as "Latest".
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
           else
             echo "draft=true" >> "$GITHUB_OUTPUT"
             echo "prerelease=false" >> "$GITHUB_OUTPUT"
@@ -106,7 +108,7 @@ jobs:
           path: dist.zip
           if-no-files-found: error
 
-      - name: Create draft release and upload asset
+      - name: Create release and upload asset
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
