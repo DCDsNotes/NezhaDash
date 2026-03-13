@@ -87,9 +87,7 @@ const { cpuAndMemAndDisk } = handleServerInfo({
 
 const platformLogoIconClassName = computed(() => hostUtils.getPlatformLogoIconClassName(props.info?.Host?.Platform));
 
-const serverRealTimeListTpls = computed(() => {
-  return 'duration,transfer,inSpeed,outSpeed';
-});
+const serverRealTimeListTpls = computed(() => 'duration,transfer,inSpeed,outSpeed');
 
 function openDetail() {
   router.push({

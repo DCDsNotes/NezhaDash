@@ -112,11 +112,9 @@ const showTransition = computed(() => {
   return store.state.serverList.length < 7;
 });
 
-const indexContainerClass = computed(() => {
-  return {
-    'list-is--card': true,
-  };
-});
+const indexContainerClass = computed(() => ({
+  'list-is--card': true,
+}));
 
 const showFilter = computed(() => true);
 const filterFormData = ref({
