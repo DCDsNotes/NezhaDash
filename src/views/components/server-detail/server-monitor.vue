@@ -114,25 +114,25 @@
                   >
                     {{ cateItem.name }}
                   </span>
-                <span
-                  v-if="cateItem.avg !== 0"
-                  class="cate-avg-ms"
-                >
-                  {{ cateItem.avg }}ms
-                </span>
-                <span
-                  v-if="cateItem.loss !== 0"
-                  class="cate-loss-rate"
-                >
-                  丢包{{ cateItem.loss }}%
-                </span>
-                <span
-                  v-if="cateItem.over !== 0"
-                  class="cate-over-rate"
-                >
-                  {{ cateItem.over }}%
-                </span>
-              </div>
+                  <span
+                    v-if="cateItem.avg !== 0"
+                    class="cate-avg-ms"
+                  >
+                    {{ cateItem.avg }}ms
+                  </span>
+                  <span
+                    v-if="cateItem.loss !== 0"
+                    class="cate-loss-rate"
+                  >
+                    丢包{{ cateItem.loss }}%
+                  </span>
+                  <span
+                    v-if="cateItem.over !== 0"
+                    class="cate-over-rate"
+                  >
+                    {{ cateItem.over }}%
+                  </span>
+                </div>
               </template>
             </popover>
           </div>

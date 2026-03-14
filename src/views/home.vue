@@ -101,16 +101,20 @@ import {
 } from './composable/server-sort';
 
 const store = useStore();
-function computeListContainerWidth() {
+
+function computeDetailContainerWidth() {
   const w = window.innerWidth;
   if (w <= 720) return w;
   if (w <= 800) return 720;
   if (w <= 1024) return 800;
-  if (w <= 1280) return 1024;
-  if (w <= 1440) return 1120;
-  return 1300;
+  return 900;
 }
-const worldMapWidth = ref(Math.max(computeListContainerWidth() - 40, 300));
+
+function computeWorldMapWidth() {
+  return Math.max(computeDetailContainerWidth() - 40, 300);
+}
+
+const worldMapWidth = ref(computeWorldMapWidth());
 
 const showTransition = computed(() => {
   // 安卓设备不开启 -> 部分安卓浏览器渲染动画会卡顿
@@ -313,10 +317,7 @@ const worldMapPosition = computed(() => {
  * 处理窗口大小变化
  */
 function handleResize() {
-  const serverListContainer = document.querySelector('.server-list-container');
-  if (serverListContainer) {
-    worldMapWidth.value = serverListContainer.clientWidth - 40;
-  }
+  worldMapWidth.value = computeWorldMapWidth();
 }
 
 onMounted(() => {
