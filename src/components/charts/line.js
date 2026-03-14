@@ -60,8 +60,7 @@ export default (options) => {
         fontFamily,
         color: mode === 'dark' ? '#ddd' : '#222',
         fontSize: 12,
-        inside: true,
-        margin: 2,
+        margin: 6,
       },
       axisTick: {
         show: false,
@@ -82,9 +81,7 @@ export default (options) => {
         color: mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
         fontSize: 12,
         formatter: '{value}%',
-        inside: true,
-        align: 'right',
-        margin: 2,
+        margin: 6,
       },
       axisTick: {
         show: false,
@@ -104,8 +101,7 @@ export default (options) => {
         fontFamily,
         color: mode === 'dark' ? '#ddd' : '#222',
         fontSize: 12,
-        inside: true,
-        margin: 2,
+        margin: 6,
       },
       axisTick: {
         show: false,
@@ -163,10 +159,10 @@ export default (options) => {
     },
     grid: {
       top: 10,
-      left: 0,
-      right: 0,
+      left: 6,
+      right: 6,
       bottom: 50,
-      containLabel: false,
+      containLabel: true,
     },
     dataZoom: [{
       id: 'dataZoomX',

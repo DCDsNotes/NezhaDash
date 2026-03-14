@@ -1082,18 +1082,20 @@ onUnmounted(() => {
 }
 
 .monitor-chart-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 0;
+  --monitor-chart-gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--monitor-chart-gap);
 
   .monitor-chart-item {
-    width: 50%;
     height: calc(var(--line-chart-size) + 28px);
   }
 
   @media screen and (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 10px;
+
     .monitor-chart-item {
-      width: 100%;
       height: auto;
     }
   }
@@ -1105,9 +1107,7 @@ onUnmounted(() => {
   }
 
   &.monitor-chart-len--1 {
-    .monitor-chart-item {
-      width: 100%;
-    }
+    grid-template-columns: 1fr;
   }
 }
 </style>
