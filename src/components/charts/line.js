@@ -60,6 +60,14 @@ export default (options) => {
         fontFamily,
         color: mode === 'dark' ? '#ddd' : '#222',
         fontSize: 12,
+        inside: true,
+        margin: 2,
+      },
+      axisTick: {
+        show: false,
+      },
+      axisLine: {
+        show: false,
       },
     }, {
       type: 'value',
@@ -74,6 +82,15 @@ export default (options) => {
         color: mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
         fontSize: 12,
         formatter: '{value}%',
+        inside: true,
+        align: 'right',
+        margin: 2,
+      },
+      axisTick: {
+        show: false,
+      },
+      axisLine: {
+        show: false,
       },
     }]
     : {
@@ -87,6 +104,14 @@ export default (options) => {
         fontFamily,
         color: mode === 'dark' ? '#ddd' : '#222',
         fontSize: 12,
+        inside: true,
+        margin: 2,
+      },
+      axisTick: {
+        show: false,
+      },
+      axisLine: {
+        show: false,
       },
     };
 
@@ -138,10 +163,10 @@ export default (options) => {
     },
     grid: {
       top: 10,
-      left: 5,
-      right: hasPercentAxis ? 25 : 5,
+      left: 0,
+      right: 0,
       bottom: 50,
-      containLabel: true,
+      containLabel: false,
     },
     dataZoom: [{
       id: 'dataZoomX',
@@ -153,6 +178,7 @@ export default (options) => {
     xAxis: {
       type: 'time',
       data: dateList,
+      boundaryGap: false,
       axisLabel: {
         hideOverlap: true,
         nameTextStyle: {
@@ -160,6 +186,12 @@ export default (options) => {
         },
         fontFamily,
         color: mode === 'dark' ? '#eee' : '#222',
+      },
+      axisTick: {
+        show: false,
+      },
+      axisLine: {
+        show: false,
       },
     },
     series: valueList.map((i) => ({

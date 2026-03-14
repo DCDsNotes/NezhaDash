@@ -200,7 +200,7 @@ function handleWorldMapWidth() {
 
 watch(() => info.value, async (newValue, oldValue) => {
   if (!oldValue && newValue && router.currentRoute.value.name === 'ServerDetail') {
-    pageTitle(newValue?.Name, '节点详情');
+    pageTitle(newValue?.Name);
     await nextTick();
     handleWorldMapWidth();
   }
@@ -216,7 +216,7 @@ watch(() => dataInit.value, () => {
 
 onMounted(() => {
   if (info.value) {
-    pageTitle(info.value?.Name, '节点详情');
+    pageTitle(info.value?.Name);
     nextTick(() => {
       handleWorldMapWidth();
     });

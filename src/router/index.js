@@ -14,7 +14,7 @@ const constantRoutes = [{
   path: '/server/:serverKey([a-f0-9]{8})',
   component: () => import('@/views/detail.vue'),
   meta: {
-    title: '节点详情',
+    title: config.nazhua.title,
   },
   props: true,
 }, {
