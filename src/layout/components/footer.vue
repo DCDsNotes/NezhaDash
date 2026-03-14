@@ -20,7 +20,7 @@ const currentYear = computed(() => new Date().getFullYear());
 
 <style lang="scss" scoped>
 .layout-footer {
-  padding: 20px;
+  padding: 20px 20px 40px;
   font-size: 12px;
   color: #ccc;
 

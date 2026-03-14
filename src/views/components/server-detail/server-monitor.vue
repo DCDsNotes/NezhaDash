@@ -1,6 +1,5 @@
 <template>
   <dot-dot-box
-    v-if="monitorData.length"
     class="server-monitor-group"
     :class="{
       'chart-type--multi': config.nazhua.monitorChartTypeToggle && monitorChartType === 'multi',
@@ -86,7 +85,7 @@
       </div>
     </div>
 
-    <template v-if="monitorChartType === 'single'">
+    <template v-if="hasMonitorData && monitorChartType === 'single'">
       <div
         class="monitor-chart-group"
         :class="'monitor-chart-len--' + monitorChartData.cateList.length"
@@ -124,7 +123,7 @@
                     v-if="cateItem.loss !== 0"
                     class="cate-loss-rate"
                   >
-                    丢包{{ cateItem.loss }}%
+                    {{ cateItem.loss }}%
                   </span>
                   <span
                     v-if="cateItem.over !== 0"
@@ -145,7 +144,7 @@
         </div>
       </div>
     </template>
-    <template v-else>
+    <template v-else-if="hasMonitorData">
       <div class="monitor-cate-group">
         <template
           v-for="cateItem in monitorChartData.cateList"
@@ -182,7 +181,7 @@
                   v-if="cateItem.loss !== 0"
                   class="cate-loss-rate"
                 >
-                  丢包{{ cateItem.loss }}%
+                  {{ cateItem.loss }}%
                 </span>
               </div>
             </template>
@@ -195,6 +194,18 @@
         :value-list="monitorChartData.valueList"
         :connect-nulls="false"
       />
+    </template>
+    <template v-else-if="isLoading">
+      <div class="monitor-placeholder">
+        <div class="placeholder-line placeholder-line--w60" />
+        <div class="placeholder-line placeholder-line--w40" />
+        <div class="placeholder-chart" />
+      </div>
+    </template>
+    <template v-else>
+      <div class="monitor-empty">
+        <span>暂无监控数据</span>
+      </div>
     </template>
   </dot-dot-box>
 </template>
@@ -295,6 +306,7 @@ const peakShaving = ref(localData.peakShaving);
 const refreshData = ref(localData.refreshData);
 const showCates = ref({});
 const monitorData = ref([]);
+const isLoading = ref(true);
 const longPressTimer = ref(null);
 
 const chartType = validate.isSet(localData.chartType)
@@ -514,6 +526,8 @@ const monitorChartData = computed(() => {
   };
 });
 
+const hasMonitorData = computed(() => monitorData.value.length > 0);
+
 function togglePeakShaving() {
   peakShaving.value = !peakShaving.value;
   window.localStorage.setItem('nazhua_monitor_peak_shaving', peakShaving.value);
@@ -536,6 +550,7 @@ function getTsdbPeriod() {
 }
 
 async function loadMonitor() {
+  isLoading.value = true;
   let url;
   if (hasTsdbEnabledField(store)) {
     url = config.nazhua.v1ApiMonitorPath.replace('{id}', props.info.ID);
@@ -554,6 +569,8 @@ async function loadMonitor() {
     }
   } catch (err) {
     console.error(err);
+  } finally {
+    isLoading.value = false;
   }
 }
 
@@ -629,9 +646,11 @@ onUnmounted(() => {
 <style lang="scss" scoped>
 .server-monitor-group {
   --line-chart-size: 300px;
+  min-height: calc(var(--line-chart-size) + 170px);
 
   &.chart-type--single {
     --line-chart-size: 240px;
+    min-height: calc(var(--line-chart-size) + 150px);
   }
 
   .monitor-cate-item {
@@ -639,10 +658,14 @@ onUnmounted(() => {
     --cate-item-font-size: 14px;
     --cate-color: #fff;
 
-    display: flex;
+    --cate-avg-width: 62px;
+    --cate-loss-width: 90px;
+    --cate-over-width: 60px;
+
+    display: grid;
+    grid-template-columns: 0.5em 1fr var(--cate-avg-width) var(--cate-loss-width) var(--cate-over-width);
     align-items: center;
-    justify-content: space-between;
-    width: var(--cate-item-width);
+    width: 100%;
     height: var(--cate-item-height);
     gap: 6px;
     padding: 0 6px;
@@ -653,6 +676,9 @@ onUnmounted(() => {
     @media screen and (max-width: 768px) {
       cursor: default;
       width: 100%;
+      --cate-item-font-size: 12px;
+      --cate-avg-width: 54px;
+      --cate-loss-width: 74px;
     }
 
     .cate-legend {
@@ -662,10 +688,13 @@ onUnmounted(() => {
     }
 
     .cate-name {
-      // flex: 1;
       height: var(--cate-item-height);
       line-height: calc(var(--cate-item-height) + 2px);
       color: #eee;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
     }
 
     .cate-avg-ms {
@@ -673,6 +702,10 @@ onUnmounted(() => {
       line-height: calc(var(--cate-item-height) + 2px);
       text-align: right;
       color: #fff;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .cate-over-rate {
@@ -680,6 +713,10 @@ onUnmounted(() => {
       line-height: calc(var(--cate-item-height) + 2px);
       text-align: right;
       color: #fffbd8;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .cate-loss-rate {
@@ -688,6 +725,9 @@ onUnmounted(() => {
       text-align: right;
       color: #f5b199;
       white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     &.disabled {
@@ -695,6 +735,39 @@ onUnmounted(() => {
       opacity: 0.5;
     }
   }
+}
+
+.monitor-placeholder {
+  padding: 10px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.placeholder-line {
+  height: 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.placeholder-line--w60 {
+  width: 60%;
+}
+.placeholder-line--w40 {
+  width: 40%;
+}
+.placeholder-chart {
+  height: var(--line-chart-size);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.monitor-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--line-chart-size);
+  margin-top: 10px;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .module-head-group {
@@ -851,22 +924,17 @@ onUnmounted(() => {
 }
 
 .monitor-cate-group {
-  --gap-size: 0;
+  --gap-size: 8px;
+  --cate-trigger-width: 280px;
   margin: 10px 0;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, var(--cate-trigger-width));
+  justify-content: space-between;
   gap: var(--gap-size);
-  margin-right: calc(var(--gap-size) * -1);
 
   @media screen and (max-width: 768px) {
-    --gap-size: 8px;
-    gap: var(--gap-size);
-    margin-right: 0;
-
-    > * {
-      flex: 0 0 calc(50% - (var(--gap-size) / 2));
-      min-width: 0;
-    }
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch;
   }
 }
 

@@ -84,11 +84,11 @@ jobs:
         run: |
           {
             echo "#### Changes"
-            git log -20 --pretty=format:"- %s"
+            git log -20 --pretty=format:"%s"
             echo
             echo "-----------"
             echo "Artifact:"
-            echo "- dist.zip (v1-only, local assets)"
+            echo "- dist.zip"
           } > release_notes.md
 
       - name: Install dependencies
