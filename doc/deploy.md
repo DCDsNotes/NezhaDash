@@ -4,8 +4,7 @@
 > Nazhua主题是纯前端项目，可部署在静态服务器上
 > 
 > **跨域解决注重点**：
-> - **V0版本**：需解决 `/api/v1/monitor/${id}`、`/ws` 和 `/` 的跨域
-> - **V1版本**：需解决 `/api/xxx` 和 `/api/v1/ws/server` 的跨域
+> - 需解决 Nezha Dashboard 的 API 与 WebSocket 跨域（如 `/api/*`、`/api/v1/ws/server`）
 > 
 > 推荐使用 Nginx 或 Caddy 反向代理解决跨域问题
 
@@ -13,9 +12,7 @@
 此方案便于后续更新，只需通过 `docker compose pull` 命令即可更新主题（镜像）。
 
 ### 配置说明
-- **favicon.ico**：可通过挂载或配置文件指定（默认无）
 - **config.js**：需单独挂载，建议使用[配置生成器](https://hi2shark.github.io/nazhua-generator/)生成
-- **style.css**：用于自定义CSS样式，尽量保持选择器稳定
 
 ### 部署示例
 ```yaml
@@ -26,9 +23,7 @@ services:
     ports:
       - 80:80
     # volumes:
-      # - ./favicon.ico:/home/wwwroot/html/favicon.ico:ro # 自定义favicon图标
       # - ./config.js:/home/wwwroot/html/config.js:ro # 自定义配置文件
-      # - ./style.css:/home/wwwroot/html/style.css:ro # 自定义样式文件
     environment:
       - DOMAIN=_ # 监听的域名，默认为_（监听所有）
       - NEZHA=http://nezha-dashboard.example.com/ # 可以被反向代理nezha主页地址
@@ -37,7 +32,6 @@ services:
 
 ### 💡 小贴士
 - 推荐使用 docker-compose 部署 Nazhua 与 Nezha Dashboard，并通过 Cloudflare Tunnels 对外提供服务
-- 如需减少内置库体积，可使用 CDN 版本镜像：`ghcr.io/hi2shark/nazhua:cdn`
 - 隐藏原面板方案：使用 Zero Trust Tunnels 部署三个容器 (Tunnels、nezha-dashboard、nazhua)
   - nazhua 通过 docker 内部地址访问 nezha-dashboard
   - Tunnels 绑定 nazhua 到公开域名
@@ -106,8 +100,6 @@ server {
 }
 ```
 ----  
-**Tips:** V0环境下若想与面板使用同域名，下载 `v0-nazhua.zip` 并将文件上传至面板目录下的 `nazhua` 文件夹
-
 ----  
 
 ## ⚙️ 配置文件
@@ -159,7 +151,6 @@ window.$$nazhuaConfig = {
   apiMonitorPath: '/api/v1/monitor/{id}',
   wsPath: '/ws',
   nezhaPath: '/nezha/',
-  nezhaV0ConfigType: 'servers', // 哪吒v0数据读取类型
   v1ApiMonitorPath: '/api/v1/service/{id}',
   v1WsPath: '/api/v1/ws/server',
   v1ApiGroupPath: '/api/v1/server-group',
@@ -168,32 +159,5 @@ window.$$nazhuaConfig = {
   v1DashboardUrl: '/dashboard', // v1版本控制台地址
   v1HideNezhaDashboardBtn: true, // v1版本导航栏控制台入口/登录按钮 在nezhaVersion为v1时有效
   routeMode: 'h5', // 路由模式
-  customFavicon: '', // 自定义favicon, 填写完整的url地址
 };
-```
-
-### 🎨 自定义样式
-通过修改根目录下的 `style.css` 文件实现样式定制：
-
-```css
-:root {
-  /* 修改颜色 */
-  /* 地图上标记点的颜色 */
-  --world-map-point-color: #fff;
-  /* 列表项显示的价格颜色 */
-  --list-item-price-color: #ff6;
-  /* 购买链接的主要颜色 */
-  --list-item-buy-link-color: #f00;
-}
-
-/* 自定义背景图示例 */
-:root {
-  /* 图片太亮时，增加背景遮罩透明度 */
-  --layout-main-bg-color: rgba(0, 0, 0, 0.75);
-}
-.layout-group .layout-bg {
-  /* 添加!important强制背景图替换 */
-  background: url(./bg.jpg) no-repeat 50% 50% !important;
-  background-size: cover;
-}
 ```

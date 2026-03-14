@@ -4,11 +4,35 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>哪吒探针</title>
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="/icon.svg">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.svg">
+    <link rel="icon" sizes="192x192" type="image/svg+xml" href="/android-chrome-192x192.svg">
+    <style>
+      #app-loading {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #2b2533;
+        z-index: 99999;
+        transition: opacity 200ms ease;
+      }
+      #app-loading .spinner {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: 3px solid rgba(255,255,255,.2);
+        border-top-color: rgba(255,255,255,.8);
+        animation: appSpin 900ms linear infinite;
+      }
+      @keyframes appSpin { to { transform: rotate(360deg); } }
+      #app-loading.hidden { opacity: 0; pointer-events: none; }
+    </style>
   </head>
   <body>
     <div id="app"></div>
+    <div id="app-loading" aria-hidden="true"><div class="spinner"></div></div>
     <script type="module" src="/src/main.js"></script>
-    <link rel="stylesheet" href="/style.css" />
   </body>
 </html>

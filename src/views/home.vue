@@ -1,16 +1,28 @@
 <template>
   <div
     class="index-container"
-    :class="indexContainerClass"
-  >
-    <div class="scroll-container">
+      :class="indexContainerClass"
+    >
+    <div
+      ref="scrollContainerRef"
+      class="scroll-container"
+    >
       <div
-        v-if="worldMapPosition === 'top' && showWorldMap"
+        v-if="worldMapPosition === 'top' && allowWorldMap"
         class="world-map-box top-world-map"
       >
         <world-map
+          v-if="showWorldMap"
           :locations="serverLocations || []"
           :width="worldMapWidth"
+        />
+        <div
+          v-else
+          class="world-map-skeleton"
+          :style="{
+            width: worldMapWidth + 'px',
+            height: worldMapHeight + 'px',
+          }"
         />
       </div>
       <div
@@ -41,19 +53,36 @@
       <server-list-wrap
         :show-transition="showTransition"
       >
-        <server-card-item
-          v-for="item in filterServerList.list"
-          :key="item.ID"
-          :info="item"
-        />
+        <template v-if="isLoading">
+          <server-card-skeleton
+            v-for="n in 6"
+            :key="'skeleton_' + n"
+          />
+        </template>
+        <template v-else>
+          <server-card-item
+            v-for="item in filterServerList.list"
+            :key="item.ID"
+            :info="item"
+          />
+        </template>
       </server-list-wrap>
       <div
-        v-if="worldMapPosition === 'bottom' && showWorldMap"
+        v-if="worldMapPosition === 'bottom' && allowWorldMap"
         class="world-map-box bottom-world-map"
       >
         <world-map
+          v-if="showWorldMap"
           :locations="serverLocations || []"
           :width="worldMapWidth"
+        />
+        <div
+          v-else
+          class="world-map-skeleton"
+          :style="{
+            width: worldMapWidth + 'px',
+            height: worldMapHeight + 'px',
+          }"
         />
       </div>
     </div>
@@ -94,6 +123,7 @@ import ServerOptionBox from './components/server-list/server-option-box.vue';
 import ServerSortBox from './components/server-list/server-sort-box.vue';
 import ServerListWrap from './components/server-list/server-list-wrap.vue';
 import ServerCardItem from './components/server-list/card/server-list-item.vue';
+import ServerCardSkeleton from './components/server-list/card/server-list-item-skeleton.vue';
 
 import {
   serverSortOptions,
@@ -101,6 +131,8 @@ import {
 } from './composable/server-sort';
 
 const store = useStore();
+const isLoading = computed(() => store.state.init !== true);
+const scrollContainerRef = ref(null);
 
 function computeDetailContainerWidth() {
   const w = window.innerWidth;
@@ -111,7 +143,19 @@ function computeDetailContainerWidth() {
 }
 
 function computeWorldMapWidth() {
-  return Math.max(computeDetailContainerWidth() - 40, 300);
+  const containerWidth = scrollContainerRef.value?.clientWidth;
+  const width = Number(containerWidth);
+  if (!Number.isFinite(width) || width <= 0) {
+    return Math.max(computeDetailContainerWidth() - 40, 300);
+  }
+  return Math.max(
+    Math.min(
+      width - 40,
+      window.innerWidth - 40,
+      1280,
+    ),
+    300,
+  );
 }
 
 const worldMapWidth = ref(computeWorldMapWidth());
@@ -306,12 +350,16 @@ const showWorldMap = computed(() => {
   return true;
 });
 
+const allowWorldMap = computed(() => !(config.nazhua?.hideWorldMap || config.nazhua?.hideHomeWorldMap));
+
 const worldMapPosition = computed(() => {
   if (Object.keys(config.nazhua).includes('homeWorldMapPosition')) {
     return config.nazhua.homeWorldMapPosition;
   }
   return 'top';
 });
+
+const worldMapHeight = computed(() => Math.ceil((621 / 1280) * (Number(worldMapWidth.value) || 0)));
 
 /**
  * 处理窗口大小变化
@@ -367,6 +415,35 @@ onActivated(() => {
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  .world-map-skeleton {
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: 0 2px 6px rgba(#000, 0.25);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .world-map-skeleton::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.10) 45%,
+      rgba(255, 255, 255, 0.14) 50%,
+      rgba(255, 255, 255, 0.10) 55%,
+      transparent 100%
+    );
+    transform: translateX(-60%);
+    animation: shimmer 1.2s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-60%); }
+    100% { transform: translateX(60%); }
   }
 
   .bottom-world-map {

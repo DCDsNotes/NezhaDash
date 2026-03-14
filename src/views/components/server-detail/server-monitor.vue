@@ -114,22 +114,22 @@
                     {{ cateItem.name }}
                   </span>
                   <span
-                    v-if="cateItem.avg !== 0"
-                    class="cate-avg-ms"
+                    class="cate-avg-ms cate-metric"
                   >
-                    {{ cateItem.avg }}ms
+                    <span class="metric-label">延时</span>
+                    <span class="metric-value">{{ formatLatency(cateItem.avg) }}</span>
                   </span>
                   <span
-                    v-if="cateItem.loss !== 0"
-                    class="cate-loss-rate"
+                    class="cate-loss-rate cate-metric"
                   >
-                    {{ cateItem.loss }}%
+                    <span class="metric-label">丢包</span>
+                    <span class="metric-value">{{ formatPercent(cateItem.loss) }}</span>
                   </span>
                   <span
-                    v-if="cateItem.over !== 0"
-                    class="cate-over-rate"
+                    class="cate-over-rate cate-metric"
                   >
-                    {{ cateItem.over }}%
+                    <span class="metric-label">成功</span>
+                    <span class="metric-value">{{ formatPercent(cateItem.over) }}</span>
                   </span>
                 </div>
               </template>
@@ -137,7 +137,7 @@
           </div>
           <line-chart
             :date-list="monitorChartData.dateList"
-            :value-list="[monitorChartData.valueList[index]]"
+            :value-list="monitorChartData.seriesByCate[index]"
             :size="240"
             :connect-nulls="false"
           />
@@ -171,27 +171,27 @@
                 >
                   {{ cateItem.name }}
                 </span>
-                <span
-                  v-if="cateItem.avg !== 0"
-                  class="cate-avg-ms"
-                >
-                  {{ cateItem.avg }}ms
-                </span>
-                <span
-                  v-if="cateItem.loss !== 0"
-                  class="cate-loss-rate"
-                >
-                  {{ cateItem.loss }}%
-                </span>
-              </div>
-            </template>
-          </popover>
-        </template>
+                 <span
+                   class="cate-avg-ms cate-metric"
+                 >
+                   <span class="metric-label">延时</span>
+                   <span class="metric-value">{{ formatLatency(cateItem.avg) }}</span>
+                 </span>
+                 <span
+                   class="cate-loss-rate cate-metric"
+                 >
+                   <span class="metric-label">丢包</span>
+                   <span class="metric-value">{{ formatPercent(cateItem.loss) }}</span>
+                 </span>
+               </div>
+             </template>
+           </popover>
+         </template>
       </div>
 
       <line-chart
         :date-list="monitorChartData.dateList"
-        :value-list="monitorChartData.valueList"
+        :value-list="monitorChartData.seriesList"
         :connect-nulls="false"
       />
     </template>
@@ -332,21 +332,21 @@ const minuteActiveArrowStyle = computed(() => {
   };
 });
 
-const monitorChartData = computed(() => {
-  /**
-   * 处理监控数据以生成分类的平均延迟随时间变化的列表。
-   *
-   * @returns {Object} 返回一个对象，包含：
-   * - cateList {Array}: 唯一监控名称的列表。
-   * - dateList {Array}: 排序后的唯一时间戳列表。
-   * - valueList {Array}: 包含以下内容的对象列表：
-   *   - name {String}: 监控名称。
-   *   - data {Array}: [时间戳, 平均延迟] 对的数组。
-   */
-  const cateList = [];
-  const cateMap = {};
-  const dateSet = new Set();
-  let valueList = [];
+  const monitorChartData = computed(() => {
+    /**
+     * 处理监控数据以生成分类的平均延迟随时间变化的列表。
+     *
+     * @returns {Object} 返回一个对象，包含：
+     * - cateList {Array}: 唯一监控名称的列表。
+     * - dateList {Array}: 排序后的唯一时间戳列表。
+     * - seriesList {Array}: 折线图数据（含丢包曲线）。
+     * - seriesByCate {Array}: 单图模式下按分类分组的折线图数据。
+     */
+    const cateList = [];
+    const cateMap = {};
+    const dateSet = new Set();
+    let seriesList = [];
+  const seriesByCate = [];
   monitorData.value.forEach((i) => {
     const dateMap = new Map();
     const {
@@ -435,13 +435,15 @@ const monitorChartData = computed(() => {
     });
 
     const lineData = [];
+    const lossLineData = [];
     const validatedData = [];
     const overValidatedData = [];
     let delayTotal = 0;
     dateMap.forEach((val, key) => {
       const time = parseInt(key, 10); // 时间戳
-      lineData.push([time, val || null]);
-      if (val) {
+      lineData.push([time, val ?? null]);
+      lossLineData.push([time, val === undefined ? 100 : 0]);
+      if (typeof val === 'number' && Number.isFinite(val)) {
         dateSet.add(time);
         validatedData.push([time, val]);
         delayTotal += val;
@@ -497,8 +499,10 @@ const monitorChartData = computed(() => {
       }
       cateItem.title = titles.filter((s) => s).join('\n');
       cateList.push(cateItem);
-      valueList.push({
-        id,
+      const cateId = id;
+      const delaySeries = {
+        id: `${cateId}-delay`,
+        cateId,
         name: monitor_name,
         data: lineData,
         itemStyle: {
@@ -507,26 +511,62 @@ const monitorChartData = computed(() => {
         lineStyle: {
           color,
         },
-      });
+      };
+
+      const lossSeries = {
+        id: `${cateId}-loss`,
+        cateId,
+        name: `${monitor_name} 丢包`,
+        data: lossLineData,
+        yAxisIndex: 1,
+        smooth: false,
+        itemStyle: {
+          color,
+          opacity: 0.35,
+        },
+        lineStyle: {
+          color,
+          opacity: 0.55,
+          type: 'dashed',
+        },
+      };
+
+      seriesByCate.push([delaySeries, lossSeries]);
+      seriesList.push(delaySeries, lossSeries);
     }
   });
 
   const dateList = Array.from(dateSet).sort((a, b) => a - b);
-  valueList = valueList.filter((i) => showCates.value[i.id]);
+  seriesList = seriesList.filter((i) => showCates.value[i.cateId]);
 
   if (import.meta.env.VITE_MONITOR_DEBUG === '1') {
     window._cateMap = cateMap;
     console.log(window._cateMap);
-    console.log(dateList, cateList, valueList);
+    console.log(dateList, cateList, seriesList);
   }
   return {
     dateList,
     cateList,
-    valueList,
+    seriesList,
+    seriesByCate,
   };
 });
 
 const hasMonitorData = computed(() => monitorData.value.length > 0);
+
+function formatLatency(value) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+    return '-';
+  }
+  return `${value}ms`;
+}
+
+function formatPercent(value) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return '-';
+  }
+  return `${value}%`;
+}
 
 function togglePeakShaving() {
   peakShaving.value = !peakShaving.value;
@@ -653,20 +693,26 @@ onUnmounted(() => {
     min-height: calc(var(--line-chart-size) + 150px);
   }
 
+  &.chart-type--multi {
+    .monitor-cate-item {
+      --cate-over-width: 0px;
+    }
+  }
+
   .monitor-cate-item {
-    --cate-item-height: 28px;
+    --cate-item-height: 40px;
     --cate-item-font-size: 14px;
     --cate-color: #fff;
 
-    --cate-avg-width: 62px;
-    --cate-loss-width: 90px;
-    --cate-over-width: 60px;
+    --cate-avg-width: 96px;
+    --cate-loss-width: 96px;
+    --cate-over-width: 88px;
 
     display: grid;
     grid-template-columns: 0.5em 1fr var(--cate-avg-width) var(--cate-loss-width) var(--cate-over-width);
     align-items: center;
     width: 100%;
-    height: var(--cate-item-height);
+    min-height: var(--cate-item-height);
     gap: 6px;
     padding: 0 6px;
     font-size: var(--cate-item-font-size);
@@ -677,8 +723,10 @@ onUnmounted(() => {
       cursor: default;
       width: 100%;
       --cate-item-font-size: 12px;
-      --cate-avg-width: 54px;
-      --cate-loss-width: 74px;
+      --cate-item-height: 52px;
+      --cate-avg-width: 70px;
+      --cate-loss-width: 70px;
+      --cate-over-width: 56px;
     }
 
     .cate-legend {
@@ -688,46 +736,60 @@ onUnmounted(() => {
     }
 
     .cate-name {
-      height: var(--cate-item-height);
-      line-height: calc(var(--cate-item-height) + 2px);
+      padding: 2px 0;
+      line-height: 1.2;
       color: #eee;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      white-space: normal;
       min-width: 0;
     }
 
-    .cate-avg-ms {
-      height: var(--cate-item-height);
-      line-height: calc(var(--cate-item-height) + 2px);
-      text-align: right;
-      color: #fff;
+    .cate-metric {
+      display: flex;
+      align-items: baseline;
+      justify-content: flex-end;
+      gap: 4px;
+      min-width: 0;
+
+      @media screen and (max-width: 768px) {
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0;
+        line-height: 1.1;
+      }
+    }
+
+    .metric-label {
+      font-size: 12px;
+      color: rgba(#fff, 0.75);
+      white-space: nowrap;
+
+      @media screen and (max-width: 768px) {
+        font-size: 10px;
+        color: rgba(#fff, 0.65);
+      }
+    }
+
+    .metric-value {
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      max-width: 100%;
+    }
+
+    .cate-avg-ms {
+      text-align: right;
+      color: #fff;
     }
 
     .cate-over-rate {
-      height: var(--cate-item-height);
-      line-height: calc(var(--cate-item-height) + 2px);
       text-align: right;
       color: #fffbd8;
-      font-variant-numeric: tabular-nums;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
 
     .cate-loss-rate {
-      height: var(--cate-item-height);
-      line-height: calc(var(--cate-item-height) + 2px);
       text-align: right;
       color: #f5b199;
-      white-space: nowrap;
-      font-variant-numeric: tabular-nums;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
 
     &.disabled {

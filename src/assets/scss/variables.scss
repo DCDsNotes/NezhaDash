@@ -7,12 +7,13 @@
 
   --detail-container-width: 900px;
 
-  --global-background-color: #392f41;
+  // Keep close to bg.webp to reduce flash before/after image load
+  --global-background-color: #2b2533;
   --global-text-color: #ddd;
   --global-link-color: #2ca9e1;
 
   --layout-main-bg-color: rgba(20, 30, 40, 0.75);
-  --layout-bg-color: #252748;
+  --layout-bg-color: #2b2533;
   
   --world-map-point-color: #fff143;
 

@@ -48,7 +48,7 @@ jobs:
           else
             # For push to default branch: publish an auto build with timestamp tag.
             if [[ "${{ github.ref_type }}" == "branch" ]]; then
-              build_ts="$(TZ=Asia/Shanghai date +%Y%m%d-%H%M%S)"
+              build_ts="$(TZ=Asia/Shanghai date +%Y%m%d%H%M%S)"
               tag="v${build_ts}"
               version="${build_ts}"
               is_auto="true"
@@ -66,18 +66,12 @@ jobs:
             is_auto="false"
           fi
 
-          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
-          echo "version=${version}" >> "$GITHUB_OUTPUT"
-          echo "is_auto=${is_auto:-false}" >> "$GITHUB_OUTPUT"
-          if [[ "${is_auto:-false}" == "true" ]]; then
-            echo "draft=false" >> "$GITHUB_OUTPUT"
-            # Auto builds are published as official releases (not pre-releases),
-            # so GitHub will mark the newest one as "Latest".
-            echo "prerelease=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "draft=true" >> "$GITHUB_OUTPUT"
-            echo "prerelease=false" >> "$GITHUB_OUTPUT"
-          fi
+           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+           echo "version=${version}" >> "$GITHUB_OUTPUT"
+           echo "is_auto=${is_auto:-false}" >> "$GITHUB_OUTPUT"
+           # Publish as an official "Latest" release (not draft / not pre-release).
+           echo "draft=false" >> "$GITHUB_OUTPUT"
+           echo "prerelease=false" >> "$GITHUB_OUTPUT"
 
       - name: Generate release notes
         shell: bash

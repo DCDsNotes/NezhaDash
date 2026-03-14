@@ -7,12 +7,24 @@
       'server--offline': info?.online !== 1,
     }"
   >
-    <template v-if="showWorldMap && worldMapPosition === 'top'">
+    <div
+      v-if="worldMapPosition === 'top' && allowWorldMap"
+      class="world-map-box top-world-map"
+    >
       <world-map
+        v-if="showWorldMap"
         :width="worldMapWidth"
         :locations="locations"
       />
-    </template>
+      <div
+        v-else
+        class="world-map-skeleton"
+        :style="{
+          width: worldMapWidth + 'px',
+          height: worldMapHeight + 'px',
+        }"
+      />
+    </div>
     <server-name
       :key="`${info.ID}_name`"
       :info="info"
@@ -29,12 +41,24 @@
       :key="`${info.ID}_monitor`"
       :info="info"
     />
-    <template v-if="showWorldMap && worldMapPosition === 'bottom'">
+    <div
+      v-if="worldMapPosition === 'bottom' && allowWorldMap"
+      class="world-map-box bottom-world-map"
+    >
       <world-map
+        v-if="showWorldMap"
         :width="worldMapWidth"
         :locations="locations"
       />
-    </template>
+      <div
+        v-else
+        class="world-map-skeleton"
+        :style="{
+          width: worldMapWidth + 'px',
+          height: worldMapHeight + 'px',
+        }"
+      />
+    </div>
   </div>
 </template>
 
@@ -140,12 +164,16 @@ const showWorldMap = computed(() => {
   return true;
 });
 
+const allowWorldMap = computed(() => !(config.nazhua?.hideWorldMap || config.nazhua?.hideDetailWorldMap));
+
 const worldMapPosition = computed(() => {
   if (Object.keys(config.nazhua).includes('detailWorldMapPosition')) {
     return config.nazhua.detailWorldMapPosition;
   }
   return 'top';
 });
+
+const worldMapHeight = computed(() => Math.ceil((621 / 1280) * (Number(worldMapWidth.value) || 0)));
 
 function handleWorldMapWidth() {
   const containerWidth = detailContainerRef.value?.clientWidth;
@@ -207,5 +235,41 @@ onUnmounted(() => {
   &.server--offline {
     filter: grayscale(1);
   }
+}
+
+.world-map-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.world-map-skeleton {
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 2px 6px rgba(#000, 0.25);
+  overflow: hidden;
+  position: relative;
+}
+
+.world-map-skeleton::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.10) 45%,
+    rgba(255, 255, 255, 0.14) 50%,
+    rgba(255, 255, 255, 0.10) 55%,
+    transparent 100%
+  );
+  transform: translateX(-60%);
+  animation: shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-60%); }
+  100% { transform: translateX(60%); }
 }
 </style>
