@@ -171,22 +171,22 @@
                 >
                   {{ cateItem.name }}
                 </span>
-                 <span
-                   class="cate-avg-ms cate-metric"
-                 >
-                   <span class="metric-label">延时</span>
-                   <span class="metric-value">{{ formatLatency(cateItem.avg) }}</span>
-                 </span>
-                 <span
-                   class="cate-loss-rate cate-metric"
-                 >
-                   <span class="metric-label">丢包</span>
-                   <span class="metric-value">{{ formatPercent(cateItem.loss) }}</span>
-                 </span>
-               </div>
-             </template>
-           </popover>
-         </template>
+                <span
+                  class="cate-avg-ms cate-metric"
+                >
+                  <span class="metric-label">延时</span>
+                  <span class="metric-value">{{ formatLatency(cateItem.avg) }}</span>
+                </span>
+                <span
+                  class="cate-loss-rate cate-metric"
+                >
+                  <span class="metric-label">丢包</span>
+                  <span class="metric-value">{{ formatPercent(cateItem.loss) }}</span>
+                </span>
+              </div>
+            </template>
+          </popover>
+        </template>
       </div>
 
       <line-chart
@@ -332,20 +332,20 @@ const minuteActiveArrowStyle = computed(() => {
   };
 });
 
-  const monitorChartData = computed(() => {
-    /**
-     * 处理监控数据以生成分类的平均延迟随时间变化的列表。
-     *
-     * @returns {Object} 返回一个对象，包含：
-     * - cateList {Array}: 唯一监控名称的列表。
-     * - dateList {Array}: 排序后的唯一时间戳列表。
-     * - seriesList {Array}: 折线图数据（含丢包曲线）。
-     * - seriesByCate {Array}: 单图模式下按分类分组的折线图数据。
-     */
-    const cateList = [];
-    const cateMap = {};
-    const dateSet = new Set();
-    let seriesList = [];
+const monitorChartData = computed(() => {
+  /**
+   * 处理监控数据以生成分类的平均延迟随时间变化的列表。
+   *
+   * @returns {Object} 返回一个对象，包含：
+   * - cateList {Array}: 唯一监控名称的列表。
+   * - dateList {Array}: 排序后的唯一时间戳列表。
+   * - seriesList {Array}: 折线图数据（含丢包曲线）。
+   * - seriesByCate {Array}: 单图模式下按分类分组的折线图数据。
+   */
+  const cateList = [];
+  const cateMap = {};
+  const dateSet = new Set();
+  let seriesList = [];
   const seriesByCate = [];
   monitorData.value.forEach((i) => {
     const dateMap = new Map();
