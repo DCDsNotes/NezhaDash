@@ -1,8 +1,8 @@
 <template>
   <div
     class="index-container"
-      :class="indexContainerClass"
-    >
+    :class="indexContainerClass"
+  >
     <div
       ref="scrollContainerRef"
       class="scroll-container"
