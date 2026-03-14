@@ -1,122 +1,159 @@
-import GlobalMap from "@/components/GlobalMap"
-import GroupSwitch from "@/components/GroupSwitch"
 import ServerCard from "@/components/ServerCard"
-import ServerCardInline from "@/components/ServerCardInline"
-import ServerOverview from "@/components/ServerOverview"
-import { ServiceTracker } from "@/components/ServiceTracker"
-import { Loader } from "@/components/loading/Loader"
-import { Label } from "@/components/ui/label"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { SORT_ORDERS, SORT_TYPES } from "@/context/sort-context"
+import { ServerListItemSkeleton } from "@/components/ServerListItemSkeleton"
+import { ServerOptionBox } from "@/components/ServerOptionBox"
+import { ServerSortBox } from "@/components/ServerSortBox"
+import WorldMap, { buildLocationsFromServers } from "@/components/WorldMap"
+import { SORT_TYPES } from "@/context/sort-context"
 import { useSort } from "@/hooks/use-sort"
 import { useStatus } from "@/hooks/use-status"
 import { useWebSocketContext } from "@/hooks/use-websocket-context"
 import { fetchServerGroup } from "@/lib/nezha-api"
-import { cn, formatNezhaInfo } from "@/lib/utils"
+import { formatNezhaInfo } from "@/lib/utils"
 import { NezhaWebsocketResponse } from "@/types/nezha-api"
 import { ServerGroup } from "@/types/nezha-api"
-import { ArrowDownIcon, ArrowUpIcon, ArrowsUpDownIcon, ChartBarSquareIcon, MapIcon, ViewColumnsIcon } from "@heroicons/react/20/solid"
 import { useQuery } from "@tanstack/react-query"
-import { useEffect, useRef, useState } from "react"
-import { useTranslation } from "react-i18next"
+import { useEffect, useMemo, useState } from "react"
+
+function computeDetailContainerWidth() {
+  const w = window.innerWidth
+  if (w <= 720) return w
+  if (w <= 800) return 720
+  if (w <= 1024) return 800
+  return 900
+}
+
+function computeWorldMapWidth() {
+  return Math.max(computeDetailContainerWidth() - 40, 300)
+}
 
 export default function Servers() {
-  const { t } = useTranslation()
   const { sortType, sortOrder, setSortOrder, setSortType } = useSort()
   const { data: groupData } = useQuery({
     queryKey: ["server-group"],
     queryFn: () => fetchServerGroup(),
   })
   const { lastMessage, connected } = useWebSocketContext()
-  const { status } = useStatus()
-  const [showServices, setShowServices] = useState<string>("0")
-  const [showMap, setShowMap] = useState<string>("0")
-  const [inline, setInline] = useState<string>("0")
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [settingsOpen, setSettingsOpen] = useState<boolean>(false)
+  const { status, setStatus } = useStatus()
   const [currentGroup, setCurrentGroup] = useState<string>("All")
-
-  const customBackgroundImage = (window.CustomBackgroundImage as string) !== "" ? window.CustomBackgroundImage : undefined
-
-  const restoreScrollPosition = () => {
-    const savedPosition = sessionStorage.getItem("scrollPosition")
-    if (savedPosition && containerRef.current) {
-      containerRef.current.scrollTop = Number(savedPosition)
-    }
-  }
+  const [worldMapWidth, setWorldMapWidth] = useState<number>(() => (typeof window === "undefined" ? 900 : computeWorldMapWidth()))
+  const worldMapHeight = useMemo(() => Math.ceil((621 / 1280) * (Number(worldMapWidth) || 0)), [worldMapWidth])
 
   const handleTagChange = (newGroup: string) => {
     setCurrentGroup(newGroup)
     sessionStorage.setItem("selectedGroup", newGroup)
-    sessionStorage.setItem("scrollPosition", String(containerRef.current?.scrollTop || 0))
+    sessionStorage.setItem("scrollPosition", String(window.scrollY || 0))
   }
-
-  useEffect(() => {
-    const showServicesState = localStorage.getItem("showServices")
-    if (window.ForceShowServices) {
-      setShowServices("1")
-    } else if (showServicesState !== null) {
-      setShowServices(showServicesState)
-    }
-  }, [])
-
-  useEffect(() => {
-    const checkInlineSettings = () => {
-      const isMobile = window.innerWidth < 768
-
-      if (!isMobile) {
-        const inlineState = localStorage.getItem("inline")
-        if (window.ForceCardInline) {
-          setInline("1")
-        } else if (inlineState !== null) {
-          setInline(inlineState)
-        }
-      }
-    }
-
-    checkInlineSettings()
-
-    window.addEventListener("resize", checkInlineSettings)
-
-    return () => {
-      window.removeEventListener("resize", checkInlineSettings)
-    }
-  }, [])
-
-  useEffect(() => {
-    const showMapState = localStorage.getItem("showMap")
-    if (window.ForceShowMap) {
-      setShowMap("1")
-    } else if (showMapState !== null) {
-      setShowMap(showMapState)
-    }
-  }, [])
 
   useEffect(() => {
     const savedGroup = sessionStorage.getItem("selectedGroup") || "All"
     setCurrentGroup(savedGroup)
+    const savedPosition = sessionStorage.getItem("scrollPosition")
+    if (savedPosition) {
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: Number(savedPosition), left: 0, behavior: "auto" })
+      })
+    }
+  }, [])
 
-    restoreScrollPosition()
+  useEffect(() => {
+    const handleResize = () => setWorldMapWidth(computeWorldMapWidth())
+    handleResize()
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
   }, [])
 
   const nezhaWsData = lastMessage ? (JSON.parse(lastMessage.data) as NezhaWebsocketResponse) : null
 
-  const groupTabs = [
-    "All",
-    ...(groupData?.data
-      ?.filter((item: ServerGroup) => {
-        return Array.isArray(item.servers) && item.servers.some((serverId) => nezhaWsData?.servers?.some((server) => server.id === serverId))
+  const groupOptions = useMemo(() => {
+    const opts = [{ key: "All", label: "全部", value: "All" }]
+    const groups = groupData?.data
+    const servers = nezhaWsData?.servers
+    if (!Array.isArray(groups) || !Array.isArray(servers)) return opts
+
+    const exist = new Set<number>(servers.map((s) => s.id))
+    groups.forEach((item: ServerGroup) => {
+      const ids = Array.isArray(item.servers) ? item.servers : []
+      const count = ids.reduce((acc, id) => (exist.has(id) ? acc + 1 : acc), 0)
+      if (count <= 0) return
+      opts.push({
+        key: String(item.group.id || item.group.name),
+        label: item.group.name,
+        value: item.group.name,
+        title: `${count}台`,
       })
-      ?.map((item: ServerGroup) => item.group.name) || []),
-  ]
+    })
+    return opts
+  }, [groupData?.data, nezhaWsData?.servers])
+
+  const onlineOptions = useMemo(() => {
+    const ws = nezhaWsData
+    if (!ws || !Array.isArray(ws.servers)) return []
+    const total = ws.servers.length
+    const online = ws.servers.reduce((acc, s) => (formatNezhaInfo(ws.now, s).online ? acc + 1 : acc), 0)
+    const offline = Math.max(total - online, 0)
+    if (total !== online) {
+      return [
+        { key: "online", label: "在线", value: "online", title: `${online}台` },
+        { key: "offline", label: "离线", value: "offline", title: `${offline}台` },
+      ]
+    }
+    return []
+  }, [nezhaWsData?.now, nezhaWsData?.servers])
+
+  const sortOptions = useMemo(
+    () =>
+      SORT_TYPES.map((type) => {
+        const label =
+          type === "default"
+            ? "排序值"
+            : type === "name"
+              ? "名称"
+              : type === "uptime"
+                ? "在线时长"
+                : type === "system"
+                  ? "系统"
+                  : type === "cpu"
+                    ? "CPU"
+                    : type === "mem"
+                      ? "内存"
+                      : type === "disk"
+                        ? "硬盘"
+                        : type === "up"
+                          ? "上传"
+                          : type === "down"
+                            ? "下载"
+                            : type === "up total"
+                              ? "总上传"
+                              : type === "down total"
+                                ? "总下载"
+                                : String(type)
+        return { value: type, label }
+      }),
+    [],
+  )
 
   if (!connected && !lastMessage) {
     return (
-      <div className="flex flex-col items-center min-h-96 justify-center ">
-        <div className="font-semibold flex items-center gap-2 text-sm">
-          <Loader visible={true} />
-          {t("info.websocketConnecting")}
+      <div className="index-container list-is--card">
+        <div className="scroll-container">
+          <div className="world-map-box top-world-map">
+            <div
+              className="world-map-skeleton"
+              style={{
+                width: `${worldMapWidth}px`,
+                height: `${worldMapHeight}px`,
+              }}
+            />
+          </div>
+          <div className="filter-group">
+            <div className="left-box" />
+            <div className="right-box" />
+          </div>
+          <div className="server-list-container server-list--card">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <ServerListItemSkeleton key={`skeleton_${i}`} />
+            ))}
+          </div>
         </div>
       </div>
     )
@@ -124,8 +161,27 @@ export default function Servers() {
 
   if (!nezhaWsData) {
     return (
-      <div className="flex flex-col items-center justify-center ">
-        <p className="font-semibold text-sm">{t("info.processing")}</p>
+      <div className="index-container list-is--card">
+        <div className="scroll-container">
+          <div className="world-map-box top-world-map">
+            <div
+              className="world-map-skeleton"
+              style={{
+                width: `${worldMapWidth}px`,
+                height: `${worldMapHeight}px`,
+              }}
+            />
+          </div>
+          <div className="filter-group">
+            <div className="left-box" />
+            <div className="right-box" />
+          </div>
+          <div className="server-list-container server-list--card">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <ServerListItemSkeleton key={`skeleton_${i}`} />
+            ))}
+          </div>
+        </div>
       </div>
     )
   }
@@ -138,31 +194,6 @@ export default function Servers() {
       )
       return !!group
     }) || []
-
-  const totalServers = filteredServers.length || 0
-  const onlineServers = filteredServers.filter((server) => formatNezhaInfo(nezhaWsData.now, server).online)?.length || 0
-  const offlineServers = filteredServers.filter((server) => !formatNezhaInfo(nezhaWsData.now, server).online)?.length || 0
-  const up =
-    filteredServers.reduce(
-      (total, server) => (formatNezhaInfo(nezhaWsData.now, server).online ? total + (server.state?.net_out_transfer ?? 0) : total),
-      0,
-    ) || 0
-  const down =
-    filteredServers.reduce(
-      (total, server) => (formatNezhaInfo(nezhaWsData.now, server).online ? total + (server.state?.net_in_transfer ?? 0) : total),
-      0,
-    ) || 0
-
-  const upSpeed =
-    filteredServers.reduce(
-      (total, server) => (formatNezhaInfo(nezhaWsData.now, server).online ? total + (server.state?.net_out_speed ?? 0) : total),
-      0,
-    ) || 0
-  const downSpeed =
-    filteredServers.reduce(
-      (total, server) => (formatNezhaInfo(nezhaWsData.now, server).online ? total + (server.state?.net_in_speed ?? 0) : total),
-      0,
-    ) || 0
 
   filteredServers =
     status === "all"
@@ -224,162 +255,62 @@ export default function Servers() {
     return sortOrder === "asc" ? comparison : -comparison
   })
 
+  const serverLocations = buildLocationsFromServers(
+    filteredServers.map((s) => ({
+      id: s.id,
+      name: s.name,
+      country_code: s.country_code,
+      online: formatNezhaInfo(nezhaWsData.now, s).online,
+    })),
+  )
+  const showWorldMap = !(filteredServers.length > 0 && serverLocations.length === 0)
+
   return (
-    <div className="nazha-container">
-      <ServerOverview
-        total={totalServers}
-        online={onlineServers}
-        offline={offlineServers}
-        up={up}
-        down={down}
-        upSpeed={upSpeed}
-        downSpeed={downSpeed}
-      />
-      <div className="flex mt-6 items-center justify-between gap-2 server-overview-controls">
-        <section className="flex items-center gap-2 w-full overflow-hidden">
-          <button
-            onClick={() => {
-              setShowMap(showMap === "0" ? "1" : "0")
-              localStorage.setItem("showMap", showMap === "0" ? "1" : "0")
-            }}
-            className={cn(
-              "rounded-[50px] bg-white dark:bg-stone-800 cursor-pointer p-[10px] transition-all border dark:border-none border-stone-200 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]",
-              {
-                "shadow-[inset_0_1px_0_rgba(0,0,0,0.2)] !bg-blue-600 hover:!bg-blue-600 border-blue-600 dark:border-blue-600": showMap === "1",
-                "text-white": showMap === "1",
-              },
-              {
-                "bg-opacity-70 dark:bg-opacity-70": customBackgroundImage,
-              },
-            )}
-          >
-            <MapIcon
-              className={cn("size-[13px]", {
-                "text-white": showMap === "1",
-              })}
+    <div className="index-container list-is--card">
+      <div className="scroll-container">
+        <div className="world-map-box top-world-map">
+          {showWorldMap ? (
+            <WorldMap locations={serverLocations} />
+          ) : (
+            <div
+              className="world-map-skeleton"
+              style={{
+                width: `${worldMapWidth}px`,
+                height: `${worldMapHeight}px`,
+              }}
             />
-          </button>
-          <button
-            onClick={() => {
-              setShowServices(showServices === "0" ? "1" : "0")
-              localStorage.setItem("showServices", showServices === "0" ? "1" : "0")
-            }}
-            className={cn(
-              "rounded-[50px] bg-white dark:bg-stone-800 cursor-pointer p-[10px] transition-all border dark:border-none border-stone-200 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]",
-              {
-                "shadow-[inset_0_1px_0_rgba(0,0,0,0.2)] !bg-blue-600 hover:!bg-blue-600 border-blue-600 dark:border-blue-600": showServices === "1",
-                "text-white": showServices === "1",
-              },
-              {
-                "bg-opacity-70 dark:bg-opacity-70": customBackgroundImage,
-              },
+          )}
+        </div>
+        <div className="filter-group">
+          <div className="left-box">
+            {groupOptions.length > 1 && (
+              <ServerOptionBox value={currentGroup} onChange={handleTagChange} options={groupOptions} acceptEmpty={false} />
             )}
-          >
-            <ChartBarSquareIcon
-              className={cn("size-[13px]", {
-                "text-white": showServices === "1",
-              })}
-            />
-          </button>
-          <button
-            onClick={() => {
-              setInline(inline === "0" ? "1" : "0")
-              localStorage.setItem("inline", inline === "0" ? "1" : "0")
-            }}
-            className={cn(
-              "rounded-[50px] bg-white dark:bg-stone-800 cursor-pointer p-[10px] transition-all border dark:border-none border-stone-200 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]",
-              {
-                "shadow-[inset_0_1px_0_rgba(0,0,0,0.2)] !bg-blue-600 hover:!bg-blue-600 border-blue-600 dark:border-blue-600": inline === "1",
-                "text-white": inline === "1",
-              },
-              {
-                "bg-opacity-70 dark:bg-opacity-70": customBackgroundImage,
-              },
+          </div>
+          <div className="right-box">
+            {onlineOptions.length > 0 && (
+              <ServerOptionBox
+                value={status === "all" ? "" : status}
+                onChange={(val) => setStatus((val || "all") as any)}
+                options={onlineOptions}
+              />
             )}
-          >
-            <ViewColumnsIcon
-              className={cn("size-[13px]", {
-                "text-white": inline === "1",
-              })}
+            <ServerSortBox
+              value={{ prop: sortType === "default" ? "" : sortType, order: sortOrder }}
+              onChange={(val) => {
+                setSortType(((val.prop || "default") as any) || "default")
+                setSortOrder(val.order)
+              }}
+              options={sortOptions}
             />
-          </button>
-          <GroupSwitch tabs={groupTabs} currentTab={currentGroup} setCurrentTab={handleTagChange} />
-        </section>
-        <Popover onOpenChange={setSettingsOpen}>
-          <PopoverTrigger asChild>
-            <button
-              className={cn(
-                "rounded-[50px] flex items-center gap-1 dark:text-white border dark:border-none text-black cursor-pointer dark:[text-shadow:_0_1px_0_rgb(0_0_0_/_20%)] dark:bg-stone-800 bg-white  p-[10px] transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]  ",
-                {
-                  "shadow-[inset_0_1px_0_rgba(0,0,0,0.2)] dark:bg-stone-700 bg-stone-200": settingsOpen,
-                },
-                {
-                  "dark:bg-stone-800/70 bg-stone-100/70 ": customBackgroundImage,
-                },
-              )}
-            >
-              <p className="text-[10px] font-bold whitespace-nowrap">{sortType === "default" ? "Sort" : sortType.toUpperCase()}</p>
-              {sortOrder === "asc" && sortType !== "default" ? (
-                <ArrowUpIcon className="size-[13px]" />
-              ) : sortOrder === "desc" && sortType !== "default" ? (
-                <ArrowDownIcon className="size-[13px]" />
-              ) : (
-                <ArrowsUpDownIcon className="size-[13px]" />
-              )}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="p-4 w-[240px] rounded-lg">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-muted-foreground">Sort by</Label>
-                <Select value={sortType} onValueChange={setSortType}>
-                  <SelectTrigger className="w-full text-xs h-8">
-                    <SelectValue placeholder="Choose type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SORT_TYPES.map((type) => (
-                      <SelectItem key={type} value={type} className="text-xs">
-                        {type.charAt(0).toUpperCase() + type.slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-muted-foreground">Sort order</Label>
-                <Select value={sortOrder} onValueChange={setSortOrder} disabled={sortType === "default"}>
-                  <SelectTrigger className="w-full text-xs h-8">
-                    <SelectValue placeholder="Choose order" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SORT_ORDERS.map((order) => (
-                      <SelectItem key={order} value={order} className="text-xs">
-                        {order.charAt(0).toUpperCase() + order.slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
-      </div>
-      {showMap === "1" && <GlobalMap now={nezhaWsData.now} serverList={nezhaWsData?.servers || []} />}
-      {showServices === "1" && <ServiceTracker serverList={filteredServers} />}
-      {inline === "1" && (
-        <section ref={containerRef} className="flex flex-col gap-2 overflow-x-scroll scrollbar-hidden mt-6 server-inline-list">
-          {filteredServers.map((serverInfo) => (
-            <ServerCardInline now={nezhaWsData.now} key={serverInfo.id} serverInfo={serverInfo} />
-          ))}
-        </section>
-      )}
-      {inline === "0" && (
-        <section ref={containerRef} className="grid grid-cols-1 gap-2 md:grid-cols-2 mt-6 server-card-list">
+          </div>
+        </div>
+        <div className="server-list-container server-list--card">
           {filteredServers.map((serverInfo) => (
             <ServerCard now={nezhaWsData.now} key={serverInfo.id} serverInfo={serverInfo} />
           ))}
-        </section>
-      )}
+        </div>
+      </div>
     </div>
   )
 }

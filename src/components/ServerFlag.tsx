@@ -35,7 +35,7 @@ export default function ServerFlag({ country_code, className }: { country_code: 
   if (!country_code) return null
 
   return (
-    <span className={cn("text-[12px] text-muted-foreground", className)}>
+    <span className={cn("server-flag", className)}>
       {forceUseSvgFlag || !supportsEmojiFlags ? <span className={`fi fi-${country_code}`} /> : getUnicodeFlagIcon(country_code)}
     </span>
   )

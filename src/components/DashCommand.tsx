@@ -3,6 +3,7 @@
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
 import { useCommand } from "@/hooks/use-command"
 import { useWebSocketContext } from "@/hooks/use-websocket-context"
+import { serverIdToServerKey } from "@/lib/server-key"
 import { formatNezhaInfo } from "@/lib/utils"
 import { NezhaWebsocketResponse } from "@/types/nezha-api"
 import { Home } from "lucide-react"
@@ -60,7 +61,7 @@ export function DashCommand() {
                     key={server.id}
                     value={server.name}
                     onSelect={() => {
-                      navigate(`/server/${server.id}`)
+                      navigate(`/server/${serverIdToServerKey(server.id)}`)
                       closeCommand()
                     }}
                   >

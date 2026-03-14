@@ -1,6 +1,7 @@
 import ServerFlag from "@/components/ServerFlag"
 import ServerUsageBar from "@/components/ServerUsageBar"
 import { formatBytes } from "@/lib/format"
+import { serverIdToServerKey } from "@/lib/server-key"
 import { GetFontLogoClass, GetOsName, MageMicrosoftWindows } from "@/lib/logo-class"
 import { cn, formatNezhaInfo, parsePublicNote } from "@/lib/utils"
 import { NezhaServer } from "@/types/nezha-api"
@@ -22,7 +23,7 @@ export default function ServerCardInline({ now, serverInfo }: { now: number; ser
 
   const cardClick = () => {
     sessionStorage.setItem("fromMainPage", "true")
-    navigate(`/server/${serverInfo.id}`)
+    navigate(`/server/${serverIdToServerKey(serverInfo.id)}`)
   }
 
   const showFlag = true

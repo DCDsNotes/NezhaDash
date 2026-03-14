@@ -74,17 +74,17 @@ const MainApp: React.FC = () => {
         )}
         <div className="nazha-layout-main">
           <main className="flex min-h-screen w-full flex-1 flex-col gap-4 p-0">
-          <RefreshToast />
-          <Header />
-          <DashCommand />
-          <Routes>
-            <Route path="/" element={<Server />} />
-            <Route path="/server/:id" element={<ServerDetail />} />
-            <Route path="/error" element={<ErrorPage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <Footer />
-        </main>
+            <RefreshToast />
+            <Header />
+            <DashCommand />
+            <Routes>
+              <Route path="/" element={<Server />} />
+              <Route path="/server/:serverKey" element={<ServerDetail />} />
+              <Route path="/error" element={<ErrorPage />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <Footer />
+          </main>
         </div>
       </div>
     </ErrorBoundary>
