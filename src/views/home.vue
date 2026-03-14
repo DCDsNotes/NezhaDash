@@ -402,11 +402,9 @@ onActivated(() => {
   }
 
   .world-map-skeleton {
-    border-radius: 12px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.04));
-    box-shadow: 0 2px 6px rgba(#000, 0.25);
-    overflow: hidden;
-    position: relative;
+    background: transparent;
+    border: none;
+    box-shadow: none;
   }
 
   .bottom-world-map {

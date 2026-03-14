@@ -126,12 +126,6 @@
                     <span class="metric-label">丢包</span>
                     <span class="metric-value">{{ formatPercent(cateItem.loss) }}</span>
                   </span>
-                  <span
-                    class="cate-over-rate cate-metric"
-                  >
-                    <span class="metric-label">成功</span>
-                    <span class="metric-value">{{ formatPercent(cateItem.over) }}</span>
-                  </span>
                 </div>
               </template>
             </popover>
@@ -184,12 +178,6 @@
                 >
                   <span class="metric-label">丢包</span>
                   <span class="metric-value">{{ formatPercent(cateItem.loss) }}</span>
-                </span>
-                <span
-                  class="cate-over-rate cate-metric"
-                >
-                  <span class="metric-label">成功</span>
-                  <span class="metric-value">{{ formatPercent(cateItem.over) }}</span>
                 </span>
               </div>
             </template>
@@ -708,10 +696,9 @@ onUnmounted(() => {
 
     --cate-avg-width: 96px;
     --cate-loss-width: 96px;
-    --cate-over-width: 88px;
 
     display: grid;
-    grid-template-columns: 0.5em 1fr var(--cate-avg-width) var(--cate-loss-width) var(--cate-over-width);
+    grid-template-columns: 0.5em 1fr var(--cate-avg-width) var(--cate-loss-width);
     align-items: center;
     width: 100%;
     min-height: var(--cate-item-height);
@@ -728,8 +715,7 @@ onUnmounted(() => {
       --cate-item-height: 64px;
       --cate-avg-width: 78px;
       --cate-loss-width: 78px;
-      --cate-over-width: 78px;
-      grid-template-columns: 0.5em 1fr var(--cate-avg-width) var(--cate-loss-width) var(--cate-over-width);
+      grid-template-columns: 0.5em 1fr var(--cate-avg-width) var(--cate-loss-width);
       grid-template-rows: auto auto;
       align-items: center;
       justify-items: start;
@@ -757,7 +743,7 @@ onUnmounted(() => {
       text-overflow: ellipsis;
 
       @media screen and (max-width: 768px) {
-        grid-column: 2 / 6;
+        grid-column: 2 / 5;
         grid-row: 1;
         align-self: center;
       }
@@ -771,11 +757,11 @@ onUnmounted(() => {
       min-width: 0;
 
       @media screen and (max-width: 768px) {
-        flex-direction: column;
-        align-items: flex-start;
+        flex-direction: row;
+        align-items: baseline;
         justify-content: flex-start;
-        gap: 0;
-        line-height: 1.1;
+        gap: 4px;
+        line-height: 1.2;
       }
     }
 
@@ -783,6 +769,7 @@ onUnmounted(() => {
       font-size: 12px;
       color: rgba(#fff, 0.75);
       white-space: nowrap;
+      flex: 0 0 auto;
 
       @media screen and (max-width: 768px) {
         font-size: 10px;
@@ -796,6 +783,8 @@ onUnmounted(() => {
       overflow: hidden;
       text-overflow: ellipsis;
       max-width: 100%;
+      min-width: 0;
+      flex: 1 1 auto;
     }
 
     .cate-avg-ms {
@@ -804,18 +793,6 @@ onUnmounted(() => {
 
       @media screen and (max-width: 768px) {
         grid-column: 3;
-        grid-row: 2;
-        justify-self: start;
-        text-align: left;
-      }
-    }
-
-    .cate-over-rate {
-      text-align: right;
-      color: #fffbd8;
-
-      @media screen and (max-width: 768px) {
-        grid-column: 5;
         grid-row: 2;
         justify-self: start;
         text-align: left;
