@@ -38,4 +38,3 @@
   100% { transform: translateX(60%); }
 }
 </style>
-
