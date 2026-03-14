@@ -114,19 +114,25 @@
                   >
                     {{ cateItem.name }}
                   </span>
-                  <span
-                    v-if="cateItem.avg !== 0"
-                    class="cate-avg-ms"
-                  >
-                    {{ cateItem.avg }}ms
-                  </span>
-                  <span
-                    v-if="cateItem.over !== 0"
-                    class="cate-over-rate"
-                  >
-                    {{ cateItem.over }}%
-                  </span>
-                </div>
+                <span
+                  v-if="cateItem.avg !== 0"
+                  class="cate-avg-ms"
+                >
+                  {{ cateItem.avg }}ms
+                </span>
+                <span
+                  v-if="cateItem.loss !== 0"
+                  class="cate-loss-rate"
+                >
+                  丢包{{ cateItem.loss }}%
+                </span>
+                <span
+                  v-if="cateItem.over !== 0"
+                  class="cate-over-rate"
+                >
+                  {{ cateItem.over }}%
+                </span>
+              </div>
               </template>
             </popover>
           </div>
@@ -171,6 +177,12 @@
                   class="cate-avg-ms"
                 >
                   {{ cateItem.avg }}ms
+                </span>
+                <span
+                  v-if="cateItem.loss !== 0"
+                  class="cate-loss-rate"
+                >
+                  丢包{{ cateItem.loss }}%
                 </span>
               </div>
             </template>
@@ -459,12 +471,14 @@ const monitorChartData = computed(() => {
         color,
         avg: avgDelay.toFixed(2) * 1,
         over: (over * 100).toFixed(2) * 1,
+        loss: (100 - (over * 100)).toFixed(2) * 1,
         validRate: (validRate * 100).toFixed(2) * 1,
       };
       const titles = [
         cateItem.name,
         cateItem.avg === 0 ? '' : `平均延迟：${cateItem.avg}ms`,
         `成功率：${cateItem.over}%`,
+        `丢包率：${cateItem.loss}%`,
       ];
       if (peakShaving.value) {
         titles.push(`削峰率: ${cateItem.validRate}%`);
@@ -666,6 +680,14 @@ onUnmounted(() => {
       line-height: calc(var(--cate-item-height) + 2px);
       text-align: right;
       color: #fffbd8;
+    }
+
+    .cate-loss-rate {
+      height: var(--cate-item-height);
+      line-height: calc(var(--cate-item-height) + 2px);
+      text-align: right;
+      color: #f5b199;
+      white-space: nowrap;
     }
 
     &.disabled {
