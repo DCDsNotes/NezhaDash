@@ -717,13 +717,13 @@ onUnmounted(() => {
       width: 100%;
       --cate-item-font-size: 12px;
       --cate-item-height: 64px;
-      --cate-metric-width: 96px;
+      --cate-metric-width: 70px;
       grid-template-columns: 0.5em 1fr;
       grid-template-rows: auto auto;
       align-items: center;
       justify-items: start;
-      column-gap: 6px;
-      row-gap: 2px;
+      column-gap: 5px;
+      row-gap: 5px;
     }
 
     .cate-legend {
@@ -763,7 +763,7 @@ onUnmounted(() => {
         grid-row: 2;
         align-items: baseline;
         justify-content: flex-start;
-        gap: 12px;
+        gap: 3px;
         width: 100%;
       }
     }
@@ -838,11 +838,14 @@ onUnmounted(() => {
 
   &.chart-type--single {
     @media screen and (max-width: 768px) {
+      --line-chart-size: 100%;
+      min-height: 390px;
+
       .monitor-cate-item {
         display: flex;
         align-items: center;
         flex-wrap: nowrap;
-        column-gap: 6px;
+        column-gap: 5px;
         row-gap: 0;
       }
 
@@ -861,12 +864,17 @@ onUnmounted(() => {
         flex: 0 0 auto;
         align-items: baseline;
         justify-content: flex-end;
-        gap: 12px;
+        gap: 3px;
         width: auto;
       }
 
       .cate-metric {
-        flex: 0 0 auto;
+        flex: 0 0 var(--cate-metric-width);
+      }
+
+      .placeholder-chart,
+      .monitor-empty {
+        height: 240px;
       }
     }
   }
@@ -1086,6 +1094,7 @@ onUnmounted(() => {
   @media screen and (max-width: 768px) {
     .monitor-chart-item {
       width: 100%;
+      height: auto;
     }
   }
 
