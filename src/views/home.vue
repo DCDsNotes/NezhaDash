@@ -403,31 +403,10 @@ onActivated(() => {
 
   .world-map-skeleton {
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.06);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.04));
     box-shadow: 0 2px 6px rgba(#000, 0.25);
     overflow: hidden;
     position: relative;
-  }
-
-  .world-map-skeleton::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.10) 45%,
-      rgba(255, 255, 255, 0.14) 50%,
-      rgba(255, 255, 255, 0.10) 55%,
-      transparent 100%
-    );
-    transform: translateX(-60%);
-    animation: shimmer 1.2s ease-in-out infinite;
-  }
-
-  @keyframes shimmer {
-    0% { transform: translateX(-60%); }
-    100% { transform: translateX(60%); }
   }
 
   .bottom-world-map {

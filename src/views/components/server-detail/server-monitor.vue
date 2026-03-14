@@ -185,6 +185,12 @@
                   <span class="metric-label">丢包</span>
                   <span class="metric-value">{{ formatPercent(cateItem.loss) }}</span>
                 </span>
+                <span
+                  class="cate-over-rate cate-metric"
+                >
+                  <span class="metric-label">成功</span>
+                  <span class="metric-value">{{ formatPercent(cateItem.over) }}</span>
+                </span>
               </div>
             </template>
           </popover>
@@ -695,12 +701,6 @@ onUnmounted(() => {
     min-height: calc(var(--line-chart-size) + 150px);
   }
 
-  &.chart-type--multi {
-    .monitor-cate-item {
-      --cate-over-width: 0px;
-    }
-  }
-
   .monitor-cate-item {
     --cate-item-height: 40px;
     --cate-item-font-size: 14px;
@@ -725,19 +725,26 @@ onUnmounted(() => {
       cursor: default;
       width: 100%;
       --cate-item-font-size: 12px;
-      --cate-item-height: 86px;
-      --cate-avg-width: 0px;
-      --cate-loss-width: 0px;
-      --cate-over-width: 0px;
-      grid-template-columns: 0.5em 1fr;
-      grid-template-rows: auto auto auto auto;
-      align-items: start;
+      --cate-item-height: 64px;
+      --cate-avg-width: 78px;
+      --cate-loss-width: 78px;
+      --cate-over-width: 78px;
+      grid-template-columns: 0.5em 1fr var(--cate-avg-width) var(--cate-loss-width) var(--cate-over-width);
+      grid-template-rows: auto auto;
+      align-items: center;
+      justify-items: start;
     }
 
     .cate-legend {
       width: 0.5em;
       height: 0.5em;
       background: var(--cate-color);
+
+      @media screen and (max-width: 768px) {
+        grid-column: 1;
+        grid-row: 1;
+        align-self: center;
+      }
     }
 
     .cate-name {
@@ -750,8 +757,9 @@ onUnmounted(() => {
       text-overflow: ellipsis;
 
       @media screen and (max-width: 768px) {
-        grid-column: 2;
+        grid-column: 2 / 6;
         grid-row: 1;
+        align-self: center;
       }
     }
 
@@ -763,10 +771,11 @@ onUnmounted(() => {
       min-width: 0;
 
       @media screen and (max-width: 768px) {
-        align-items: baseline;
-        justify-content: flex-end;
-        gap: 6px;
-        line-height: 1.2;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: flex-start;
+        gap: 0;
+        line-height: 1.1;
       }
     }
 
@@ -794,9 +803,10 @@ onUnmounted(() => {
       color: #fff;
 
       @media screen and (max-width: 768px) {
-        grid-column: 2;
+        grid-column: 3;
         grid-row: 2;
-        justify-self: end;
+        justify-self: start;
+        text-align: left;
       }
     }
 
@@ -805,9 +815,10 @@ onUnmounted(() => {
       color: #fffbd8;
 
       @media screen and (max-width: 768px) {
-        grid-column: 2;
-        grid-row: 4;
-        justify-self: end;
+        grid-column: 5;
+        grid-row: 2;
+        justify-self: start;
+        text-align: left;
       }
     }
 
@@ -816,9 +827,10 @@ onUnmounted(() => {
       color: #f5b199;
 
       @media screen and (max-width: 768px) {
-        grid-column: 2;
-        grid-row: 3;
-        justify-self: end;
+        grid-column: 4;
+        grid-row: 2;
+        justify-self: start;
+        text-align: left;
       }
     }
 

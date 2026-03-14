@@ -85,7 +85,7 @@ const {
   flex-wrap: wrap;
 
   &--ring {
-    --ring-size: 84px;
+    --ring-size: 100px;
     --ring-thickness: 12px;
     justify-content: space-around;
     gap: 16px;
