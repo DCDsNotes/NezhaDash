@@ -1,6 +1,6 @@
 import ServerCard from "@/components/ServerCard"
 import { ServerListItemSkeleton } from "@/components/ServerListItemSkeleton"
-import { ServerOptionBox } from "@/components/ServerOptionBox"
+import { ServerOptionBox, type ServerOptionItem } from "@/components/ServerOptionBox"
 import { ServerSortBox } from "@/components/ServerSortBox"
 import WorldMap, { buildLocationsFromServers } from "@/components/WorldMap"
 import { SORT_TYPES } from "@/context/sort-context"
@@ -65,7 +65,7 @@ export default function Servers() {
   const nezhaWsData = lastMessage ? (JSON.parse(lastMessage.data) as NezhaWebsocketResponse) : null
 
   const groupOptions = useMemo(() => {
-    const opts = [{ key: "All", label: "全部", value: "All" }]
+    const opts: ServerOptionItem[] = [{ key: "All", label: "全部", value: "All" }]
     const groups = groupData?.data
     const servers = nezhaWsData?.servers
     if (!Array.isArray(groups) || !Array.isArray(servers)) return opts
@@ -85,7 +85,7 @@ export default function Servers() {
     return opts
   }, [groupData?.data, nezhaWsData?.servers])
 
-  const onlineOptions = useMemo(() => {
+  const onlineOptions = useMemo<ServerOptionItem[]>(() => {
     const ws = nezhaWsData
     if (!ws || !Array.isArray(ws.servers)) return []
     const total = ws.servers.length

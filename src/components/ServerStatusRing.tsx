@@ -1,4 +1,4 @@
-import React, { useMemo } from "react"
+import { useMemo, type CSSProperties } from "react"
 
 type Colors =
   | string
@@ -50,8 +50,8 @@ export function ServerStatusRing({
   }, [label, usedPercent])
 
   const ringStyle = useMemo(() => {
-    const style: React.CSSProperties = {
-      ["--ring-used" as any]: `${usedPercent}%`,
+    const style: Record<string, string> = {
+      "--ring-used": `${usedPercent}%`,
     }
 
     const usedColor = typeof colors === "string" ? colors : colors?.used
@@ -59,12 +59,12 @@ export function ServerStatusRing({
 
     if (Array.isArray(usedColor)) {
       const [ringColor] = usedColor
-      if (ringColor) style["--ring-color" as any] = ringColor
+      if (ringColor) style["--ring-color"] = ringColor
     } else if (usedColor) {
-      style["--ring-color" as any] = usedColor
+      style["--ring-color"] = usedColor
     }
-    style["--ring-track" as any] = trackColor || "rgba(255, 255, 255, 0.18)"
-    return style
+    style["--ring-track"] = trackColor || "rgba(255, 255, 255, 0.18)"
+    return style as CSSProperties
   }, [colors, usedPercent])
 
   return (
@@ -79,4 +79,3 @@ export function ServerStatusRing({
     </div>
   )
 }
-
