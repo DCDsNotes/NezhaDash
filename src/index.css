@@ -1,0 +1,325 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: "Microsoft YaHei", "微软雅黑", "PingFang SC", "HanHei SC", "Helvetica Neue", "Helvetica", "STHeitiSC-Light", Arial, sans-serif;
+  line-height: 1.8;
+  font-weight: 400;
+
+  color-scheme: dark;
+  color: #ddd;
+  background-color: #181f30;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer base {
+  :root {
+    --layout-header-height: 60px;
+
+    --list-container-width: 1300px;
+    --detail-container-width: 900px;
+
+    --global-background-color: #181f30;
+    --global-text-color: #ddd;
+    --global-link-color: #2ca9e1;
+
+    --layout-main-bg-color: rgba(20, 30, 40, 0.75);
+    --layout-bg-color: #181f30;
+
+    --server-online-color: #74dbef;
+    --server-offline-color: #f5b199;
+
+    --background: 222 33% 14%;
+    --foreground: 0 0% 87%;
+    --card: 222 33% 14%;
+    --card-foreground: 0 0% 87%;
+    --popover: 222 33% 14%;
+    --popover-foreground: 0 0% 87%;
+    --primary: 0 0% 87%;
+    --primary-foreground: 222 33% 14%;
+    --secondary: 222 22% 20%;
+    --secondary-foreground: 0 0% 87%;
+    --muted: 222 22% 20%;
+    --muted-foreground: 0 0% 78%;
+    --accent: 222 22% 20%;
+    --accent-foreground: 0 0% 87%;
+    --destructive: 0 62.8% 40%;
+    --destructive-foreground: 0 0% 87%;
+    --border: 222 22% 20%;
+    --input: 222 22% 20%;
+    --ring: 0 0% 87%;
+    --radius: 1rem;
+    --chart-1: 220 70% 50%;
+    --chart-2: 340 75% 55%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 160 60% 45%;
+    --chart-6: 180 50% 50%;
+    --chart-7: 216 50% 50%;
+    --chart-8: 252 50% 50%;
+    --chart-9: 288 50% 50%;
+    --chart-10: 324 50% 50%;
+  }
+
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    @apply scroll-smooth;
+  }
+  body {
+    @apply text-foreground;
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+    background: var(--global-background-color);
+  }
+
+  a {
+    color: var(--global-link-color);
+    transition: color 150ms linear;
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  a:hover {
+    color: #08a;
+  }
+}
+
+@layer utilities {
+  .step {
+    counter-increment: step;
+  }
+
+  .step:before {
+    @apply absolute inline-flex h-9 w-9 items-center justify-center rounded-full border-4 border-background bg-muted text-center -indent-px font-mono text-base font-medium;
+    @apply ml-[-50px] mt-[-4px];
+    content: counter(step);
+  }
+}
+
+@media (max-width: 640px) {
+  .container {
+    @apply px-4;
+  }
+}
+
+::selection {
+  @apply bg-stone-300 dark:bg-stone-800;
+}
+
+.hamster-loading-wrapper {
+  --size: 12px;
+  height: var(--size);
+  width: var(--size);
+  inset: 0;
+  z-index: 10;
+}
+
+.hamster-loading-wrapper[data-visible="false"] {
+  transform-origin: center;
+  animation: hamster-fade-out 0.2s ease forwards;
+}
+
+.hamster-spinner {
+  position: relative;
+  top: 50%;
+  left: 50%;
+  height: var(--size);
+  width: var(--size);
+}
+
+.hamster-loading-bar {
+  --gray11: hsl(0, 0%, 43.5%);
+  animation: hamster-spin 0.8s linear infinite;
+  background: var(--gray11);
+  border-radius: 6px;
+  height: 13%;
+  left: -10%;
+  position: absolute;
+  top: -3.9%;
+  width: 30%;
+}
+
+.hamster-loading-bar:nth-child(1) {
+  animation-delay: -0.8s;
+  transform: rotate(0deg) translate(120%);
+}
+
+.hamster-loading-bar:nth-child(2) {
+  animation-delay: -0.7s;
+  transform: rotate(45deg) translate(120%);
+}
+
+.hamster-loading-bar:nth-child(3) {
+  animation-delay: -0.6s;
+  transform: rotate(90deg) translate(120%);
+}
+
+.hamster-loading-bar:nth-child(4) {
+  animation-delay: -0.5s;
+  transform: rotate(135deg) translate(120%);
+}
+
+.hamster-loading-bar:nth-child(5) {
+  animation-delay: -0.4s;
+  transform: rotate(180deg) translate(120%);
+}
+
+.hamster-loading-bar:nth-child(6) {
+  animation-delay: -0.3s;
+  transform: rotate(225deg) translate(120%);
+}
+
+.hamster-loading-bar:nth-child(7) {
+  animation-delay: -0.2s;
+  transform: rotate(270deg) translate(120%);
+}
+
+.hamster-loading-bar:nth-child(8) {
+  animation-delay: -0.1s;
+  transform: rotate(315deg) translate(120%);
+}
+
+@keyframes hamster-fade-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes hamster-fade-out {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+@keyframes hamster-spin {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.15;
+  }
+}
+
+.scrollbar-hidden {
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none; /* Chrome, Safari 和 Opera */
+}
+
+@media screen and (max-width: 1440px) {
+  :root {
+    --list-container-width: 1120px;
+  }
+}
+
+@media screen and (max-width: 1280px) {
+  :root {
+    --list-container-width: 1024px;
+  }
+}
+
+@media screen and (max-width: 1024px) {
+  :root {
+    --list-container-width: 800px;
+    --detail-container-width: 800px;
+  }
+}
+
+@media screen and (max-width: 800px) {
+  :root {
+    --list-container-width: 720px;
+    --detail-container-width: 720px;
+  }
+}
+
+@media screen and (max-width: 720px) {
+  :root {
+    --list-container-width: 100vw;
+    --detail-container-width: 100vw;
+  }
+}
+
+.nazha-layout {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+}
+
+.nazha-layout-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  background: var(--layout-bg-color) url("/bg.webp") no-repeat 50% 100%;
+  background-size: 100% auto;
+}
+
+.nazha-layout-main {
+  position: relative;
+  z-index: 10;
+  min-height: 100vh;
+  background: var(--layout-main-bg-color);
+}
+
+.nazha-container {
+  width: var(--list-container-width);
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.nazha-detail-container {
+  width: var(--detail-container-width);
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.nazha-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  min-height: var(--layout-header-height);
+  background-position: 0% 0%;
+  background-image: radial-gradient(transparent 1px, rgba(0, 0, 0, 0.8) 2px);
+  background-size: 3px 3px;
+  backdrop-filter: saturate(50%) blur(3px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.nazha-box {
+  --border-radius: 12px;
+  color: #eee;
+  border-radius: var(--border-radius);
+  box-shadow: 2px 4px 6px rgba(0, 0, 0, 0.4);
+  background-image: radial-gradient(transparent 1px, rgba(0, 0, 0, 0.6) 1px);
+  background-size: 3px 3px;
+  backdrop-filter: saturate(50%) blur(3px);
+}
+
+@media screen and (max-width: 768px) {
+  .nazha-box {
+    background-color: rgba(0, 0, 0, 0.8);
+    background-image: none;
+    backdrop-filter: none;
+  }
+}

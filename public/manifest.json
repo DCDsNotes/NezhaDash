@@ -1,0 +1,17 @@
+{
+  "name": "哪吒监控",
+  "short_name": "哪吒监控",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "theme_color": "#181f30",
+  "background_color": "#181f30",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait"
+}
