@@ -716,7 +716,6 @@ onUnmounted(() => {
       cursor: default;
       width: 100%;
       --cate-item-font-size: 12px;
-      --cate-item-height: 64px;
       --cate-metric-width: 70px;
       grid-template-columns: 0.5em 1fr;
       grid-template-rows: auto auto;
