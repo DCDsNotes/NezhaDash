@@ -841,11 +841,13 @@ onUnmounted(() => {
       min-height: 390px;
 
       .monitor-cate-item {
-        display: flex;
+        display: grid;
+        grid-template-columns: 0.5em minmax(0, 1fr) minmax(0, calc(var(--cate-metric-width) + var(--cate-metric-width) + 3px));
+        grid-template-rows: 1fr;
         align-items: center;
-        flex-wrap: nowrap;
         column-gap: 5px;
         row-gap: 0;
+        overflow: hidden;
       }
 
       .cate-legend {
@@ -860,15 +862,19 @@ onUnmounted(() => {
 
       .cate-metrics-row {
         display: flex;
+        grid-column: 3;
+        grid-row: 1;
         flex: 0 0 auto;
         align-items: baseline;
         justify-content: flex-end;
         gap: 3px;
         width: auto;
+        min-width: 0;
       }
 
       .cate-metric {
         flex: 0 0 var(--cate-metric-width);
+        overflow: hidden;
       }
 
       .placeholder-chart,
