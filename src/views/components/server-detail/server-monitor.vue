@@ -2,8 +2,8 @@
   <dot-dot-box
     class="server-monitor-group"
     :class="{
-      'chart-type--multi': config.nazhua.monitorChartTypeToggle && monitorChartType === 'multi',
-      'chart-type--single': config.nazhua.monitorChartTypeToggle && monitorChartType === 'single',
+      'chart-type--multi': monitorChartType === 'multi',
+      'chart-type--single': monitorChartType === 'single',
     }"
     padding="16px 20px"
   >
@@ -114,18 +114,20 @@
                   >
                     {{ cateItem.name }}
                   </span>
-                  <span
-                    class="cate-avg-ms cate-metric"
-                  >
-                    <span class="metric-label">延时</span>
-                    <span class="metric-value">{{ formatLatency(cateItem.avg) }}</span>
-                  </span>
-                  <span
-                    class="cate-loss-rate cate-metric"
-                  >
-                    <span class="metric-label">丢包</span>
-                    <span class="metric-value">{{ formatPercent(cateItem.loss) }}</span>
-                  </span>
+                  <div class="cate-metrics-row">
+                    <span
+                      class="cate-avg-ms cate-metric"
+                    >
+                      <span class="metric-label">延时</span>
+                      <span class="metric-value">{{ formatLatency(cateItem.avg) }}</span>
+                    </span>
+                    <span
+                      class="cate-loss-rate cate-metric"
+                    >
+                      <span class="metric-label">丢包</span>
+                      <span class="metric-value">{{ formatPercent(cateItem.loss) }}</span>
+                    </span>
+                  </div>
                 </div>
               </template>
             </popover>
@@ -167,18 +169,20 @@
                 >
                   {{ cateItem.name }}
                 </span>
-                <span
-                  class="cate-avg-ms cate-metric"
-                >
-                  <span class="metric-label">延时</span>
-                  <span class="metric-value">{{ formatLatency(cateItem.avg) }}</span>
-                </span>
-                <span
-                  class="cate-loss-rate cate-metric"
-                >
-                  <span class="metric-label">丢包</span>
-                  <span class="metric-value">{{ formatPercent(cateItem.loss) }}</span>
-                </span>
+                <div class="cate-metrics-row">
+                  <span
+                    class="cate-avg-ms cate-metric"
+                  >
+                    <span class="metric-label">延时</span>
+                    <span class="metric-value">{{ formatLatency(cateItem.avg) }}</span>
+                  </span>
+                  <span
+                    class="cate-loss-rate cate-metric"
+                  >
+                    <span class="metric-label">丢包</span>
+                    <span class="metric-value">{{ formatPercent(cateItem.loss) }}</span>
+                  </span>
+                </div>
               </div>
             </template>
           </popover>
@@ -713,12 +717,13 @@ onUnmounted(() => {
       width: 100%;
       --cate-item-font-size: 12px;
       --cate-item-height: 64px;
-      --cate-avg-width: 78px;
-      --cate-loss-width: 78px;
-      grid-template-columns: 0.5em 1fr var(--cate-avg-width) var(--cate-loss-width);
+      --cate-metric-width: 96px;
+      grid-template-columns: 0.5em 1fr;
       grid-template-rows: auto auto;
       align-items: center;
       justify-items: start;
+      column-gap: 6px;
+      row-gap: 2px;
     }
 
     .cate-legend {
@@ -743,9 +748,23 @@ onUnmounted(() => {
       text-overflow: ellipsis;
 
       @media screen and (max-width: 768px) {
-        grid-column: 2 / 5;
+        grid-column: 2;
         grid-row: 1;
         align-self: center;
+      }
+    }
+
+    .cate-metrics-row {
+      display: contents;
+
+      @media screen and (max-width: 768px) {
+        display: flex;
+        grid-column: 2;
+        grid-row: 2;
+        align-items: baseline;
+        justify-content: flex-start;
+        gap: 12px;
+        width: 100%;
       }
     }
 
@@ -757,11 +776,13 @@ onUnmounted(() => {
       min-width: 0;
 
       @media screen and (max-width: 768px) {
+        font-size: 10px;
         flex-direction: row;
         align-items: baseline;
         justify-content: flex-start;
         gap: 4px;
         line-height: 1.2;
+        flex: 0 0 var(--cate-metric-width);
       }
     }
 
@@ -785,6 +806,10 @@ onUnmounted(() => {
       max-width: 100%;
       min-width: 0;
       flex: 1 1 auto;
+
+      @media screen and (max-width: 768px) {
+        font-size: 10px;
+      }
     }
 
     .cate-avg-ms {
@@ -792,9 +817,6 @@ onUnmounted(() => {
       color: #fff;
 
       @media screen and (max-width: 768px) {
-        grid-column: 3;
-        grid-row: 2;
-        justify-self: start;
         text-align: left;
       }
     }
@@ -804,9 +826,6 @@ onUnmounted(() => {
       color: #f5b199;
 
       @media screen and (max-width: 768px) {
-        grid-column: 4;
-        grid-row: 2;
-        justify-self: start;
         text-align: left;
       }
     }
@@ -814,6 +833,41 @@ onUnmounted(() => {
     &.disabled {
       filter: grayscale(1) brightness(0.8);
       opacity: 0.5;
+    }
+  }
+
+  &.chart-type--single {
+    @media screen and (max-width: 768px) {
+      .monitor-cate-item {
+        display: flex;
+        align-items: center;
+        flex-wrap: nowrap;
+        column-gap: 6px;
+        row-gap: 0;
+      }
+
+      .cate-legend {
+        flex: 0 0 auto;
+      }
+
+      .cate-name {
+        flex: 1 1 auto;
+        min-width: 0;
+        padding: 0;
+      }
+
+      .cate-metrics-row {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: baseline;
+        justify-content: flex-end;
+        gap: 12px;
+        width: auto;
+      }
+
+      .cate-metric {
+        flex: 0 0 auto;
+      }
     }
   }
 }
