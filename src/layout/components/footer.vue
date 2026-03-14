@@ -1,22 +1,10 @@
 <template>
   <div class="layout-footer">
     <div class="copyright-text">
-      <span class="text">© {{ currentYear }} 哪吒监控</span>
+      <span class="text">Powered by Nezha Monitoring</span>
     </div>
   </div>
 </template>
-
-<script setup>
-/**
- * Footer
- */
-
-import {
-  computed,
-} from 'vue';
-
-const currentYear = computed(() => new Date().getFullYear());
-</script>
 
 <style lang="scss" scoped>
 .layout-footer {

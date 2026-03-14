@@ -1,10 +1,10 @@
 <template>
   <div
-    v-if="info"
     ref="detailContainerRef"
     class="detail-container"
     :class="{
       'server--offline': info?.online !== 1,
+      'is-loading': !info,
     }"
   >
     <div
@@ -12,7 +12,7 @@
       class="world-map-box top-world-map"
     >
       <world-map
-        v-if="showWorldMap"
+        v-if="info && showWorldMap"
         :width="worldMapWidth"
         :locations="locations"
       />
@@ -25,28 +25,37 @@
         }"
       />
     </div>
-    <server-name
-      :key="`${info.ID}_name`"
-      :info="info"
-    />
-    <server-status-box
-      :key="`${info.ID}_status`"
-      :info="info"
-    />
-    <server-info-box
-      :key="`${info.ID}_info`"
-      :info="info"
-    />
-    <server-monitor
-      :key="`${info.ID}_monitor`"
-      :info="info"
-    />
+
+    <template v-if="info">
+      <server-name
+        :key="`${info.ID}_name`"
+        :info="info"
+      />
+      <server-status-box
+        :key="`${info.ID}_status`"
+        :info="info"
+      />
+      <server-info-box
+        :key="`${info.ID}_info`"
+        :info="info"
+      />
+      <server-monitor
+        :key="`${info.ID}_monitor`"
+        :info="info"
+      />
+    </template>
+    <template v-else>
+      <div class="detail-skeleton-block detail-skeleton-block--name" />
+      <div class="detail-skeleton-block detail-skeleton-block--status" />
+      <div class="detail-skeleton-block detail-skeleton-block--info" />
+      <div class="detail-skeleton-block detail-skeleton-block--monitor" />
+    </template>
     <div
       v-if="worldMapPosition === 'bottom' && allowWorldMap"
       class="world-map-box bottom-world-map"
     >
       <world-map
-        v-if="showWorldMap"
+        v-if="info && showWorldMap"
         :width="worldMapWidth"
         :locations="locations"
       />
@@ -231,6 +240,7 @@ onUnmounted(() => {
   width: var(--detail-container-width);
   padding: 20px;
   margin: auto;
+  min-height: calc(100vh - var(--layout-header-height) - 80px);
 
   &.server--offline {
     filter: grayscale(1);
@@ -271,5 +281,45 @@ onUnmounted(() => {
 @keyframes shimmer {
   0% { transform: translateX(-60%); }
   100% { transform: translateX(60%); }
+}
+
+.detail-skeleton-block {
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 2px 6px rgba(#000, 0.25);
+  overflow: hidden;
+  position: relative;
+}
+
+.detail-skeleton-block::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.10) 45%,
+    rgba(255, 255, 255, 0.14) 50%,
+    rgba(255, 255, 255, 0.10) 55%,
+    transparent 100%
+  );
+  transform: translateX(-60%);
+  animation: shimmer 1.2s ease-in-out infinite;
+}
+
+.detail-skeleton-block--name {
+  height: 56px;
+}
+
+.detail-skeleton-block--status {
+  height: 170px;
+}
+
+.detail-skeleton-block--info {
+  height: 320px;
+}
+
+.detail-skeleton-block--monitor {
+  height: 420px;
 }
 </style>

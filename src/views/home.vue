@@ -3,10 +3,7 @@
     class="index-container"
     :class="indexContainerClass"
   >
-    <div
-      ref="scrollContainerRef"
-      class="scroll-container"
-    >
+    <div class="scroll-container">
       <div
         v-if="worldMapPosition === 'top' && allowWorldMap"
         class="world-map-box top-world-map"
@@ -132,7 +129,6 @@ import {
 
 const store = useStore();
 const isLoading = computed(() => store.state.init !== true);
-const scrollContainerRef = ref(null);
 
 function computeDetailContainerWidth() {
   const w = window.innerWidth;
@@ -143,19 +139,7 @@ function computeDetailContainerWidth() {
 }
 
 function computeWorldMapWidth() {
-  const containerWidth = scrollContainerRef.value?.clientWidth;
-  const width = Number(containerWidth);
-  if (!Number.isFinite(width) || width <= 0) {
-    return Math.max(computeDetailContainerWidth() - 40, 300);
-  }
-  return Math.max(
-    Math.min(
-      width - 40,
-      window.innerWidth - 40,
-      1280,
-    ),
-    300,
-  );
+  return Math.max(computeDetailContainerWidth() - 40, 300);
 }
 
 const worldMapWidth = ref(computeWorldMapWidth());

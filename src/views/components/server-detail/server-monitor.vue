@@ -110,6 +110,7 @@
                   <span class="cate-legend" />
                   <span
                     class="cate-name"
+                    :title="cateItem.name"
                   >
                     {{ cateItem.name }}
                   </span>
@@ -168,6 +169,7 @@
                 <span class="cate-legend" />
                 <span
                   class="cate-name"
+                  :title="cateItem.name"
                 >
                   {{ cateItem.name }}
                 </span>
@@ -723,10 +725,13 @@ onUnmounted(() => {
       cursor: default;
       width: 100%;
       --cate-item-font-size: 12px;
-      --cate-item-height: 52px;
-      --cate-avg-width: 70px;
-      --cate-loss-width: 70px;
-      --cate-over-width: 56px;
+      --cate-item-height: 86px;
+      --cate-avg-width: 0px;
+      --cate-loss-width: 0px;
+      --cate-over-width: 0px;
+      grid-template-columns: 0.5em 1fr;
+      grid-template-rows: auto auto auto auto;
+      align-items: start;
     }
 
     .cate-legend {
@@ -739,8 +744,15 @@ onUnmounted(() => {
       padding: 2px 0;
       line-height: 1.2;
       color: #eee;
-      white-space: normal;
+      white-space: nowrap;
       min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+
+      @media screen and (max-width: 768px) {
+        grid-column: 2;
+        grid-row: 1;
+      }
     }
 
     .cate-metric {
@@ -751,10 +763,10 @@ onUnmounted(() => {
       min-width: 0;
 
       @media screen and (max-width: 768px) {
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 0;
-        line-height: 1.1;
+        align-items: baseline;
+        justify-content: flex-end;
+        gap: 6px;
+        line-height: 1.2;
       }
     }
 
@@ -780,16 +792,34 @@ onUnmounted(() => {
     .cate-avg-ms {
       text-align: right;
       color: #fff;
+
+      @media screen and (max-width: 768px) {
+        grid-column: 2;
+        grid-row: 2;
+        justify-self: end;
+      }
     }
 
     .cate-over-rate {
       text-align: right;
       color: #fffbd8;
+
+      @media screen and (max-width: 768px) {
+        grid-column: 2;
+        grid-row: 4;
+        justify-self: end;
+      }
     }
 
     .cate-loss-rate {
       text-align: right;
       color: #f5b199;
+
+      @media screen and (max-width: 768px) {
+        grid-column: 2;
+        grid-row: 3;
+        justify-self: end;
+      }
     }
 
     &.disabled {
@@ -987,7 +1017,7 @@ onUnmounted(() => {
 
 .monitor-cate-group {
   --gap-size: 8px;
-  --cate-trigger-width: 280px;
+  --cate-trigger-width: 320px;
   margin: 10px 0;
   display: grid;
   grid-template-columns: repeat(auto-fill, var(--cate-trigger-width));
