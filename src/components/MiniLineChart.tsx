@@ -219,13 +219,14 @@ export default function MiniLineChart({
 
   const timeTicks = useMemo(() => {
     if (normalizedDateList.length < 2) return [] as number[]
-    const maxTicks = clampInt(Math.floor((containerWidth || 1000) / 95), 6, 12)
+    const isMobile = viewWidth < 520
+    const maxTicks = isMobile ? 4 : clampInt(Math.floor((containerWidth || 1000) / 95), 6, 12)
     const { xMin, xMax } = xRange
     const span = xMax - xMin || 1
     const ticks: number[] = []
     for (let i = 0; i < maxTicks; i += 1) ticks.push(xMin + (i * span) / (maxTicks - 1))
     return ticks
-  }, [containerWidth, normalizedDateList.length, xRange])
+  }, [containerWidth, normalizedDateList.length, viewWidth, xRange])
 
   const valueMapList = useMemo(() => {
     return normalizedSeries.map((s) => {
