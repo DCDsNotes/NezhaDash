@@ -2,7 +2,7 @@ import { type CSSProperties, useEffect, useMemo, useState } from "react"
 
 import { useQuery } from "@tanstack/react-query"
 
-import MiniLineChart, { type LineChartSeries } from "@/components/MiniLineChart"
+import MiniLineChart, { type LineChartPoint, type LineChartSeries } from "@/components/MiniLineChart"
 import { fetchMonitor } from "@/lib/nezha-api"
 import { cn } from "@/lib/utils"
 import { type NezhaMonitor } from "@/types/nezha-api"
@@ -164,26 +164,26 @@ function buildMonitorChartData({
       })
     }
 
-    const lineData: readonly [number, number | null][] = []
-    const lossLineData: readonly [number, number | null][] = []
-    const validatedData: readonly [number, number][] = []
-    const overValidatedData: readonly [number, number | null][] = []
+    const lineData: LineChartPoint[] = []
+    const lossLineData: LineChartPoint[] = []
+    const validatedData: Array<[number, number]> = []
+    const overValidatedData: LineChartPoint[] = []
     let delayTotal = 0
 
     dateMap.forEach((v, k) => {
       const time = Number(k)
       const val = typeof v === "number" && Number.isFinite(v) ? Number((Math.round(v * 100) / 100).toFixed(2)) : v
 
-      lineData.push([time, (val ?? null) as number | null] as const)
-      lossLineData.push([time, v === undefined ? 100 : 0] as const)
+      lineData.push([time, (val ?? null) as number | null])
+      lossLineData.push([time, v === undefined ? 100 : 0])
 
       if (typeof val === "number" && Number.isFinite(val)) {
         dateSet.add(time)
-        validatedData.push([time, val] as const)
+        validatedData.push([time, val])
         delayTotal += val
       }
       if (v !== undefined) {
-        overValidatedData.push([time, (val ?? null) as number | null] as const)
+        overValidatedData.push([time, (val ?? null) as number | null])
       }
     })
 

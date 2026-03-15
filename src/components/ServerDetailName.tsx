@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 
 import ServerFlag from "@/components/ServerFlag"
-import { GetFontLogoClass, MageMicrosoftWindows } from "@/lib/logo-class"
+import { getPlatformLogoIconClassName } from "@/lib/logo-class"
 import { formatCpuMemDiskText } from "@/lib/server-spec"
 import { cn } from "@/lib/utils"
 import { NezhaServer } from "@/types/nezha-api"
@@ -46,7 +46,8 @@ export default function ServerDetailName({ server }: { server: NezhaServer }) {
   )
 
   const platform = String(server.host?.platform || "")
-  const platformIcon = platform.includes("Windows") ? <MageMicrosoftWindows /> : <span className={cn(`fl-${GetFontLogoClass(platform)}`)} />
+  const platformIconClassName = useMemo(() => getPlatformLogoIconClassName(platform), [platform])
+  const platformIcon = <span className={platformIconClassName} />
 
   // custom slogan from PublicNote.customData.slogan (optional)
   const slogan = useMemo(() => {

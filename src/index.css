@@ -359,7 +359,8 @@
   padding: 20px;
 }
 
-.nazha-header {
+.nazha-header,
+.layout-header {
   position: sticky;
   top: 0;
   z-index: 100;
@@ -369,6 +370,331 @@
   background-size: 3px 3px;
   backdrop-filter: saturate(50%) blur(3px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+@media screen and (max-width: 450px) {
+  .layout-header.layout-header--show-server-stat {
+    padding-top: 10px;
+  }
+}
+
+.layout-header .site-name {
+  line-height: calc(var(--layout-header-height) - 20px);
+  font-size: 24px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+
+@media screen and (max-width: 720px) {
+  .layout-header .site-name {
+    font-size: 18px;
+  }
+}
+
+.layout-header .layer-header-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 20px;
+  width: var(--layout-header-container-width, 100%);
+  margin: auto;
+  padding: 10px 20px;
+  transition: width 0.3s;
+}
+
+.layout-header .right-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 20px;
+  color: #ddd;
+}
+
+.server-count-group {
+  display: flex;
+  gap: 10px;
+}
+
+.server-count-group .server-count {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: #ddd;
+  line-height: 30px;
+}
+
+.server-count-group .server-count .icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  font-size: 18px;
+}
+
+.server-count-group .server-count .value {
+  font-weight: bold;
+}
+
+.server-count-group .server-count.server-count--online {
+  color: var(--server-online-color);
+}
+
+.server-count-group .server-count.server-count--offline {
+  color: var(--server-offline-color);
+}
+
+.server-stat-group {
+  min-width: 160px;
+}
+
+@media screen and (max-width: 450px) {
+  .server-stat-group {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 28px;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    flex-direction: row-reverse;
+    gap: 10px;
+  }
+
+  .server-stat-group .server-stat-label {
+    display: none;
+  }
+
+  .server-stat-group .server-stat-content {
+    gap: 10px;
+  }
+}
+
+.server-stat-group .server-stat {
+  display: flex;
+  gap: 8px;
+  line-height: 16px;
+  font-size: 12px;
+}
+
+.server-stat-group .server-stat .server-stat-content {
+  flex: 1;
+  display: flex;
+}
+
+.server-stat-group .server-stat .server-stat-item {
+  flex: 1;
+}
+
+.server-stat-group .server-stat--transfer .server-stat-item--in .text-value {
+  color: var(--transfer-in-color);
+}
+
+.server-stat-group .server-stat--transfer .server-stat-item--out .text-value {
+  color: var(--transfer-out-color);
+}
+
+.server-stat-group .server-stat--net-speed .server-stat-item--in .text-value {
+  color: var(--net-speed-in-color);
+}
+
+.server-stat-group .server-stat--net-speed .server-stat-item--out .text-value {
+  color: var(--net-speed-out-color);
+}
+
+.nezha-user-info-group {
+  display: flex;
+  align-items: center;
+  gap: 0 20px;
+}
+
+.nezha-user-info-group .dashboard-url {
+  display: flex;
+  align-items: center;
+  gap: 0 5px;
+  color: #ddd;
+  cursor: pointer;
+}
+
+.nezha-user-info-group .dashboard-url:hover {
+  color: #ff9a00;
+}
+
+.layout-footer {
+  padding: 20px 20px 40px;
+  font-size: 12px;
+  color: #ccc;
+}
+
+.layout-footer .copyright-text {
+  display: flex;
+  justify-content: center;
+}
+
+/* Search box (match current version) */
+.search-box-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+}
+
+.search-box-group {
+  position: fixed;
+  left: 50%;
+  top: 150px;
+  z-index: 1010;
+  transform: translate(-50%, 0);
+  width: 600px;
+  padding: 30px;
+  border-radius: 12px;
+  background-color: rgba(0, 0, 0, 0.9);
+}
+
+@media screen and (max-width: 640px) {
+  .search-box-group {
+    width: auto;
+    top: 100px;
+    left: 20px;
+    right: 20px;
+    padding: 20px;
+    transform: translate(0, 0);
+  }
+}
+
+.search-box-group .search-box {
+  position: relative;
+  width: 100%;
+  padding-right: 40px;
+  border-radius: 20px;
+  background: #eee;
+}
+
+.search-box-group .search-box .search-box-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 15px;
+  color: #234;
+  font-size: 14px;
+  background: transparent;
+  border: none;
+  outline: none;
+  transition: 0.3s;
+}
+
+.search-box-group .search-box .clear-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  line-height: 40px;
+  text-align: center;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.search-box-group .search-box .clear-btn .clear-icon {
+  font-size: 20px;
+  color: #666;
+}
+
+.search-box-group .search-list {
+  margin-top: 10px;
+  height: 300px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+@media screen and (max-width: 640px) {
+  .search-box-group .search-list {
+    height: 50vh;
+  }
+}
+
+.search-box-group .search-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.search-box-group .search-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.search-box-group .search-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.search-box-group .search-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.search-active-btn {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 10;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.7);
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.search-active-btn .icon {
+  line-height: 1;
+  font-size: 24px;
+  color: #eee;
+}
+
+.search-active-btn:hover {
+  background: rgba(0, 0, 0, 0.9);
+}
+
+.search-list-item {
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.search-list-item .server-name {
+  flex: 1;
+  line-height: 30px;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.search-list-item .server-tag-list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+}
+
+.search-list-item .server-tag-list .tag-item {
+  height: 18px;
+  padding: 0 4px;
+  line-height: 18px;
+  font-size: 12px;
+  color: var(--public-note-tag-color);
+  background: var(--public-note-tag-bg);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
 }
 
 .nazha-box {

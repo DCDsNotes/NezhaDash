@@ -3,11 +3,11 @@ import { ServerListItemSkeleton } from "@/components/ServerListItemSkeleton"
 import { ServerOptionBox, type ServerOptionItem } from "@/components/ServerOptionBox"
 import { ServerSortBox } from "@/components/ServerSortBox"
 import WorldMap, { buildLocationsFromServers } from "@/components/WorldMap"
-import { SORT_TYPES } from "@/context/sort-context"
 import { useSort } from "@/hooks/use-sort"
 import { useStatus } from "@/hooks/use-status"
 import { useWebSocketContext } from "@/hooks/use-websocket-context"
 import { fetchServerGroup } from "@/lib/nezha-api"
+import { serverSortHandler, serverSortOptions } from "@/lib/server-sort"
 import { formatNezhaInfo } from "@/lib/utils"
 import { NezhaWebsocketResponse } from "@/types/nezha-api"
 import { ServerGroup } from "@/types/nezha-api"
@@ -27,7 +27,7 @@ function computeWorldMapWidth() {
 }
 
 export default function Servers() {
-  const { sortType, sortOrder, setSortOrder, setSortType } = useSort()
+  const { sortProp, sortOrder, setSortOrder, setSortProp } = useSort()
   const { data: groupData } = useQuery({
     queryKey: ["server-group"],
     queryFn: () => fetchServerGroup(),
@@ -101,34 +101,7 @@ export default function Servers() {
   }, [nezhaWsData?.now, nezhaWsData?.servers])
 
   const sortOptions = useMemo(
-    () =>
-      SORT_TYPES.map((type) => {
-        const label =
-          type === "default"
-            ? "排序值"
-            : type === "name"
-              ? "名称"
-              : type === "uptime"
-                ? "在线时长"
-                : type === "system"
-                  ? "系统"
-                  : type === "cpu"
-                    ? "CPU"
-                    : type === "mem"
-                      ? "内存"
-                      : type === "disk"
-                        ? "硬盘"
-                        : type === "up"
-                          ? "上传"
-                          : type === "down"
-                            ? "下载"
-                            : type === "up total"
-                              ? "总上传"
-                              : type === "down total"
-                                ? "总下载"
-                                : String(type)
-        return { value: type, label }
-      }),
+    () => serverSortOptions().map((i) => ({ value: i.value, label: i.label })),
     [],
   )
 
@@ -200,60 +173,7 @@ export default function Servers() {
       ? filteredServers
       : filteredServers.filter((server) => [status].includes(formatNezhaInfo(nezhaWsData.now, server).online ? "online" : "offline"))
 
-  filteredServers = filteredServers.sort((a, b) => {
-    const serverAInfo = formatNezhaInfo(nezhaWsData.now, a)
-    const serverBInfo = formatNezhaInfo(nezhaWsData.now, b)
-
-    if (sortType !== "name") {
-      // 仅在非 "name" 排序时，先按在线状态排序
-      if (!serverAInfo.online && serverBInfo.online) return 1
-      if (serverAInfo.online && !serverBInfo.online) return -1
-      if (!serverAInfo.online && !serverBInfo.online) {
-        // 如果两者都离线，可以继续按照其他条件排序，或者保持原序
-        // 这里选择保持原序
-        return 0
-      }
-    }
-
-    let comparison = 0
-
-    switch (sortType) {
-      case "name":
-        comparison = a.name.localeCompare(b.name)
-        break
-      case "uptime":
-        comparison = (a.state?.uptime ?? 0) - (b.state?.uptime ?? 0)
-        break
-      case "system":
-        comparison = a.host.platform.localeCompare(b.host.platform)
-        break
-      case "cpu":
-        comparison = (a.state?.cpu ?? 0) - (b.state?.cpu ?? 0)
-        break
-      case "mem":
-        comparison = (formatNezhaInfo(nezhaWsData.now, a).mem ?? 0) - (formatNezhaInfo(nezhaWsData.now, b).mem ?? 0)
-        break
-      case "disk":
-        comparison = (formatNezhaInfo(nezhaWsData.now, a).disk ?? 0) - (formatNezhaInfo(nezhaWsData.now, b).disk ?? 0)
-        break
-      case "up":
-        comparison = (a.state?.net_out_speed ?? 0) - (b.state?.net_out_speed ?? 0)
-        break
-      case "down":
-        comparison = (a.state?.net_in_speed ?? 0) - (b.state?.net_in_speed ?? 0)
-        break
-      case "up total":
-        comparison = (a.state?.net_out_transfer ?? 0) - (b.state?.net_out_transfer ?? 0)
-        break
-      case "down total":
-        comparison = (a.state?.net_in_transfer ?? 0) - (b.state?.net_in_transfer ?? 0)
-        break
-      default:
-        comparison = 0
-    }
-
-    return sortOrder === "asc" ? comparison : -comparison
-  })
+  filteredServers = filteredServers.sort((a, b) => serverSortHandler(a, b, sortProp, sortOrder))
 
   const serverLocations = buildLocationsFromServers(
     filteredServers.map((s) => ({
@@ -296,9 +216,9 @@ export default function Servers() {
               />
             )}
             <ServerSortBox
-              value={{ prop: sortType === "default" ? "" : sortType, order: sortOrder }}
+              value={{ prop: sortProp, order: sortOrder }}
               onChange={(val) => {
-                setSortType(((val.prop || "default") as any) || "default")
+                setSortProp(val.prop)
                 setSortOrder(val.order)
               }}
               options={sortOptions}

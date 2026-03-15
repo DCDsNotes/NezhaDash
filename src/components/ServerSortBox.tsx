@@ -5,18 +5,6 @@ import { cn } from "@/lib/utils"
 
 import { ServerSortDropdownMenu, SortOption } from "./ServerSortDropdownMenu"
 
-function ArrowIcon({ dir }: { dir: "up" | "down" }) {
-  return (
-    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-      {dir === "down" ? (
-        <path fill="currentColor" d="M12 16l-6-6h12l-6 6z" />
-      ) : (
-        <path fill="currentColor" d="M12 8l6 6H6l6-6z" />
-      )}
-    </svg>
-  )
-}
-
 export function ServerSortBox({
   value,
   onChange,
@@ -161,7 +149,7 @@ export function ServerSortBox({
         <div className="sort-select-selected">
           <span className="sort-select-selected-value">{selectedLabel}</span>
           <span className="sort-select-selected-icon" onClick={toggleOrder}>
-            <ArrowIcon dir={activeValue.order === "desc" ? "down" : "up"} />
+            {activeValue.order === "desc" ? <span className="ri-arrow-down-line" /> : <span className="ri-arrow-up-line" />}
           </span>
         </div>
       </div>
@@ -182,4 +170,3 @@ export function ServerSortBox({
     </div>
   )
 }
-

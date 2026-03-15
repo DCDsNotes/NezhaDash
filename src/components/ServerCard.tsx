@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom"
 import ServerFlag from "@/components/ServerFlag"
 import { ServerStatusRing } from "@/components/ServerStatusRing"
 import { serverIdToServerKey } from "@/lib/server-key"
-import { GetFontLogoClass, MageMicrosoftWindows } from "@/lib/logo-class"
+import { getPlatformLogoIconClassName } from "@/lib/logo-class"
 import { formatCpuMemDiskText, calcBinary } from "@/lib/server-spec"
 import { cn, formatNezhaInfo, getNextCycleTime, parsePublicNote } from "@/lib/utils"
 import { NezhaServer } from "@/types/nezha-api"
@@ -98,6 +98,7 @@ export default function ServerCard({ now, serverInfo }: { now: number; serverInf
   const info = formatNezhaInfo(now, serverInfo)
   const parsedData = useMemo(() => parsePublicNote(info.public_note), [info.public_note])
   const { billing, remainingTime } = useMemo(() => computeBillAndRemaining(parsedData), [parsedData])
+  const platformIconClassName = useMemo(() => getPlatformLogoIconClassName(info.platform || ""), [info.platform])
 
   const cpuText = serverInfo.host?.cpu?.[0] || ""
   const cpuMemDiskText = useMemo(
@@ -220,7 +221,7 @@ export default function ServerCard({ now, serverInfo }: { now: number; serverInf
           {remainingTime ? (
             <div className="remaining-time-info">
               <span className="icon" aria-hidden="true">
-                ⏳
+                <span className="ri-hourglass-fill" />
               </span>
               <span className="text">
                 {remainingTime.type !== "infinity" ? (
@@ -239,11 +240,7 @@ export default function ServerCard({ now, serverInfo }: { now: number; serverInf
 
           {cpuMemDiskText ? (
             <div className="server-spec">
-              {String(info.platform || "").includes("Windows") ? (
-                <MageMicrosoftWindows className="server-spec-icon" />
-              ) : (
-                <span className={cn("server-spec-icon", `fl-${GetFontLogoClass(info.platform || "")}`)} />
-              )}
+              <span className={cn("server-spec-icon", platformIconClassName)} />
               <span className="server-spec-text">{cpuMemDiskText}</span>
             </div>
           ) : null}

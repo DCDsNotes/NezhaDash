@@ -3,10 +3,10 @@ import React, { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom"
 
-import { DashCommand } from "./components/DashCommand"
 import ErrorBoundary from "./components/ErrorBoundary"
 import Footer from "./components/Footer"
 import Header, { RefreshToast } from "./components/Header"
+import SearchBox from "./components/SearchBox"
 import { useBackground } from "./hooks/use-background"
 import { InjectContext } from "./lib/inject"
 import { fetchSetting } from "./lib/nezha-api"
@@ -73,10 +73,9 @@ const MainApp: React.FC = () => {
           />
         )}
         <div className="nazha-layout-main">
-          <main className="flex min-h-screen w-full flex-1 flex-col gap-4 p-0">
+          <main className="flex min-h-screen w-full flex-1 flex-col gap-0 p-0">
             <RefreshToast />
             <Header />
-            <DashCommand />
             <Routes>
               <Route path="/" element={<Server />} />
               <Route path="/server/:serverKey" element={<ServerDetail />} />
@@ -84,6 +83,7 @@ const MainApp: React.FC = () => {
               <Route path="*" element={<NotFound />} />
             </Routes>
             <Footer />
+            <SearchBox />
           </main>
         </div>
       </div>

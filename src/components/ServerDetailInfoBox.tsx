@@ -59,6 +59,15 @@ export default function ServerDetailInfoBox({ now, server }: { now: number; serv
     return "双向"
   }, [parsedNote?.planDataMod?.trafficType])
 
+  function getTemperatureIconClass(label: string) {
+    const name = String(label || "").toLowerCase()
+    if (name.includes("cpu")) return "ri-cpu-line"
+    if (name.includes("gpu")) return "ri-gamepad-line"
+    if (name.includes("nvme")) return "ri-hard-drive-3-line"
+    if (name.includes("motherboard")) return "ri-instance-line"
+    return "ri-temp-hot-line"
+  }
+
   return (
     <div className="server-info-box nazha-box">
       <div className="server-info-group server-info--cpu">
@@ -110,8 +119,12 @@ export default function ServerDetailInfoBox({ now, server }: { now: number; serv
             <div className="server-info-item-group">
               {temperatures.map((item, idx) => (
                 <span key={`${server.id}_temp_${idx}`} className="server-info-item" title={`${item.Name}: ${item.Temperature.toFixed(2)}°C`}>
-                  <span className="server-info-item-icon">🌡</span>
-                  <span className="server-info-item-label">{item.Name}</span>
+                  <span className="server-info-item-icon">
+                    <i className={getTemperatureIconClass(item.Name)} />
+                  </span>
+                  <span className="server-info-item-label" title={item.Name}>
+                    {item.Name}
+                  </span>
                   <span className="server-info-item-value">{item.Temperature.toFixed(1)}°C</span>
                 </span>
               ))}
@@ -221,4 +234,3 @@ export default function ServerDetailInfoBox({ now, server }: { now: number; serv
     </div>
   )
 }
-
