@@ -402,7 +402,7 @@ export default function MiniLineChart({
                 x={paddingLeft - 6}
                 y={y + 4}
                 textAnchor="end"
-                fontSize="15"
+                fontSize="12"
                 fontWeight="700"
                 fill="rgba(221,221,221,0.75)"
               >
@@ -421,7 +421,7 @@ export default function MiniLineChart({
                   x={paddingLeft + plotWidth + 6}
                   y={y + 4}
                   textAnchor="start"
-                  fontSize="15"
+                  fontSize="12"
                   fontWeight="700"
                   fill="rgba(221,221,221,0.65)"
                 >
@@ -442,7 +442,7 @@ export default function MiniLineChart({
                 x={x}
                 y={viewHeight - 6}
                 textAnchor={isFirst ? "start" : isLast ? "end" : "middle"}
-                fontSize="14"
+                fontSize="12"
                 fontWeight="700"
                 fill="rgba(221,221,221,0.70)"
               >
@@ -460,7 +460,7 @@ export default function MiniLineChart({
                   <path
                     d={seg.fillD}
                     fill={p.color}
-                    opacity={(p.opacity ?? 1) * 0.18}
+                    opacity={(p.opacity ?? 1) * 0.5}
                     vectorEffect="non-scaling-stroke"
                   />
                 ) : null}
