@@ -808,6 +808,9 @@
   transform: translate(-50%, -50%);
   background: var(--world-map-point-color, #fff143);
   border-radius: 50%;
+  will-change: transform;
+  animation: world-map-point-jump 1.8s ease-in-out infinite;
+  animation-delay: var(--map-point-delay, 0s);
 }
 
 .world-map-point .point-block::before {
@@ -822,6 +825,16 @@
   border-radius: 50%;
 }
 
+@keyframes world-map-point-jump {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) translateY(0) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) translateY(calc(-7px * var(--map-point-scale))) scale(1.06);
+  }
+}
+
 @media screen and (max-width: 720px) {
   .world-map-point {
     --map-point-scale: 0.5;
@@ -829,17 +842,7 @@
 }
 
 .world-map-point--group .point-block::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: calc(var(--map-point-size) * var(--map-point-scale) + (16px * var(--map-point-scale)));
-  height: calc(var(--map-point-size) * var(--map-point-scale) + (16px * var(--map-point-scale)));
-  transform: translate(-50%, -50%);
-  border: calc(2px * var(--map-point-scale)) solid var(--world-map-point-color, #fff143);
-  border-radius: 50%;
-  opacity: 0.7;
-  transition: opacity 0.3s;
+  display: none;
 }
 
 .world-map-point--group .point-block:hover::after {
@@ -2383,10 +2386,65 @@
 .line-box {
   width: 100%;
   height: var(--line-chart-size, 300px);
+  position: relative;
 }
 
 .line-box .chart {
   width: 100%;
   height: 100%;
   display: block;
+}
+
+.line-box .chart-tooltip {
+  position: absolute;
+  z-index: 10;
+  min-width: 200px;
+  max-width: 280px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.82);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  color: #eee;
+  font-size: 12px;
+  line-height: 1.25;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+}
+
+.line-box .chart-tooltip-time {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 6px;
+}
+
+.line-box .chart-tooltip-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.line-box .chart-tooltip-row {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.line-box .chart-tooltip-row .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
+}
+
+.line-box .chart-tooltip-row .name {
+  color: rgba(255, 255, 255, 0.78);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.line-box .chart-tooltip-row .value {
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.92);
 }

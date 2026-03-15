@@ -523,7 +523,7 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
                   </div>
                 </div>
               </div>
-              <MiniLineChart seriesList={chartData.seriesByCate[index] || []} />
+              <MiniLineChart seriesList={chartData.seriesByCate[index] || []} dateList={chartData.dateList} />
             </div>
           ))}
         </div>
@@ -557,7 +557,7 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
               </div>
             ))}
           </div>
-          <MiniLineChart seriesList={chartData.seriesList} />
+          <MiniLineChart seriesList={chartData.seriesList} dateList={chartData.dateList} />
         </>
       )}
     </div>
