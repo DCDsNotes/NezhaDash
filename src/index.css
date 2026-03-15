@@ -2402,7 +2402,7 @@
   position: absolute;
   z-index: 10;
   min-width: 200px;
-  max-width: 280px;
+  max-width: 360px;
   padding: 8px 10px;
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.82);
@@ -2442,9 +2442,10 @@
 
 .line-box .chart-tooltip-row .name {
   color: rgba(255, 255, 255, 0.78);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: visible;
+  text-overflow: unset;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .line-box .chart-tooltip-row .value {

@@ -123,10 +123,10 @@ export default function MiniLineChart({
   const viewWidth = 1000
   const viewHeight = 300
 
-  const paddingLeft = 44
+  const paddingLeft = 64
   const paddingRight = 44
   const paddingTop = 10
-  const paddingBottom = 22
+  const paddingBottom = 26
   const plotWidth = viewWidth - paddingLeft - paddingRight
   const plotHeight = viewHeight - paddingTop - paddingBottom
 
@@ -384,7 +384,7 @@ export default function MiniLineChart({
                 x={paddingLeft - 6}
                 y={y + 4}
                 textAnchor="end"
-                fontSize="12"
+                fontSize="13"
                 fontWeight="700"
                 fill="rgba(221,221,221,0.75)"
               >
@@ -403,7 +403,7 @@ export default function MiniLineChart({
                   x={paddingLeft + plotWidth + 6}
                   y={y + 4}
                   textAnchor="start"
-                  fontSize="12"
+                  fontSize="13"
                   fontWeight="700"
                   fill="rgba(221,221,221,0.65)"
                 >
@@ -424,7 +424,7 @@ export default function MiniLineChart({
                 x={x}
                 y={viewHeight - 6}
                 textAnchor={isFirst ? "start" : isLast ? "end" : "middle"}
-                fontSize="11"
+                fontSize="12"
                 fontWeight="700"
                 fill="rgba(221,221,221,0.70)"
               >
@@ -457,8 +457,8 @@ export default function MiniLineChart({
             x2={crosshairX}
             y1={paddingTop}
             y2={paddingTop + plotHeight}
-            stroke="rgba(255,255,255,0.18)"
-            strokeWidth={1}
+            stroke="rgba(255,255,255,0.65)"
+            strokeWidth={1.5}
           />
         ) : null}
       </svg>
