@@ -824,7 +824,7 @@
   opacity: 0;
   will-change: transform, opacity;
   pointer-events: none;
-  animation: world-map-point-pulse 1.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  animation: world-map-point-pulse 2.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
   animation-fill-mode: both;
 }
 
@@ -833,7 +833,7 @@
 }
 
 .world-map-point .point-block::after {
-  animation-delay: calc(var(--map-point-delay, 0s) + 0.8s);
+  animation-delay: calc(var(--map-point-delay, 0s) + 1.2s);
 }
 
 @keyframes world-map-point-pulse {
