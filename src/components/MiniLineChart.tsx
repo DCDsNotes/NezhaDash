@@ -132,9 +132,12 @@ export default function MiniLineChart({
 
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [containerWidth, setContainerWidth] = useState<number>(0)
+  const [containerHeight, setContainerHeight] = useState<number>(0)
   const [hoverIdx, setHoverIdx] = useState<number>(-1)
   const [hoverX, setHoverX] = useState<number>(0)
   const [hovering, setHovering] = useState(false)
+  const tooltipRef = useRef<HTMLDivElement | null>(null)
+  const [tooltipSize, setTooltipSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 })
 
   const normalizedSeries = useMemo(() => {
     return seriesList.map((s) => ({
@@ -176,6 +179,7 @@ export default function MiniLineChart({
   }, [normalizedSeries])
 
   const yTicks = useMemo(() => buildTicks(delayMax, 7), [delayMax])
+  const yMax = useMemo(() => Math.max(1, yTicks[yTicks.length - 1] ?? 1), [yTicks])
   const hasLossSeries = useMemo(() => normalizedSeries.some((s) => s.yAxisIndex === 1), [normalizedSeries])
 
   const normalizedDateList = useMemo(() => {
@@ -194,9 +198,12 @@ export default function MiniLineChart({
     const el = containerRef.current
     if (!el) return
     setContainerWidth(el.clientWidth || 0)
+    setContainerHeight(el.clientHeight || 0)
     const ro = new ResizeObserver((entries) => {
       const w = entries?.[0]?.contentRect?.width
       if (typeof w === "number" && Number.isFinite(w)) setContainerWidth(w)
+      const h = entries?.[0]?.contentRect?.height
+      if (typeof h === "number" && Number.isFinite(h)) setContainerHeight(h)
     })
     ro.observe(el)
     return () => ro.disconnect()
@@ -228,7 +235,7 @@ export default function MiniLineChart({
     const span = xMax - xMin || 1
 
     return normalizedSeries.map((s) => {
-      const ySpan = delayMax || 1
+      const ySpan = yMax || 1
 
       const segments: string[] = []
       let current: { x: number; y: number }[] = []
@@ -260,7 +267,7 @@ export default function MiniLineChart({
         d: segments.join(" "),
       }
     })
-  }, [connectNulls, delayMax, normalizedSeries, paddingLeft, paddingTop, plotHeight, plotWidth, xRange])
+  }, [connectNulls, normalizedSeries, paddingLeft, paddingTop, plotHeight, plotWidth, xRange, yMax])
 
   const crosshairX = useMemo(() => {
     if (!hovering || hoverIdx < 0 || hoverIdx >= normalizedDateList.length) return null
@@ -300,6 +307,36 @@ export default function MiniLineChart({
   }, [hoverIdx, hovering, normalizedDateList, normalizedSeries, valueMapList, xRange.xMax, xRange.xMin])
 
   useEffect(() => {
+    if (!tooltipData) return
+    const id = requestAnimationFrame(() => {
+      const el = tooltipRef.current
+      if (!el) return
+      const w = el.offsetWidth || 0
+      const h = el.offsetHeight || 0
+      setTooltipSize((prev) => (prev.w === w && prev.h === h ? prev : { w, h }))
+    })
+    return () => cancelAnimationFrame(id)
+  }, [hoverX, tooltipData])
+
+  const tooltipStyle = useMemo(() => {
+    if (!tooltipData) return null
+    const cw = containerRef.current?.clientWidth || containerWidth || 0
+    const ch = containerRef.current?.clientHeight || containerHeight || 0
+    const w = tooltipSize.w || 210
+    const h = tooltipSize.h || 0
+
+    const maxLeft = Math.max(10, cw - w - 10)
+    let left = hoverX + 12
+    if (left + w > cw - 10) left = hoverX - w - 12
+    left = Math.max(10, Math.min(left, maxLeft))
+
+    let top = 10
+    if (ch && h && top + h > ch - 10) top = Math.max(10, ch - h - 10)
+
+    return { left: `${left}px`, top: `${top}px` }
+  }, [containerHeight, containerWidth, hoverX, tooltipData, tooltipSize.h, tooltipSize.w])
+
+  useEffect(() => {
     if (!hovering) setHoverIdx(-1)
   }, [hovering])
 
@@ -326,7 +363,7 @@ export default function MiniLineChart({
       <svg className="chart" viewBox={`0 0 ${viewWidth} ${viewHeight}`} preserveAspectRatio="none">
         <g className="chart-grid">
           {yTicks.map((tick) => {
-            const y = paddingTop + plotHeight - clamp01(tick / delayMax) * plotHeight
+            const y = paddingTop + plotHeight - clamp01(tick / yMax) * plotHeight
             return <line key={`y_${tick}`} x1={paddingLeft} x2={paddingLeft + plotWidth} y1={y} y2={y} stroke="rgba(255,255,255,0.10)" strokeWidth={1} />
           })}
           {timeTicks.map((tick) => {
@@ -339,7 +376,7 @@ export default function MiniLineChart({
 
         <g className="chart-axis-labels">
           {yTicks.map((tick) => {
-            const y = paddingTop + plotHeight - clamp01(tick / delayMax) * plotHeight
+            const y = paddingTop + plotHeight - clamp01(tick / yMax) * plotHeight
             const label = `${Math.round(tick)}ms`
             return (
               <text
@@ -347,7 +384,7 @@ export default function MiniLineChart({
                 x={paddingLeft - 6}
                 y={y + 4}
                 textAnchor="end"
-                fontSize="11"
+                fontSize="12"
                 fontWeight="700"
                 fill="rgba(221,221,221,0.75)"
               >
@@ -357,11 +394,19 @@ export default function MiniLineChart({
           })}
           {hasLossSeries &&
             yTicks.map((tick) => {
-              const y = paddingTop + plotHeight - clamp01(tick / delayMax) * plotHeight
-              const p = clampPercent((tick / delayMax) * 100)
+              const y = paddingTop + plotHeight - clamp01(tick / yMax) * plotHeight
+              const p = clampPercent((tick / yMax) * 100)
               const label = `${Math.round(p)}%`
               return (
-                <text key={`yr_${tick}`} x={paddingLeft + plotWidth + 6} y={y + 4} textAnchor="start" fontSize="11" fill="rgba(221,221,221,0.65)">
+                <text
+                  key={`yr_${tick}`}
+                  x={paddingLeft + plotWidth + 6}
+                  y={y + 4}
+                  textAnchor="start"
+                  fontSize="12"
+                  fontWeight="700"
+                  fill="rgba(221,221,221,0.65)"
+                >
                   {label}
                 </text>
               )
@@ -379,7 +424,7 @@ export default function MiniLineChart({
                 x={x}
                 y={viewHeight - 6}
                 textAnchor={isFirst ? "start" : isLast ? "end" : "middle"}
-                fontSize="10"
+                fontSize="11"
                 fontWeight="700"
                 fill="rgba(221,221,221,0.70)"
               >
@@ -420,11 +465,9 @@ export default function MiniLineChart({
 
       {tooltipData ? (
         <div
+          ref={tooltipRef}
           className="chart-tooltip"
-          style={{
-            left: `${Math.max(10, Math.min(hoverX + 12, (containerRef.current?.clientWidth || 0) - 210))}px`,
-            top: "10px",
-          }}
+          style={tooltipStyle || undefined}
         >
           <div className="chart-tooltip-time">{tooltipData.label}</div>
           <div className="chart-tooltip-rows">
