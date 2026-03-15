@@ -25,7 +25,13 @@ export function ServerSortBox({
 
   const [isMobile, setIsMobile] = useState<boolean>(() => (typeof window !== "undefined" ? window.innerWidth < 768 : false))
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({
+    position: "fixed",
+    top: "0px",
+    left: "0px",
+    visibility: "hidden",
+    zIndex: 500,
+  })
 
   const activeValue = value
 
@@ -85,7 +91,32 @@ export function ServerSortBox({
 
   function toggleDropdown(e: React.MouseEvent) {
     e.stopPropagation()
-    setIsDropdownOpen((v) => !v)
+    setIsDropdownOpen((v) => {
+      const next = !v
+      if (next) {
+        const triggerEl = triggerRef.current
+        if (isMobile) {
+          setDropdownStyle({
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            visibility: "visible",
+            zIndex: 500,
+          })
+        } else if (triggerEl) {
+          const rect = triggerEl.getBoundingClientRect()
+          setDropdownStyle({
+            position: "fixed",
+            top: `${rect.bottom + 8}px`,
+            left: `${rect.left}px`,
+            visibility: "hidden",
+            zIndex: 500,
+          })
+        }
+      }
+      return next
+    })
   }
 
   function toggleOrder(e: React.MouseEvent) {

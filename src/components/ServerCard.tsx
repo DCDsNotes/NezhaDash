@@ -92,6 +92,12 @@ function getRingUsedColor(type: "cpu" | "mem" | "disk") {
   return "#70F3FF"
 }
 
+function splitDaysText(value: string) {
+  const m = String(value || "").match(/^(\d+)(天)$/)
+  if (!m) return null
+  return { num: m[1], unit: m[2] }
+}
+
 export default function ServerCard({ now, serverInfo }: { now: number; serverInfo: NezhaServer }) {
   const navigate = useNavigate()
 
@@ -141,6 +147,7 @@ export default function ServerCard({ now, serverInfo }: { now: number; serverInf
   const inSpeed = useMemo(() => formatBinaryValue(serverInfo.state?.net_in_speed || 0, { t: 2, g: 2, m: 1, k: 1 }), [serverInfo.state?.net_in_speed])
   const outSpeed = useMemo(() => formatBinaryValue(serverInfo.state?.net_out_speed || 0, { t: 2, g: 2, m: 1, k: 1 }), [serverInfo.state?.net_out_speed])
   const duration = useMemo(() => formatDurationValue(serverInfo.state?.uptime || 0), [serverInfo.state?.uptime])
+  const remainingDays = useMemo(() => (remainingTime?.type === "days" ? splitDaysText(remainingTime.value) : null), [remainingTime?.type, remainingTime?.value])
 
   const cardClick = () => {
     sessionStorage.setItem("fromMainPage", "true")
@@ -227,7 +234,14 @@ export default function ServerCard({ now, serverInfo }: { now: number; serverInf
                 {remainingTime.type !== "infinity" ? (
                   <>
                     <span className="text-item label-text">{remainingTime.label}</span>
-                    <span className="text-item value-text">{remainingTime.value}</span>
+                    {remainingDays ? (
+                      <>
+                        <span className="text-item value-text">{remainingDays.num}</span>
+                        <span className="text-item label-text">{remainingDays.unit}</span>
+                      </>
+                    ) : (
+                      <span className="text-item value-text">{remainingTime.value}</span>
+                    )}
                   </>
                 ) : (
                   <span className="text-item value-text">{remainingTime.value}</span>

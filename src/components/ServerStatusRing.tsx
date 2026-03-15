@@ -69,7 +69,7 @@ export function ServerStatusRing({
 
   return (
     <div className={`server-status-ring server-status--${type}`} style={ringStyle} title={tooltip}>
-      <div className="ring">
+      <div className="ring-circle">
         <div className="ring-center">
           <div className="ring-percent">{displayPercent}</div>
           {displayValText ? <div className="ring-val">{displayValText}</div> : null}

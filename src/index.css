@@ -59,8 +59,8 @@
     --public-note-tag-color: #ccc;
     --public-note-tag-bg: linear-gradient(125deg, #676ef7, #41459c);
 
-    --option-high-color: #ff7500;
-    --option-high-color-active: rgba(255, 177, 0, 0.75);
+    --option-high-color: #74dbef;
+    --option-high-color-active: rgba(116, 219, 239, 0.35);
 
     --server-status-value-color: #a1eafb;
     --server-status-label-color: #ddd;
@@ -424,6 +424,7 @@
   gap: 3px;
   color: #ddd;
   line-height: 30px;
+  font-size: 16px;
 }
 
 .server-count-group .server-count .icon {
@@ -437,7 +438,7 @@
 }
 
 .server-count-group .server-count .value {
-  font-weight: bold;
+  font-weight: 400;
 }
 
 .server-count-group .server-count.server-count--online {
@@ -519,6 +520,8 @@
   gap: 0 5px;
   color: #ddd;
   cursor: pointer;
+  font-size: 16px;
+  font-weight: 400;
 }
 
 .nezha-user-info-group .dashboard-url:hover {
@@ -926,6 +929,7 @@
 .server-option-box .server-option-item .option-label {
   color: #fff;
   font-weight: 700;
+  font-size: 14px;
   transition: all 0.3s linear;
 }
 
@@ -970,6 +974,7 @@
   height: 36px;
   padding: 0 15px;
   line-height: 1.2;
+  font-size: 14px;
   border-radius: 6px;
   background: rgba(0, 0, 0, 0.3);
   transition: all 0.3s linear;
@@ -1018,6 +1023,7 @@
   background: rgba(0, 0, 0, 0.8);
   border-radius: 6px;
   padding: 10px;
+  font-size: 14px;
   min-width: 150px;
   max-height: 300px;
   overflow-y: auto;
@@ -1052,6 +1058,7 @@
 .server-sort-item .option-label {
   color: #fff;
   font-weight: 700;
+  font-size: 14px;
   transition: all 0.3s linear;
 }
 
@@ -1292,7 +1299,7 @@
   cursor: default;
 }
 
-.server-status-ring .ring {
+.server-status-ring .ring-circle {
   width: var(--ring-size, 72px);
   height: var(--ring-size, 72px);
   border-radius: 50%;
@@ -1300,7 +1307,7 @@
   position: relative;
 }
 
-.server-status-ring .ring::before {
+.server-status-ring .ring-circle::before {
   content: "";
   position: absolute;
   inset: var(--ring-thickness, 11px);
@@ -1484,6 +1491,10 @@
 }
 
 .server-list-item-bill .server-spec-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
   font-size: var(--list-item-bill-icon-font-size);
   opacity: 0.9;
   color: inherit;

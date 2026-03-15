@@ -97,13 +97,20 @@ function getThreshold(raw: Array<number | null | undefined>) {
 }
 
 function formatLatency(value: number) {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return "-"
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return "-"
   return `${value}ms`
 }
 
 function formatPercent(value: number) {
   if (typeof value !== "number" || !Number.isFinite(value)) return "-"
   return `${value}%`
+}
+
+function clampPercent(n: number) {
+  if (!Number.isFinite(n)) return 0
+  if (n < 0) return 0
+  if (n > 100) return 100
+  return n
 }
 
 function buildMonitorChartData({
@@ -131,8 +138,11 @@ function buildMonitorChartData({
     const monitorId = Number(m.monitor_id || 0)
     const createdAt = Array.isArray(m.created_at) ? m.created_at : []
     const avgDelay = Array.isArray(m.avg_delay) ? m.avg_delay : []
+    const packetLoss = Array.isArray(m.packet_loss) ? m.packet_loss : []
+    const hasPacketLoss = packetLoss.length > 0
 
     const cateAcceptTimeMap = new Map<number, number>()
+    const cateAcceptLossMap = new Map<number, number>()
     let earliestTimestamp = nowServerTime
 
     createdAt.forEach((t, index) => {
@@ -141,18 +151,35 @@ function buildMonitorChartData({
       if (time < earliestTimestamp) earliestTimestamp = time
       if (time < acceptShowTime) return
       const d = Number(avgDelay[index])
-      if (!Number.isFinite(d)) return
-      cateAcceptTimeMap.set(time, d)
+      if (Number.isFinite(d)) {
+        cateAcceptTimeMap.set(time, d)
+      }
+
+      if (hasPacketLoss) {
+        const lossRaw = packetLoss[index]
+        const loss = Number(lossRaw)
+        if (Number.isFinite(loss)) {
+          cateAcceptLossMap.set(time, clampPercent(loss))
+        }
+      }
     })
 
     const actualStartTime = Math.max(acceptShowTime, earliestTimestamp)
     const allMinutes = Math.max(0, Math.floor((nowServerTime - actualStartTime) / 60000))
 
     const dateMap = new Map<number, number | null | undefined>()
+    const lossDateMap = new Map<number, number | null | undefined>()
     for (let j = 0; j <= allMinutes; j += 1) {
       const time = actualStartTime + j * 60000
-      const v = cateAcceptTimeMap.get(time)
-      dateMap.set(time, v ?? undefined)
+      const delayV = cateAcceptTimeMap.get(time)
+      dateMap.set(time, delayV ?? undefined)
+
+      if (hasPacketLoss) {
+        const lossV = cateAcceptLossMap.get(time)
+        lossDateMap.set(time, lossV ?? undefined)
+      } else {
+        lossDateMap.set(time, delayV === undefined ? 100 : 0)
+      }
     }
 
     const { median, tolerancePercent } = peakShaving ? getThreshold(Array.from(dateMap.values())) : { median: 0, tolerancePercent: 0 }
@@ -169,13 +196,17 @@ function buildMonitorChartData({
     const validatedData: Array<[number, number]> = []
     const overValidatedData: LineChartPoint[] = []
     let delayTotal = 0
+    let lossTotal = 0
+    let lossCount = 0
 
     dateMap.forEach((v, k) => {
       const time = Number(k)
       const val = typeof v === "number" && Number.isFinite(v) ? Number((Math.round(v * 100) / 100).toFixed(2)) : v
 
       lineData.push([time, (val ?? null) as number | null])
-      lossLineData.push([time, v === undefined ? 100 : 0])
+      const lossV = lossDateMap.get(time)
+      const lossVal = typeof lossV === "number" && Number.isFinite(lossV) ? clampPercent(lossV) : lossV
+      lossLineData.push([time, (lossVal ?? null) as number | null])
 
       if (typeof val === "number" && Number.isFinite(val)) {
         dateSet.add(time)
@@ -185,11 +216,15 @@ function buildMonitorChartData({
       if (v !== undefined) {
         overValidatedData.push([time, (val ?? null) as number | null])
       }
+      if (typeof lossVal === "number" && Number.isFinite(lossVal)) {
+        lossTotal += lossVal
+        lossCount += 1
+      }
     })
 
     const avg = validatedData.length ? delayTotal / validatedData.length : 0
     const over = lineData.length ? (overValidatedData.length / lineData.length) * 100 : 0
-    const loss = 100 - over
+    const loss = lossCount > 0 ? lossTotal / lossCount : 100 - over
     const validRate = 1 - (validatedData.length > 0 && overValidatedData.length > 0 ? validatedData.length / overValidatedData.length : 0)
 
     const color = getLineColor(monitorId)

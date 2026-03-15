@@ -9,6 +9,17 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatNezhaInfo(now: number, serverInfo: NezhaServer) {
   const lastActiveTime = serverInfo.last_active.startsWith("000") ? 0 : parseISOTimestamp(serverInfo.last_active)
+
+  function calcPercent(used: unknown, total: unknown) {
+    const u = Number(used)
+    const t = Number(total)
+    if (!Number.isFinite(u) || !Number.isFinite(t) || t <= 0) return 0
+    const v = (u / t) * 100
+    if (!Number.isFinite(v) || v < 0) return 0
+    if (v > 100) return 100
+    return v
+  }
+
   return {
     ...serverInfo,
     cpu: serverInfo.state.cpu || 0,
@@ -22,10 +33,10 @@ export function formatNezhaInfo(now: number, serverInfo: NezhaServer) {
     version: serverInfo.host.version || null,
     tcp: serverInfo.state.tcp_conn_count || 0,
     udp: serverInfo.state.udp_conn_count || 0,
-    mem: (serverInfo.state.mem_used / serverInfo.host.mem_total) * 100 || 0,
-    swap: (serverInfo.state.swap_used / serverInfo.host.swap_total) * 100 || 0,
-    disk: (serverInfo.state.disk_used / serverInfo.host.disk_total) * 100 || 0,
-    stg: (serverInfo.state.disk_used / serverInfo.host.disk_total) * 100 || 0,
+    mem: calcPercent(serverInfo.state.mem_used, serverInfo.host.mem_total),
+    swap: calcPercent(serverInfo.state.swap_used, serverInfo.host.swap_total),
+    disk: calcPercent(serverInfo.state.disk_used, serverInfo.host.disk_total),
+    stg: calcPercent(serverInfo.state.disk_used, serverInfo.host.disk_total),
     country_code: serverInfo.country_code,
     platform: serverInfo.host.platform || "",
     net_out_transfer: serverInfo.state.net_out_transfer || 0,

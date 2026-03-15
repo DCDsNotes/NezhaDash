@@ -34,7 +34,7 @@ export default function Servers() {
   })
   const { lastMessage, connected } = useWebSocketContext()
   const { status, setStatus } = useStatus()
-  const [currentGroup, setCurrentGroup] = useState<string>("All")
+  const [currentGroup, setCurrentGroup] = useState<string>("")
   const [worldMapWidth, setWorldMapWidth] = useState<number>(() => (typeof window === "undefined" ? 900 : computeWorldMapWidth()))
   const worldMapHeight = useMemo(() => Math.ceil((621 / 1280) * (Number(worldMapWidth) || 0)), [worldMapWidth])
 
@@ -45,8 +45,8 @@ export default function Servers() {
   }
 
   useEffect(() => {
-    const savedGroup = sessionStorage.getItem("selectedGroup") || "All"
-    setCurrentGroup(savedGroup)
+    const savedGroup = sessionStorage.getItem("selectedGroup") || ""
+    setCurrentGroup(savedGroup === "All" ? "" : savedGroup)
     const savedPosition = sessionStorage.getItem("scrollPosition")
     if (savedPosition) {
       requestAnimationFrame(() => {
@@ -65,7 +65,7 @@ export default function Servers() {
   const nezhaWsData = lastMessage ? (JSON.parse(lastMessage.data) as NezhaWebsocketResponse) : null
 
   const groupOptions = useMemo(() => {
-    const opts: ServerOptionItem[] = [{ key: "All", label: "全部", value: "All" }]
+    const opts: ServerOptionItem[] = []
     const groups = groupData?.data
     const servers = nezhaWsData?.servers
     if (!Array.isArray(groups) || !Array.isArray(servers)) return opts
@@ -161,7 +161,7 @@ export default function Servers() {
 
   let filteredServers =
     nezhaWsData?.servers?.filter((server) => {
-      if (currentGroup === "All") return true
+      if (!currentGroup) return true
       const group = groupData?.data?.find(
         (g: ServerGroup) => g.group.name === currentGroup && Array.isArray(g.servers) && g.servers.includes(server.id),
       )
@@ -203,8 +203,8 @@ export default function Servers() {
         </div>
         <div className="filter-group">
           <div className="left-box">
-            {groupOptions.length > 1 && (
-              <ServerOptionBox value={currentGroup} onChange={handleTagChange} options={groupOptions} acceptEmpty={false} />
+            {groupOptions.length > 0 && (
+              <ServerOptionBox value={currentGroup} onChange={handleTagChange} options={groupOptions} />
             )}
           </div>
           <div className="right-box">
