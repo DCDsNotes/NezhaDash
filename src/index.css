@@ -380,7 +380,7 @@
 
 .layout-header .site-name {
   line-height: calc(var(--layout-header-height) - 20px);
-  font-size: 24px;
+  font-size: 20px;
   font-weight: bold;
   color: #fff;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
@@ -2175,6 +2175,7 @@
   height: 30px;
   line-height: 30px;
   font-size: 16px;
+  font-weight: 700;
   color: #eee;
 }
 

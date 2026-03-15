@@ -20,6 +20,13 @@ export function formatNezhaInfo(now: number, serverInfo: NezhaServer) {
     return v
   }
 
+  function normalizeCountryCode(raw: unknown) {
+    const code = String(raw || "").trim().toLowerCase()
+    if (!code) return "cn"
+    if (!/^[a-z]{2}$/.test(code)) return "cn"
+    return code
+  }
+
   return {
     ...serverInfo,
     cpu: serverInfo.state.cpu || 0,
@@ -37,7 +44,7 @@ export function formatNezhaInfo(now: number, serverInfo: NezhaServer) {
     swap: calcPercent(serverInfo.state.swap_used, serverInfo.host.swap_total),
     disk: calcPercent(serverInfo.state.disk_used, serverInfo.host.disk_total),
     stg: calcPercent(serverInfo.state.disk_used, serverInfo.host.disk_total),
-    country_code: serverInfo.country_code,
+    country_code: normalizeCountryCode(serverInfo.country_code),
     platform: serverInfo.host.platform || "",
     net_out_transfer: serverInfo.state.net_out_transfer || 0,
     net_in_transfer: serverInfo.state.net_in_transfer || 0,

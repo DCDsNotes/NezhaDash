@@ -53,9 +53,9 @@ export default function ServerDetail() {
 
   const locations = useMemo(() => {
     if (!server) return []
-    const code = String(server.country_code || "").toUpperCase()
-    const coord = code ? countryCoordinates[code] : null
-    if (!coord) return []
+    let code = String(server.country_code || "").toUpperCase()
+    if (!code || !countryCoordinates[code]) code = "CN"
+    const coord = countryCoordinates[code]
     return [
       {
         key: code,

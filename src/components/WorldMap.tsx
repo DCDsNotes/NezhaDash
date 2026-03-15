@@ -151,9 +151,8 @@ export function buildLocationsFromServers(servers: { id: number; name: string; c
   servers.forEach((s) => {
     const isOnline = s.online === true || s.online === 1
     if (!isOnline) return
-    const code = (s.country_code || "").toUpperCase()
-    if (!code) return
-    if (!countryCoordinates[code]) return
+    let code = (s.country_code || "").toUpperCase()
+    if (!code || !countryCoordinates[code]) code = "CN"
     const prev = map.get(code) || { count: 0, servers: [] }
     prev.count += 1
     prev.servers.push({ id: s.id, name: s.name })
@@ -174,4 +173,3 @@ export function buildLocationsFromServers(servers: { id: number; name: string; c
   })
   return locations
 }
-

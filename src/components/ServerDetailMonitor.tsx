@@ -66,11 +66,6 @@ function normalizeTimestampMs(t: number) {
   return n * 1000
 }
 
-function toMinuteKey(t: number) {
-  const ms = normalizeTimestampMs(t)
-  return Math.floor(ms / 60000) * 60000
-}
-
 function getLineColor(id: number) {
   const idx = Math.abs(Number(id) || 0) % DEFAULT_LINE_COLORS.length
   return DEFAULT_LINE_COLORS[idx]
@@ -113,6 +108,60 @@ function clampPercent(n: number) {
   return n
 }
 
+function calculatePacketLoss(delays: Array<number | null | undefined>): number[] {
+  if (!delays || delays.length === 0) return []
+
+  const packetLossRates: number[] = []
+  const windowSize = Math.min(10, Math.max(3, Math.floor(delays.length / 10)))
+  const timeoutThreshold = 3000
+  const extremeDelayThreshold = 10000
+
+  for (let i = 0; i < delays.length; i += 1) {
+    const currentDelay = delays[i]
+    let lossRate = 0
+
+    if (currentDelay === 0 || currentDelay === null || currentDelay === undefined) {
+      lossRate = 100
+    } else if (currentDelay >= extremeDelayThreshold) {
+      lossRate = Math.min(95, 60 + (currentDelay - extremeDelayThreshold) / 1000)
+    } else if (currentDelay >= timeoutThreshold) {
+      lossRate = Math.min(50, (currentDelay - timeoutThreshold) / 200)
+    } else {
+      const start = Math.max(0, i - Math.floor(windowSize / 2))
+      const end = Math.min(delays.length, i + Math.ceil(windowSize / 2))
+      const windowDelays = delays.slice(start, end).filter((d): d is number => typeof d === "number" && Number.isFinite(d) && d > 0)
+
+      if (windowDelays.length > 2) {
+        const mean = windowDelays.reduce((sum, d) => sum + d, 0) / windowDelays.length
+        const variance = windowDelays.reduce((sum, d) => sum + (d - mean) ** 2, 0) / windowDelays.length
+        const standardDeviation = Math.sqrt(variance)
+        const coefficientOfVariation = standardDeviation / mean
+
+        if (coefficientOfVariation > 0.8) {
+          lossRate = Math.min(25, coefficientOfVariation * 15)
+        } else if (coefficientOfVariation > 0.5) {
+          lossRate = Math.min(10, coefficientOfVariation * 8)
+        } else if (coefficientOfVariation > 0.3) {
+          lossRate = Math.min(5, coefficientOfVariation * 5)
+        }
+
+        if (typeof currentDelay === "number" && currentDelay > mean * 2.5) {
+          lossRate += Math.min(15, (currentDelay / mean - 2.5) * 10)
+        }
+      }
+    }
+
+    if (i > 0) {
+      const alpha = 0.3
+      lossRate = alpha * lossRate + (1 - alpha) * packetLossRates[i - 1]
+    }
+
+    packetLossRates.push(Math.max(0, Math.min(100, lossRate)))
+  }
+
+  return packetLossRates.map((rate) => Number(rate.toFixed(2)))
+}
+
 function buildMonitorChartData({
   monitorData,
   minute,
@@ -127,11 +176,23 @@ function buildMonitorChartData({
   showCates: Record<number, boolean>
 }): MonitorChartData {
   const cateList: CateItem[] = []
-  const dateSet = new Set<number>()
   const seriesByCate: LineChartSeries[][] = []
   const seriesList: LineChartSeries[] = []
 
-  const acceptShowTime = (Math.floor(nowServerTime / 60000) - minute) * 60000
+  const nowTime = normalizeTimestampMs(nowServerTime) || Date.now()
+  const acceptShowTime = nowTime - Math.max(0, Number(minute) || 0) * 60000
+
+  const allTimeSet = new Set<number>()
+  monitorData.forEach((m) => {
+    const createdAt = Array.isArray(m.created_at) ? m.created_at : []
+    createdAt.forEach((t) => {
+      const time = normalizeTimestampMs(Number(t))
+      if (!time) return
+      if (time < acceptShowTime) return
+      allTimeSet.add(time)
+    })
+  })
+  const dateList = Array.from(allTimeSet).sort((a, b) => a - b)
 
   monitorData.forEach((m) => {
     const monitorName = String(m.monitor_name || "")
@@ -139,82 +200,63 @@ function buildMonitorChartData({
     const createdAt = Array.isArray(m.created_at) ? m.created_at : []
     const avgDelay = Array.isArray(m.avg_delay) ? m.avg_delay : []
     const packetLoss = Array.isArray(m.packet_loss) ? m.packet_loss : []
-    const hasPacketLoss = packetLoss.length > 0
+    const lossList = packetLoss.length > 0 ? packetLoss : calculatePacketLoss(avgDelay)
 
-    const cateAcceptTimeMap = new Map<number, number>()
-    const cateAcceptLossMap = new Map<number, number>()
-    let earliestTimestamp = nowServerTime
+    const delayByTime = new Map<number, number | null>()
+    const lossByTime = new Map<number, number | null>()
 
-    createdAt.forEach((t, index) => {
-      const time = toMinuteKey(t)
-      if (!time) return
-      if (time < earliestTimestamp) earliestTimestamp = time
-      if (time < acceptShowTime) return
-      const d = Number(avgDelay[index])
-      if (Number.isFinite(d)) {
-        cateAcceptTimeMap.set(time, d)
-      }
+    for (let i = 0; i < createdAt.length; i += 1) {
+      const time = normalizeTimestampMs(Number(createdAt[i]))
+      if (!time) continue
+      if (time < acceptShowTime) continue
 
-      if (hasPacketLoss) {
-        const lossRaw = packetLoss[index]
-        const loss = Number(lossRaw)
-        if (Number.isFinite(loss)) {
-          cateAcceptLossMap.set(time, clampPercent(loss))
-        }
-      }
-    })
+      const d = Number(avgDelay[i])
+      delayByTime.set(time, Number.isFinite(d) ? d : null)
 
-    const actualStartTime = Math.max(acceptShowTime, earliestTimestamp)
-    const allMinutes = Math.max(0, Math.floor((nowServerTime - actualStartTime) / 60000))
-
-    const dateMap = new Map<number, number | null | undefined>()
-    const lossDateMap = new Map<number, number | null | undefined>()
-    for (let j = 0; j <= allMinutes; j += 1) {
-      const time = actualStartTime + j * 60000
-      const delayV = cateAcceptTimeMap.get(time)
-      dateMap.set(time, delayV ?? undefined)
-
-      if (hasPacketLoss) {
-        const lossV = cateAcceptLossMap.get(time)
-        lossDateMap.set(time, lossV ?? undefined)
-      } else {
-        lossDateMap.set(time, delayV === undefined ? 100 : 0)
-      }
+      const l = Number(lossList[i])
+      lossByTime.set(time, Number.isFinite(l) ? clampPercent(l) : null)
     }
 
-    const { median, tolerancePercent } = peakShaving ? getThreshold(Array.from(dateMap.values())) : { median: 0, tolerancePercent: 0 }
+    const { median, tolerancePercent } = peakShaving ? getThreshold(Array.from(delayByTime.values())) : { median: 0, tolerancePercent: 0 }
+    let shavedCount = 0
+    let eligibleCount = 0
     if (peakShaving && median > 0) {
       const threshold = median * tolerancePercent
-      dateMap.forEach((v, k) => {
-        if (typeof v !== "number" || !Number.isFinite(v)) return
-        if (Math.abs(v - median) > threshold) dateMap.set(k, null)
+      delayByTime.forEach((v, k) => {
+        if (typeof v !== "number" || !Number.isFinite(v) || v === 0) return
+        eligibleCount += 1
+        if (Math.abs(v - median) > threshold) {
+          delayByTime.set(k, null)
+          shavedCount += 1
+        }
       })
     }
+    const shaveRatePercent = eligibleCount > 0 ? (shavedCount / eligibleCount) * 100 : 0
 
     const lineData: LineChartPoint[] = []
     const lossLineData: LineChartPoint[] = []
-    const validatedData: Array<[number, number]> = []
-    const overValidatedData: LineChartPoint[] = []
+
     let delayTotal = 0
+    let delayCount = 0
+    let sampleCount = 0
     let lossTotal = 0
     let lossCount = 0
 
-    dateMap.forEach((v, k) => {
-      const time = Number(k)
-      const val = typeof v === "number" && Number.isFinite(v) ? Number((Math.round(v * 100) / 100).toFixed(2)) : v
+    dateList.forEach((time) => {
+      const delayValRaw = delayByTime.get(time)
+      const delayVal = typeof delayValRaw === "number" && Number.isFinite(delayValRaw) ? Number((Math.round(delayValRaw * 100) / 100).toFixed(2)) : null
+      lineData.push([time, delayVal])
 
-      lineData.push([time, (val ?? null) as number | null])
-      const lossV = lossDateMap.get(time)
-      const lossVal = typeof lossV === "number" && Number.isFinite(lossV) ? clampPercent(lossV) : lossV
-      lossLineData.push([time, (lossVal ?? null) as number | null])
+      const lossValRaw = lossByTime.get(time)
+      const lossVal = typeof lossValRaw === "number" && Number.isFinite(lossValRaw) ? clampPercent(lossValRaw) : null
+      lossLineData.push([time, lossVal])
 
-      if (typeof val === "number" && Number.isFinite(val)) {
-        dateSet.add(time)
-        validatedData.push([time, val])
-        delayTotal += val
-      }
-      if (v !== undefined) {
-        overValidatedData.push([time, (val ?? null) as number | null])
+      if (delayByTime.has(time)) {
+        sampleCount += 1
+        if (typeof delayVal === "number" && Number.isFinite(delayVal) && delayVal > 0) {
+          delayTotal += delayVal
+          delayCount += 1
+        }
       }
       if (typeof lossVal === "number" && Number.isFinite(lossVal)) {
         lossTotal += lossVal
@@ -222,10 +264,10 @@ function buildMonitorChartData({
       }
     })
 
-    const avg = validatedData.length ? delayTotal / validatedData.length : 0
-    const over = lineData.length ? (overValidatedData.length / lineData.length) * 100 : 0
-    const loss = lossCount > 0 ? lossTotal / lossCount : 100 - over
-    const validRate = 1 - (validatedData.length > 0 && overValidatedData.length > 0 ? validatedData.length / overValidatedData.length : 0)
+    const avg = delayCount > 0 ? delayTotal / delayCount : 0
+    const loss = lossCount > 0 ? lossTotal / lossCount : 0
+    const over = lossCount > 0 ? 100 - loss : 0
+    const validRate = shaveRatePercent
 
     const color = getLineColor(monitorId)
     const cate: CateItem = {
@@ -235,13 +277,13 @@ function buildMonitorChartData({
       avg: Number(avg.toFixed(2)),
       over: Number(over.toFixed(2)),
       loss: Number(loss.toFixed(2)),
-      validRate: Number((validRate * 100).toFixed(2)),
+      validRate: Number(validRate.toFixed(2)),
       title: [
         monitorName,
         avg > 0 ? `平均延迟：${Number(avg.toFixed(2))}ms` : "",
         `成功率：${Number(over.toFixed(2))}%`,
         `丢包率：${Number(loss.toFixed(2))}%`,
-        peakShaving ? `削峰率: ${Number((validRate * 100).toFixed(2))}%` : "",
+        peakShaving ? `削峰率: ${Number(validRate.toFixed(2))}%` : "",
       ]
         .filter(Boolean)
         .join("\n"),
@@ -274,8 +316,6 @@ function buildMonitorChartData({
       seriesList.push(delaySeries, lossSeries)
     }
   })
-
-  const dateList = Array.from(dateSet).sort((a, b) => a - b)
   return {
     dateList,
     cateList,

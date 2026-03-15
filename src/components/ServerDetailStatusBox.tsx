@@ -5,6 +5,16 @@ import { calcBinary } from "@/lib/server-spec"
 import { formatNezhaInfo, parsePublicNote } from "@/lib/utils"
 import { NezhaServer } from "@/types/nezha-api"
 
+function calcPercent(used: unknown, total: unknown) {
+  const u = Number(used)
+  const t = Number(total)
+  if (!Number.isFinite(u) || !Number.isFinite(t) || t <= 0) return 0
+  const v = (u / t) * 100
+  if (!Number.isFinite(v) || v < 0) return 0
+  if (v > 100) return 100
+  return v
+}
+
 function getRingTrackColor() {
   return "rgba(255, 255, 255, 0.25)"
 }
@@ -52,9 +62,9 @@ export default function ServerDetailStatusBox({ now, server }: { now: number; se
   const swapTotal = server.host?.swap_total || 0
   const diskTotal = server.host?.disk_total || 0
 
-  const memPercent = memTotal > 0 ? (server.state?.mem_used / memTotal) * 100 : 0
-  const swapPercent = swapTotal > 0 ? (server.state?.swap_used / swapTotal) * 100 : 0
-  const diskPercent = diskTotal > 0 ? (server.state?.disk_used / diskTotal) * 100 : 0
+  const memPercent = calcPercent(server.state?.mem_used, memTotal)
+  const swapPercent = calcPercent(server.state?.swap_used, swapTotal)
+  const diskPercent = calcPercent(server.state?.disk_used, diskTotal)
 
   const duration = useMemo(() => formatDurationValue(server.state?.uptime || 0), [server.state?.uptime])
 
@@ -159,4 +169,3 @@ export default function ServerDetailStatusBox({ now, server }: { now: number; se
     </div>
   )
 }
-
