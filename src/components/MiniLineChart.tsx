@@ -45,6 +45,7 @@ function niceStep(rawStep: number) {
   const normalized = rawStep / magnitude
   if (normalized <= 1) return 1 * magnitude
   if (normalized <= 2) return 2 * magnitude
+  if (normalized <= 2.5) return 2.5 * magnitude
   if (normalized <= 5) return 5 * magnitude
   return 10 * magnitude
 }
@@ -52,14 +53,11 @@ function niceStep(rawStep: number) {
 function buildTicks(max: number, targetLines = 5) {
   const m = Number(max)
   if (!Number.isFinite(m) || m <= 0) return [0, 1]
-  const lines = clampInt(targetLines, 2, 8)
-  const step = niceStep(m / (lines - 1))
-  const niceMax = Math.max(step, Math.ceil(m / step) * step)
+  const lines = clampInt(targetLines, 2, 10)
+  const rawStep = m / (lines - 1)
+  const step = Math.max(1, niceStep(rawStep))
   const ticks: number[] = []
-  for (let v = 0; v <= niceMax + step * 0.5; v += step) {
-    ticks.push(v)
-    if (ticks.length >= 10) break
-  }
+  for (let i = 0; i < lines; i += 1) ticks.push(i * step)
   return ticks
 }
 
@@ -76,6 +74,16 @@ function formatTimeLabel(ms: number, spanMs: number) {
   const hh = String(d.getHours()).padStart(2, "0")
   const mi = String(d.getMinutes()).padStart(2, "0")
   return `${hh}:${mi}`
+}
+
+function formatTooltipTime(ms: number) {
+  const d = new Date(ms)
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, "0")
+  const dd = String(d.getDate()).padStart(2, "0")
+  const hh = String(d.getHours()).padStart(2, "0")
+  const mi = String(d.getMinutes()).padStart(2, "0")
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`
 }
 
 function findNearestIndex(sorted: number[], target: number) {
@@ -123,6 +131,7 @@ export default function MiniLineChart({
   const plotHeight = viewHeight - paddingTop - paddingBottom
 
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const [containerWidth, setContainerWidth] = useState<number>(0)
   const [hoverIdx, setHoverIdx] = useState<number>(-1)
   const [hoverX, setHoverX] = useState<number>(0)
   const [hovering, setHovering] = useState(false)
@@ -166,7 +175,7 @@ export default function MiniLineChart({
     return Math.max(max, 1)
   }, [normalizedSeries])
 
-  const yTicks = useMemo(() => buildTicks(delayMax, 5), [delayMax])
+  const yTicks = useMemo(() => buildTicks(delayMax, 7), [delayMax])
   const hasLossSeries = useMemo(() => normalizedSeries.some((s) => s.yAxisIndex === 1), [normalizedSeries])
 
   const normalizedDateList = useMemo(() => {
@@ -181,16 +190,27 @@ export default function MiniLineChart({
     return Array.from(set).sort((a, b) => a - b)
   }, [dateList, normalizedSeries])
 
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    setContainerWidth(el.clientWidth || 0)
+    const ro = new ResizeObserver((entries) => {
+      const w = entries?.[0]?.contentRect?.width
+      if (typeof w === "number" && Number.isFinite(w)) setContainerWidth(w)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   const timeTicks = useMemo(() => {
     if (normalizedDateList.length < 2) return [] as number[]
-    const lastIdx = normalizedDateList.length - 1
-    const midIdx = Math.floor(lastIdx / 2)
-    const q1Idx = Math.floor(lastIdx / 4)
-    const q3Idx = Math.floor((lastIdx * 3) / 4)
-    const list = [normalizedDateList[0], normalizedDateList[q1Idx], normalizedDateList[midIdx], normalizedDateList[q3Idx], normalizedDateList[lastIdx]]
-    const uniq = Array.from(new Set(list)).filter((v) => typeof v === "number")
-    return uniq.length > 3 ? [uniq[0], uniq[Math.floor(uniq.length / 2)], uniq[uniq.length - 1]] : uniq
-  }, [normalizedDateList])
+    const maxTicks = clampInt(Math.floor((containerWidth || 1000) / 95), 6, 12)
+    const { xMin, xMax } = xRange
+    const span = xMax - xMin || 1
+    const ticks: number[] = []
+    for (let i = 0; i < maxTicks; i += 1) ticks.push(xMin + (i * span) / (maxTicks - 1))
+    return ticks
+  }, [containerWidth, normalizedDateList.length, xRange])
 
   const valueMapList = useMemo(() => {
     return normalizedSeries.map((s) => {
@@ -255,15 +275,28 @@ export default function MiniLineChart({
     if (!hovering || hoverIdx < 0 || hoverIdx >= normalizedDateList.length) return null
     const t = normalizedDateList[hoverIdx]
     const span = xRange.xMax - xRange.xMin
-    const label = formatTimeLabel(t, span)
-    const rows = normalizedSeries.map((s, idx) => {
+    const label = formatTooltipTime(t)
+
+    type Row = { key: string; name: string; color: string; delay: string; loss: string }
+    const map = new Map<string, { name: string; color: string; delay?: number | null; loss?: number | null }>()
+
+    normalizedSeries.forEach((s, idx) => {
       const v = valueMapList[idx]?.get(t)
-      const isLoss = s.yAxisIndex === 1 || String(s.name).includes("丢包")
-      const unit = isLoss ? "%" : "ms"
-      const value = typeof v === "number" && Number.isFinite(v) ? `${v.toFixed(2).replace(/\\.00$/, "")}${unit}` : "-"
-      return { id: s.id, name: s.name, color: s.color, value }
+      const isLoss = s.yAxisIndex === 1 || String(s.name).includes("丢包") || s.id.endsWith("-loss")
+      const base = String(s.name || "").replace(/\s*丢包\s*$/, "").trim() || s.id.replace(/-(delay|loss)$/, "")
+      const existing = map.get(base) || { name: base, color: s.color }
+      if (isLoss) existing.loss = typeof v === "number" && Number.isFinite(v) ? v : null
+      else existing.delay = typeof v === "number" && Number.isFinite(v) ? v : null
+      map.set(base, existing)
     })
-    return { time: t, label, rows }
+
+    const rows: Row[] = Array.from(map.entries()).map(([key, v]) => {
+      const delayText = typeof v.delay === "number" ? `${v.delay.toFixed(2).replace(/\\.00$/, "")}ms` : "-"
+      const lossText = typeof v.loss === "number" ? `${v.loss.toFixed(2).replace(/\\.00$/, "")}%` : "-"
+      return { key, name: v.name, color: v.color, delay: delayText, loss: lossText }
+    })
+
+    return { time: t, label, rows, span }
   }, [hoverIdx, hovering, normalizedDateList, normalizedSeries, valueMapList, xRange.xMax, xRange.xMin])
 
   useEffect(() => {
@@ -307,9 +340,17 @@ export default function MiniLineChart({
         <g className="chart-axis-labels">
           {yTicks.map((tick) => {
             const y = paddingTop + plotHeight - clamp01(tick / delayMax) * plotHeight
-            const label = tick >= 100 ? `${Math.round(tick)}ms` : `${Number(tick.toFixed(1)).toString()}ms`
+            const label = `${Math.round(tick)}ms`
             return (
-              <text key={`yl_${tick}`} x={paddingLeft - 6} y={y + 4} textAnchor="end" fontSize="11" fill="rgba(221,221,221,0.75)">
+              <text
+                key={`yl_${tick}`}
+                x={paddingLeft - 6}
+                y={y + 4}
+                textAnchor="end"
+                fontSize="11"
+                fontWeight="700"
+                fill="rgba(221,221,221,0.75)"
+              >
                 {label}
               </text>
             )
@@ -330,8 +371,18 @@ export default function MiniLineChart({
             const span = xMax - xMin || 1
             const x = paddingLeft + clamp01((tick - xMin) / span) * plotWidth
             const label = formatTimeLabel(tick, span)
+            const isFirst = tick === timeTicks[0]
+            const isLast = tick === timeTicks[timeTicks.length - 1]
             return (
-              <text key={`xt_${tick}`} x={x} y={viewHeight - 6} textAnchor="middle" fontSize="11" fill="rgba(221,221,221,0.70)">
+              <text
+                key={`xt_${tick}`}
+                x={x}
+                y={viewHeight - 6}
+                textAnchor={isFirst ? "start" : isLast ? "end" : "middle"}
+                fontSize="10"
+                fontWeight="700"
+                fill="rgba(221,221,221,0.70)"
+              >
                 {label}
               </text>
             )
@@ -378,12 +429,12 @@ export default function MiniLineChart({
           <div className="chart-tooltip-time">{tooltipData.label}</div>
           <div className="chart-tooltip-rows">
             {tooltipData.rows.map((r) => (
-              <div key={r.id} className="chart-tooltip-row">
+              <div key={r.key} className="chart-tooltip-row">
                 <span className="dot" style={{ background: r.color }} />
                 <span className="name" title={r.name}>
                   {r.name}
                 </span>
-                <span className="value">{r.value}</span>
+                <span className="value">{`延时 ${r.delay} 丢包 ${r.loss}`}</span>
               </div>
             ))}
           </div>

@@ -808,9 +808,6 @@
   transform: translate(-50%, -50%);
   background: var(--world-map-point-color, #fff143);
   border-radius: 50%;
-  will-change: transform;
-  animation: world-map-point-jump 1.8s ease-in-out infinite;
-  animation-delay: var(--map-point-delay, 0s);
 }
 
 .world-map-point .point-block::before {
@@ -823,15 +820,21 @@
   transform: translate(-50%, -50%);
   border: calc(2px * var(--map-point-scale)) solid var(--world-map-point-color, #fff143);
   border-radius: 50%;
+  opacity: 0.65;
+  will-change: transform, opacity;
+  animation: world-map-point-pulse 1.6s ease-out infinite;
+  animation-delay: var(--map-point-delay, 0s);
 }
 
-@keyframes world-map-point-jump {
+@keyframes world-map-point-pulse {
   0%,
-  100% {
-    transform: translate(-50%, -50%) translateY(0) scale(1);
+  25% {
+    transform: translate(-50%, -50%) scale(0.9);
+    opacity: 0.55;
   }
-  50% {
-    transform: translate(-50%, -50%) translateY(calc(-7px * var(--map-point-scale))) scale(1.06);
+  100% {
+    transform: translate(-50%, -50%) scale(1.9);
+    opacity: 0;
   }
 }
 
