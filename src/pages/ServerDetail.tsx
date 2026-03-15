@@ -1,9 +1,8 @@
-import { NetworkChart } from "@/components/NetworkChart"
-import ServerDetailChart from "@/components/ServerDetailChart"
-import ServerDetailOverview from "@/components/ServerDetailOverview"
-import TabSwitch from "@/components/TabSwitch"
+import ServerDetailInfoBox from "@/components/ServerDetailInfoBox"
+import ServerDetailMonitor from "@/components/ServerDetailMonitor"
+import ServerDetailName from "@/components/ServerDetailName"
+import ServerDetailStatusBox from "@/components/ServerDetailStatusBox"
 import WorldMap from "@/components/WorldMap"
-import { Separator } from "@/components/ui/separator"
 import { useWebSocketContext } from "@/hooks/use-websocket-context"
 import { countryCoordinates } from "@/lib/geo-limit"
 import { serverIdToServerKey } from "@/lib/server-key"
@@ -40,9 +39,6 @@ export default function ServerDetail() {
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
   }, [])
-
-  const tabs = ["Detail", "Network"]
-  const [currentTab, setCurrentTab] = useState(tabs[0])
 
   const { serverKey } = useParams()
 
@@ -108,20 +104,10 @@ export default function ServerDetail() {
       <div className="world-map-box top-world-map">
         <WorldMap locations={locations} />
       </div>
-      <ServerDetailOverview server_id={String(serverId)} />
-      <section className="flex items-center my-2 w-full">
-        <Separator className="flex-1" />
-        <div className="flex justify-center w-full max-w-[200px]">
-          <TabSwitch tabs={tabs} currentTab={currentTab} setCurrentTab={setCurrentTab} />
-        </div>
-        <Separator className="flex-1" />
-      </section>
-      <div style={{ display: currentTab === tabs[0] ? "block" : "none" }}>
-        <ServerDetailChart server_id={String(serverId)} />
-      </div>
-      <div style={{ display: currentTab === tabs[1] ? "block" : "none" }}>
-        <NetworkChart server_id={serverId} show={currentTab === tabs[1]} />
-      </div>
+      <ServerDetailName server={server} />
+      <ServerDetailStatusBox now={wsNow} server={server} />
+      <ServerDetailInfoBox now={wsNow} server={server} />
+      <ServerDetailMonitor now={wsNow} serverId={serverId} />
     </div>
   )
 }
