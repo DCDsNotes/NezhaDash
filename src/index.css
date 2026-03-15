@@ -1944,7 +1944,7 @@
     cursor: default;
     width: 100%;
     --cate-item-font-size: 12px;
-    --cate-metric-width: 70px;
+    --cate-metric-width: 75px;
     grid-template-columns: 0.5em 1fr;
     grid-template-rows: auto auto;
     align-items: center;

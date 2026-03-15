@@ -419,10 +419,24 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
     setMinute(val)
   }
 
-  function toggleShowCate(id: number) {
+  function handleMultiCateClick(id: number) {
     setShowCates((prev) => {
-      const currentShow = prev[id] !== false
-      return { ...prev, [id]: !currentShow }
+      const ids = chartData.cateList.map((c) => c.id)
+      if (!ids.length) return prev
+      const isShown = (cateId: number) => prev[cateId] !== false
+      const onlyThisSelected = ids.every((cateId) => (cateId === id ? isShown(cateId) : !isShown(cateId)))
+
+      const next: Record<number, boolean> = { ...prev }
+      if (onlyThisSelected) {
+        ids.forEach((cateId) => {
+          next[cateId] = true
+        })
+        return next
+      }
+      ids.forEach((cateId) => {
+        next[cateId] = cateId === id
+      })
+      return next
     })
   }
 
@@ -538,7 +552,7 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
                 })}
                 style={cateStyle(cate.color)}
                 title={cate.title}
-                onClick={() => toggleShowCate(cate.id)}
+                onClick={() => handleMultiCateClick(cate.id)}
               >
                 <span className="cate-legend" />
                 <span className="cate-name" title={cate.name}>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 
 export type LineChartPoint = readonly [time: number, value: number | null]
 
@@ -22,6 +22,14 @@ function normalizeTimestampMs(t: number) {
 function buildPath(points: { x: number; y: number }[]) {
   if (points.length === 0) return ""
   return `M ${points.map((p) => `${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" L ")}`
+}
+
+function buildAreaPath(points: { x: number; y: number }[], baseY: number) {
+  if (points.length === 0) return ""
+  const first = points[0]
+  const last = points[points.length - 1]
+  const line = buildPath(points)
+  return `${line} L ${last.x.toFixed(2)} ${baseY.toFixed(2)} L ${first.x.toFixed(2)} ${baseY.toFixed(2)} Z`
 }
 
 function clamp01(x: number) {
@@ -120,16 +128,6 @@ export default function MiniLineChart({
   connectNulls?: boolean
   dateList?: number[]
 }) {
-  const viewWidth = 1000
-  const viewHeight = 300
-
-  const paddingLeft = 64
-  const paddingRight = 44
-  const paddingTop = 10
-  const paddingBottom = 26
-  const plotWidth = viewWidth - paddingLeft - paddingRight
-  const plotHeight = viewHeight - paddingTop - paddingBottom
-
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [containerWidth, setContainerWidth] = useState<number>(0)
   const [containerHeight, setContainerHeight] = useState<number>(0)
@@ -138,6 +136,16 @@ export default function MiniLineChart({
   const [hovering, setHovering] = useState(false)
   const tooltipRef = useRef<HTMLDivElement | null>(null)
   const [tooltipSize, setTooltipSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 })
+
+  const viewWidth = Math.max(1, containerWidth || 1000)
+  const viewHeight = Math.max(1, containerHeight || 300)
+
+  const paddingLeft = viewWidth < 520 ? 66 : 74
+  const paddingRight = viewWidth < 520 ? 42 : 48
+  const paddingTop = 10
+  const paddingBottom = 30
+  const plotWidth = Math.max(1, viewWidth - paddingLeft - paddingRight)
+  const plotHeight = Math.max(1, viewHeight - paddingTop - paddingBottom)
 
   const normalizedSeries = useMemo(() => {
     return seriesList.map((s) => ({
@@ -194,7 +202,7 @@ export default function MiniLineChart({
     return Array.from(set).sort((a, b) => a - b)
   }, [dateList, normalizedSeries])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = containerRef.current
     if (!el) return
     setContainerWidth(el.clientWidth || 0)
@@ -233,17 +241,26 @@ export default function MiniLineChart({
   const paths = useMemo(() => {
     const { xMin, xMax } = xRange
     const span = xMax - xMin || 1
+    const baseY = paddingTop + plotHeight
 
     return normalizedSeries.map((s) => {
       const ySpan = yMax || 1
+      const isLoss = s.yAxisIndex === 1
 
-      const segments: string[] = []
+      const segments: { strokeD: string; fillD?: string }[] = []
       let current: { x: number; y: number }[] = []
+
+      function pushSegment(points: { x: number; y: number }[]) {
+        const strokeD = buildPath(points)
+        if (!strokeD) return
+        const fillD = isLoss ? buildAreaPath(points, baseY) : undefined
+        segments.push({ strokeD, fillD })
+      }
 
       s.data.forEach(([t, v]) => {
         if (v === null || v === undefined || !Number.isFinite(Number(v))) {
           if (!connectNulls && current.length > 1) {
-            segments.push(buildPath(current))
+            pushSegment(current)
             current = []
           }
           return
@@ -256,7 +273,7 @@ export default function MiniLineChart({
       })
 
       if (current.length > 1) {
-        segments.push(buildPath(current))
+        pushSegment(current)
       }
 
       return {
@@ -264,7 +281,8 @@ export default function MiniLineChart({
         color: s.color,
         dashed: s.dashed,
         opacity: s.opacity,
-        d: segments.join(" "),
+        isLoss,
+        segments,
       }
     })
   }, [connectNulls, normalizedSeries, paddingLeft, paddingTop, plotHeight, plotWidth, xRange, yMax])
@@ -384,7 +402,7 @@ export default function MiniLineChart({
                 x={paddingLeft - 6}
                 y={y + 4}
                 textAnchor="end"
-                fontSize="13"
+                fontSize="15"
                 fontWeight="700"
                 fill="rgba(221,221,221,0.75)"
               >
@@ -403,7 +421,7 @@ export default function MiniLineChart({
                   x={paddingLeft + plotWidth + 6}
                   y={y + 4}
                   textAnchor="start"
-                  fontSize="13"
+                  fontSize="15"
                   fontWeight="700"
                   fill="rgba(221,221,221,0.65)"
                 >
@@ -424,7 +442,7 @@ export default function MiniLineChart({
                 x={x}
                 y={viewHeight - 6}
                 textAnchor={isFirst ? "start" : isLast ? "end" : "middle"}
-                fontSize="12"
+                fontSize="14"
                 fontWeight="700"
                 fill="rgba(221,221,221,0.70)"
               >
@@ -434,22 +452,35 @@ export default function MiniLineChart({
           })}
         </g>
 
-        {paths.map((p) =>
-          p.d ? (
-            <path
-              key={p.id}
-              d={p.d}
-              fill="none"
-              stroke={p.color}
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity={p.opacity ?? 1}
-              strokeDasharray={p.dashed ? "6 6" : undefined}
-              vectorEffect="non-scaling-stroke"
-            />
-          ) : null,
-        )}
+        {paths.map((p) => (
+          <g key={p.id}>
+            {p.segments.map((seg, index) => (
+              <g key={`${p.id}_${index}`}>
+                {p.isLoss && seg.fillD ? (
+                  <path
+                    d={seg.fillD}
+                    fill={p.color}
+                    opacity={(p.opacity ?? 1) * 0.18}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                ) : null}
+                {seg.strokeD ? (
+                  <path
+                    d={seg.strokeD}
+                    fill="none"
+                    stroke={p.color}
+                    strokeWidth={p.isLoss ? 1.2 : 1.4}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity={p.opacity ?? 1}
+                    strokeDasharray={!p.isLoss && p.dashed ? "6 6" : undefined}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                ) : null}
+              </g>
+            ))}
+          </g>
+        ))}
 
         {crosshairX !== null ? (
           <line
