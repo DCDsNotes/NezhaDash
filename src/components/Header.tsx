@@ -103,11 +103,11 @@ function Header() {
           {serverCount?.total ? (
             <div className="server-count-group">
               <span className="server-count server-count--online" title="在线">
-                <span className="icon ri-global-line" />
+                <span className="icon ri-hard-drive-3-line" />
                 <span className="value">{serverCount.online}</span>
               </span>
               <span className="server-count server-count--offline" title="离线">
-                <span className="icon ri-global-off-line" />
+                <span className="icon ri-hard-drive-3-line" />
                 <span className="value">{serverCount.offline}</span>
               </span>
             </div>
