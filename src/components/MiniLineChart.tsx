@@ -39,6 +39,14 @@ function clamp01(x: number) {
   return x
 }
 
+function clamp(n: number, min: number, max: number) {
+  const v = Number(n)
+  if (!Number.isFinite(v)) return min
+  if (v < min) return min
+  if (v > max) return max
+  return v
+}
+
 function clampInt(n: number, min: number, max: number) {
   const v = Math.floor(Number(n))
   if (!Number.isFinite(v)) return min
@@ -134,6 +142,7 @@ export default function MiniLineChart({
   const [hoverIdx, setHoverIdx] = useState<number>(-1)
   const [hoverX, setHoverX] = useState<number>(0)
   const [hovering, setHovering] = useState(false)
+  const [pointerDown, setPointerDown] = useState(false)
   const tooltipRef = useRef<HTMLDivElement | null>(null)
   const [tooltipSize, setTooltipSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 })
 
@@ -289,13 +298,9 @@ export default function MiniLineChart({
   }, [connectNulls, normalizedSeries, paddingLeft, paddingTop, plotHeight, plotWidth, xRange, yMax])
 
   const crosshairX = useMemo(() => {
-    if (!hovering || hoverIdx < 0 || hoverIdx >= normalizedDateList.length) return null
-    const { xMin, xMax } = xRange
-    const span = xMax - xMin || 1
-    const t = normalizedDateList[hoverIdx]
-    const x = paddingLeft + clamp01((t - xMin) / span) * plotWidth
-    return x
-  }, [hoverIdx, hovering, normalizedDateList, paddingLeft, plotWidth, xRange])
+    if (!hovering) return null
+    return clamp(hoverX, paddingLeft, paddingLeft + plotWidth)
+  }, [hoverX, hovering, paddingLeft, plotWidth])
 
   const tooltipData = useMemo(() => {
     if (!hovering || hoverIdx < 0 || hoverIdx >= normalizedDateList.length) return null
@@ -359,26 +364,83 @@ export default function MiniLineChart({
     if (!hovering) setHoverIdx(-1)
   }, [hovering])
 
-  function handleMouseMove(e: React.MouseEvent) {
+  function updateHover(clientX: number) {
     const el = containerRef.current
     if (!el) return
     const rect = el.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const ratio = clamp01(x / Math.max(rect.width, 1))
+    const x = clamp(clientX - rect.left, 0, rect.width || 1)
+    const xInPlot = clamp(x, paddingLeft, paddingLeft + plotWidth)
+    const ratio = clamp01((xInPlot - paddingLeft) / Math.max(plotWidth, 1))
     const { xMin, xMax } = xRange
     const t = xMin + ratio * (xMax - xMin)
     const idx = findNearestIndex(normalizedDateList, t)
     setHoverIdx(idx)
     setHoverX(x)
-    setHovering(true)
   }
 
-  function handleMouseLeave() {
+  function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.pointerType !== "mouse") e.preventDefault()
+    setPointerDown(true)
+    setHovering(true)
+    updateHover(e.clientX)
+    const el = containerRef.current
+    if (!el) return
+    try {
+      el.setPointerCapture(e.pointerId)
+    } catch {
+      // ignore
+    }
+  }
+
+  function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.pointerType === "mouse") {
+      setHovering(true)
+      updateHover(e.clientX)
+      return
+    }
+    if (!pointerDown) return
+    e.preventDefault()
+    updateHover(e.clientX)
+  }
+
+  function handlePointerLeave(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.pointerType !== "mouse") return
+    if (pointerDown) return
+    setHovering(false)
+  }
+
+  function handlePointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.pointerType === "mouse") return
+    try {
+      containerRef.current?.releasePointerCapture(e.pointerId)
+    } catch {
+      // ignore
+    }
+    setPointerDown(false)
+    setHovering(false)
+  }
+
+  function handlePointerCancel(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.pointerType === "mouse") return
+    try {
+      containerRef.current?.releasePointerCapture(e.pointerId)
+    } catch {
+      // ignore
+    }
+    setPointerDown(false)
     setHovering(false)
   }
 
   return (
-    <div className="line-box" ref={containerRef} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}>
+    <div
+      className="line-box"
+      ref={containerRef}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
+    >
       <svg className="chart" viewBox={`0 0 ${viewWidth} ${viewHeight}`} preserveAspectRatio="none">
         <g className="chart-grid">
           {yTicks.map((tick) => {
