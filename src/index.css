@@ -1807,6 +1807,12 @@
   gap: 16px;
 }
 
+.server-status-and-real-time .server-status--mem .ring-val,
+.server-status-and-real-time .server-status--swap .ring-val,
+.server-status-and-real-time .server-status--disk .ring-val {
+  font-size: 10px;
+}
+
 @media screen and (max-width: 1024px) {
   .server-status-group--ring {
     --ring-size: 76px;

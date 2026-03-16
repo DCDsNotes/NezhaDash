@@ -26,12 +26,27 @@ function getRingUsedColor(type: "cpu" | "mem" | "swap" | "disk") {
   return "#70F3FF"
 }
 
-function formatBinaryShort(bytes: number) {
-  const stats = calcBinary(bytes)
-  if (stats.t >= 1) return `${Number(stats.t.toFixed(1))}T`
-  if (stats.g >= 10) return `${Number(stats.g.toFixed(1))}G`
-  if (stats.g >= 1) return `${Number(stats.g.toFixed(1))}G`
-  return `${Math.ceil(stats.m)}M`
+function pickBinaryUnitByTotalBytes(totalBytes: number): "G" | "T" {
+  const t = calcBinary(totalBytes).t
+  return t >= 1 ? "T" : "G"
+}
+
+function formatBinaryAsGT(bytes: number, unit: "G" | "T") {
+  const safeBytes = Math.max(Number(bytes) || 0, 0)
+  const { g, t } = calcBinary(safeBytes)
+  const raw = unit === "T" ? t : g
+  const v = Math.round(raw * 10) / 10
+  const text = Number.isInteger(v) ? String(v) : String(v)
+  return `${text}${unit}`
+}
+
+function formatBinaryUsageText(usedBytes: number, totalBytes: number) {
+  const safeTotal = Math.max(Number(totalBytes) || 0, 0)
+  const unit = pickBinaryUnitByTotalBytes(safeTotal)
+  const usedText = formatBinaryAsGT(usedBytes, unit)
+  if (!safeTotal) return `${usedText}/-`
+  const totalText = formatBinaryAsGT(safeTotal, unit)
+  return `${usedText}/${totalText}`
 }
 
 function formatDurationValue(uptimeSeconds: number) {
@@ -96,7 +111,7 @@ export default function ServerDetailStatusBox({ now, server }: { now: number; se
         used: Number(memPercent.toFixed(1)),
         label: "内存",
         valPercent: `${Number(memPercent.toFixed(1))}%`,
-        valText: formatBinaryShort(server.state?.mem_used || 0),
+        valText: formatBinaryUsageText(server.state?.mem_used || 0, memTotal),
       },
     ] as { type: "cpu" | "mem" | "swap" | "disk"; used: number; label: string; valPercent: string; valText: string }[]
 
@@ -106,7 +121,7 @@ export default function ServerDetailStatusBox({ now, server }: { now: number; se
         used: Number(swapPercent.toFixed(1)),
         label: "交换",
         valPercent: `${Number(swapPercent.toFixed(1))}%`,
-        valText: formatBinaryShort(server.state?.swap_used || 0),
+        valText: formatBinaryUsageText(server.state?.swap_used || 0, swapTotal),
       })
     }
 
@@ -115,7 +130,7 @@ export default function ServerDetailStatusBox({ now, server }: { now: number; se
       used: Number(diskPercent.toFixed(1)),
       label: "磁盘",
       valPercent: `${Number(diskPercent.toFixed(1))}%`,
-      valText: formatBinaryShort(server.state?.disk_used || 0),
+      valText: formatBinaryUsageText(server.state?.disk_used || 0, diskTotal),
     })
     return list
   }, [diskPercent, memPercent, swapPercent, swapTotal, server.state?.cpu, server.state?.disk_used, server.state?.mem_used, server.state?.swap_used])
