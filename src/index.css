@@ -449,6 +449,29 @@
   color: var(--server-offline-color);
 }
 
+/* remixicon does not ship `ri-global-off-line`; emulate it */
+.ri-global-off-line:before {
+  content: "\edcf"; /* ri-global-line */
+}
+
+.ri-global-off-line {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ri-global-off-line:after {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 2px;
+  background: currentColor;
+  transform: rotate(-45deg);
+  border-radius: 2px;
+  opacity: 0.85;
+}
+
 .server-stat-group {
   min-width: 160px;
 }
@@ -1807,10 +1830,10 @@
   gap: 16px;
 }
 
-.server-status-and-real-time .server-status--mem .ring-val,
-.server-status-and-real-time .server-status--swap .ring-val,
-.server-status-and-real-time .server-status--disk .ring-val {
-  font-size: 10px;
+.server-status-ring.server-status--mem .ring-val,
+.server-status-ring.server-status--swap .ring-val,
+.server-status-ring.server-status--disk .ring-val {
+  font-size: 8px;
 }
 
 @media screen and (max-width: 1024px) {

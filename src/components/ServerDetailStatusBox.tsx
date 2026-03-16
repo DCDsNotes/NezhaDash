@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 
 import { ServerStatusRing } from "@/components/ServerStatusRing"
-import { calcBinary } from "@/lib/server-spec"
+import { calcBinary, formatBinaryUsageGT } from "@/lib/server-spec"
 import { formatNezhaInfo, parsePublicNote } from "@/lib/utils"
 import { NezhaServer } from "@/types/nezha-api"
 
@@ -24,29 +24,6 @@ function getRingUsedColor(type: "cpu" | "mem" | "swap" | "disk") {
   if (type === "mem") return "#0AA344"
   if (type === "swap") return "#FF8C00"
   return "#70F3FF"
-}
-
-function pickBinaryUnitByTotalBytes(totalBytes: number): "G" | "T" {
-  const t = calcBinary(totalBytes).t
-  return t >= 1 ? "T" : "G"
-}
-
-function formatBinaryAsGT(bytes: number, unit: "G" | "T") {
-  const safeBytes = Math.max(Number(bytes) || 0, 0)
-  const { g, t } = calcBinary(safeBytes)
-  const raw = unit === "T" ? t : g
-  const v = Math.round(raw * 10) / 10
-  const text = Number.isInteger(v) ? String(v) : String(v)
-  return `${text}${unit}`
-}
-
-function formatBinaryUsageText(usedBytes: number, totalBytes: number) {
-  const safeTotal = Math.max(Number(totalBytes) || 0, 0)
-  const unit = pickBinaryUnitByTotalBytes(safeTotal)
-  const usedText = formatBinaryAsGT(usedBytes, unit)
-  if (!safeTotal) return `${usedText}/-`
-  const totalText = formatBinaryAsGT(safeTotal, unit)
-  return `${usedText}/${totalText}`
 }
 
 function formatDurationValue(uptimeSeconds: number) {
@@ -111,7 +88,7 @@ export default function ServerDetailStatusBox({ now, server }: { now: number; se
         used: Number(memPercent.toFixed(1)),
         label: "内存",
         valPercent: `${Number(memPercent.toFixed(1))}%`,
-        valText: formatBinaryUsageText(server.state?.mem_used || 0, memTotal),
+        valText: formatBinaryUsageGT(server.state?.mem_used || 0, memTotal),
       },
     ] as { type: "cpu" | "mem" | "swap" | "disk"; used: number; label: string; valPercent: string; valText: string }[]
 
@@ -121,7 +98,7 @@ export default function ServerDetailStatusBox({ now, server }: { now: number; se
         used: Number(swapPercent.toFixed(1)),
         label: "交换",
         valPercent: `${Number(swapPercent.toFixed(1))}%`,
-        valText: formatBinaryUsageText(server.state?.swap_used || 0, swapTotal),
+        valText: formatBinaryUsageGT(server.state?.swap_used || 0, swapTotal),
       })
     }
 
@@ -130,7 +107,7 @@ export default function ServerDetailStatusBox({ now, server }: { now: number; se
       used: Number(diskPercent.toFixed(1)),
       label: "磁盘",
       valPercent: `${Number(diskPercent.toFixed(1))}%`,
-      valText: formatBinaryUsageText(server.state?.disk_used || 0, diskTotal),
+      valText: formatBinaryUsageGT(server.state?.disk_used || 0, diskTotal),
     })
     return list
   }, [diskPercent, memPercent, swapPercent, swapTotal, server.state?.cpu, server.state?.disk_used, server.state?.mem_used, server.state?.swap_used])

@@ -6,7 +6,7 @@ import ServerFlag from "@/components/ServerFlag"
 import { ServerStatusRing } from "@/components/ServerStatusRing"
 import { serverIdToServerKey } from "@/lib/server-key"
 import { getPlatformLogoIconClassName } from "@/lib/logo-class"
-import { formatCpuMemDiskText, calcBinary } from "@/lib/server-spec"
+import { formatBinaryUsageGT, formatCpuMemDiskText, calcBinary } from "@/lib/server-spec"
 import { cn, formatNezhaInfo, getNextCycleTime, parsePublicNote } from "@/lib/utils"
 import { NezhaServer } from "@/types/nezha-api"
 
@@ -114,21 +114,15 @@ export default function ServerCard({ now, serverInfo }: { now: number; serverInf
 
   const memUsedBytes = serverInfo.state?.mem_used || 0
   const memTotalBytes = serverInfo.host?.mem_total || 0
-  const memUsedStats = useMemo(() => calcBinary(memUsedBytes), [memUsedBytes])
-  const memTotalStats = useMemo(() => calcBinary(memTotalBytes || 1), [memTotalBytes])
   const memValText = useMemo(() => {
-    if (memUsedStats.g >= 10 && memTotalStats.g >= 10) return `${Number(memUsedStats.g.toFixed(1))}G`
-    return `${Math.ceil(memUsedStats.m)}M`
-  }, [memUsedStats.g, memUsedStats.m, memTotalStats.g])
+    return formatBinaryUsageGT(memUsedBytes, memTotalBytes)
+  }, [memTotalBytes, memUsedBytes])
 
   const diskUsedBytes = serverInfo.state?.disk_used || 0
   const diskTotalBytes = serverInfo.host?.disk_total || 0
-  const diskUsedStats = useMemo(() => calcBinary(diskUsedBytes), [diskUsedBytes])
-  const diskTotalStats = useMemo(() => calcBinary(diskTotalBytes || 1), [diskTotalBytes])
   const diskValText = useMemo(() => {
-    if (diskUsedStats.t >= 1 && diskTotalStats.t >= 1) return `${Number(diskUsedStats.t.toFixed(1))}T`
-    return `${Math.ceil(diskUsedStats.g)}G`
-  }, [diskUsedStats.g, diskUsedStats.t, diskTotalStats.t])
+    return formatBinaryUsageGT(diskUsedBytes, diskTotalBytes)
+  }, [diskTotalBytes, diskUsedBytes])
 
   const transferStat = useMemo(() => {
     const inTransfer = serverInfo.state?.net_in_transfer || 0
