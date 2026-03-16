@@ -409,7 +409,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0 20px;
+  gap: 12px;
+  padding-right: 20px;
   color: #ddd;
 }
 
@@ -921,8 +922,8 @@
 .server-option-box {
   display: flex;
   flex-wrap: wrap;
-  padding: 0 var(--list-padding, 20px);
-  gap: 8px;
+  padding: 0;
+  gap: 12px;
 }
 
 @media screen and (max-width: 768px) {
@@ -983,7 +984,7 @@
 .server-sort-box {
   display: flex;
   flex-wrap: wrap;
-  padding: 0 var(--list-padding, 20px);
+  padding: 0;
   gap: 8px;
   position: relative;
 }
