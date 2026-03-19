@@ -5,28 +5,19 @@ import ServerDetailStatusBox from "@/components/ServerDetailStatusBox"
 import WorldMap from "@/components/WorldMap"
 import { useWebSocketContext } from "@/hooks/use-websocket-context"
 import { countryCoordinates } from "@/lib/geo-limit"
+import { computeWorldMapWidth } from "@/lib/layout"
 import { serverIdToServerKey } from "@/lib/server-key"
 import { cn, formatNezhaInfo } from "@/lib/utils"
 import { NezhaWebsocketResponse } from "@/types/nezha-api"
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 
-function computeDetailContainerWidth() {
-  const w = window.innerWidth
-  if (w <= 720) return w
-  if (w <= 800) return 720
-  if (w <= 1024) return 800
-  return 900
-}
-
-function computeWorldMapWidth() {
-  return Math.max(computeDetailContainerWidth() - 40, 300)
-}
-
 export default function ServerDetail() {
   const navigate = useNavigate()
   const { lastMessage, connected } = useWebSocketContext()
-  const [worldMapWidth, setWorldMapWidth] = useState<number>(() => (typeof window === "undefined" ? 900 : computeWorldMapWidth()))
+  const [worldMapWidth, setWorldMapWidth] = useState<number>(() =>
+    typeof window === "undefined" ? 900 : computeWorldMapWidth(window.innerWidth),
+  )
   const worldMapHeight = useMemo(() => Math.ceil((621 / 1280) * (Number(worldMapWidth) || 0)), [worldMapWidth])
 
   useEffect(() => {
@@ -34,7 +25,7 @@ export default function ServerDetail() {
   }, [])
 
   useEffect(() => {
-    const handleResize = () => setWorldMapWidth(computeWorldMapWidth())
+    const handleResize = () => setWorldMapWidth(computeWorldMapWidth(window.innerWidth))
     handleResize()
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)

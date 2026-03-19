@@ -100,9 +100,10 @@
 
 }
 
-@media screen and (max-width: 1440px) {
+@media screen and (max-width: 1920px) and (min-width: 1025px) {
   :root {
-    --list-container-width: 1120px;
+    --list-container-width: 1060px;
+    --detail-container-width: 760px;
   }
 }
 
@@ -291,39 +292,6 @@
 
 .scrollbar-hidden::-webkit-scrollbar {
   display: none; /* Chrome, Safari 和 Opera */
-}
-
-@media screen and (max-width: 1440px) {
-  :root {
-    --list-container-width: 1120px;
-  }
-}
-
-@media screen and (max-width: 1280px) {
-  :root {
-    --list-container-width: 1024px;
-  }
-}
-
-@media screen and (max-width: 1024px) {
-  :root {
-    --list-container-width: 800px;
-    --detail-container-width: 800px;
-  }
-}
-
-@media screen and (max-width: 800px) {
-  :root {
-    --list-container-width: 720px;
-    --detail-container-width: 720px;
-  }
-}
-
-@media screen and (max-width: 720px) {
-  :root {
-    --list-container-width: 100vw;
-    --detail-container-width: 100vw;
-  }
 }
 
 .nazha-layout {
@@ -1263,7 +1231,7 @@
   gap: 10px;
   padding: 15px 10px;
 
-  --real-time-value-font-size: 24px;
+  --real-time-value-font-size: 22px;
   --real-time-text-font-size: 12px;
   --real-time-label-font-size: 14px;
 
@@ -1279,7 +1247,7 @@
 
 @media screen and (max-width: 1024px) {
   .server-list-item-main {
-    --real-time-value-font-size: 24px;
+    --real-time-value-font-size: 22px;
   }
 }
 
@@ -1291,7 +1259,7 @@
 
 @media screen and (max-width: 720px) {
   .server-list-item-main {
-    --real-time-value-font-size: 24px;
+    --real-time-value-font-size: 22px;
     --real-time-text-font-size: 12px;
     --real-time-label-font-size: 12px;
     padding: 5px 0;
@@ -1792,20 +1760,20 @@
   gap: 20px;
   padding: 15px;
 
-  --real-time-value-font-size: 36px;
+  --real-time-value-font-size: 28px;
   --real-time-text-font-size: 16px;
   --real-time-label-font-size: 16px;
 }
 
 @media screen and (max-width: 1024px) {
   .server-status-and-real-time {
-    --real-time-value-font-size: 30px;
+    --real-time-value-font-size: 26px;
   }
 }
 
 @media screen and (max-width: 720px) {
   .server-status-and-real-time {
-    --real-time-value-font-size: 24px;
+    --real-time-value-font-size: 22px;
     --real-time-text-font-size: 14px;
     --real-time-label-font-size: 14px;
   }
@@ -1825,7 +1793,7 @@
 }
 
 .server-status-group--ring {
-  --ring-size: 100px;
+  --ring-size: 120px;
   --ring-thickness: 12px;
   justify-content: space-around;
   gap: 16px;

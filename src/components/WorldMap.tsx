@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react"
 
 import { countryCoordinates } from "@/lib/geo-limit"
+import { computeWorldMapWidth } from "@/lib/layout"
 import { cn } from "@/lib/utils"
 import { count2size, findIntersectingGroups, lonLatToMapXY } from "@/lib/world-map"
 
@@ -15,18 +16,6 @@ type LocationInput = {
   lat: number
 }
 
-function computeDetailContainerWidth() {
-  const w = window.innerWidth
-  if (w <= 720) return w
-  if (w <= 800) return 720
-  if (w <= 1024) return 800
-  return 900
-}
-
-function computeWorldMapWidth() {
-  return Math.max(computeDetailContainerWidth() - 40, 300)
-}
-
 export default function WorldMap({
   locations,
   className,
@@ -34,10 +23,12 @@ export default function WorldMap({
   locations: LocationInput[]
   className?: string
 }) {
-  const [mapWidth, setMapWidth] = useState<number>(() => (typeof window === "undefined" ? 900 : computeWorldMapWidth()))
+  const [mapWidth, setMapWidth] = useState<number>(() =>
+    typeof window === "undefined" ? 900 : computeWorldMapWidth(window.innerWidth),
+  )
 
   useEffect(() => {
-    const handleResize = () => setMapWidth(computeWorldMapWidth())
+    const handleResize = () => setMapWidth(computeWorldMapWidth(window.innerWidth))
     handleResize()
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)

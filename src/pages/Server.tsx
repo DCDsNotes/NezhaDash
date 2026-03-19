@@ -6,6 +6,7 @@ import WorldMap, { buildLocationsFromServers } from "@/components/WorldMap"
 import { useSort } from "@/hooks/use-sort"
 import { useStatus } from "@/hooks/use-status"
 import { useWebSocketContext } from "@/hooks/use-websocket-context"
+import { computeWorldMapWidth } from "@/lib/layout"
 import { fetchServerGroup } from "@/lib/nezha-api"
 import { serverSortHandler, serverSortOptions } from "@/lib/server-sort"
 import { formatNezhaInfo } from "@/lib/utils"
@@ -13,18 +14,6 @@ import { NezhaWebsocketResponse } from "@/types/nezha-api"
 import { ServerGroup } from "@/types/nezha-api"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useMemo, useState } from "react"
-
-function computeDetailContainerWidth() {
-  const w = window.innerWidth
-  if (w <= 720) return w
-  if (w <= 800) return 720
-  if (w <= 1024) return 800
-  return 900
-}
-
-function computeWorldMapWidth() {
-  return Math.max(computeDetailContainerWidth() - 40, 300)
-}
 
 export default function Servers() {
   const { sortProp, sortOrder, setSortOrder, setSortProp } = useSort()
@@ -35,7 +24,9 @@ export default function Servers() {
   const { lastMessage, connected } = useWebSocketContext()
   const { status, setStatus } = useStatus()
   const [currentGroup, setCurrentGroup] = useState<string>("")
-  const [worldMapWidth, setWorldMapWidth] = useState<number>(() => (typeof window === "undefined" ? 900 : computeWorldMapWidth()))
+  const [worldMapWidth, setWorldMapWidth] = useState<number>(() =>
+    typeof window === "undefined" ? 900 : computeWorldMapWidth(window.innerWidth),
+  )
   const worldMapHeight = useMemo(() => Math.ceil((621 / 1280) * (Number(worldMapWidth) || 0)), [worldMapWidth])
 
   const handleTagChange = (newGroup: string) => {
@@ -56,7 +47,7 @@ export default function Servers() {
   }, [])
 
   useEffect(() => {
-    const handleResize = () => setWorldMapWidth(computeWorldMapWidth())
+    const handleResize = () => setWorldMapWidth(computeWorldMapWidth(window.innerWidth))
     handleResize()
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
