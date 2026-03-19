@@ -1793,7 +1793,7 @@
 }
 
 .server-status-group--ring {
-  --ring-size: 120px;
+  --ring-size: 100px;
   --ring-thickness: 12px;
   justify-content: space-around;
   gap: 16px;
