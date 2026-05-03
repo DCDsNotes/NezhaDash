@@ -1,86 +1,110 @@
-/* eslint-disable no-restricted-globals */
-/**
- * Minimal runtime cache for static assets (icons/fonts/images/styles).
- * Keeps refreshes fast even when the hosting server doesn't set long cache headers.
+/* Service Worker for static asset caching (CSS/fonts/images/icons)
+ * - Avoid caching API calls under /api/
+ * - Cache-first for static assets (hashed by Vite)
+ * - Network-first for navigation documents
  */
 
-const CACHE_NAME = 'nazhua-static-v1';
-const CACHEABLE_DESTINATIONS = new Set(['style', 'font', 'image']);
-const CACHEABLE_SUFFIXES = [
-  '.css',
-  '.woff2',
-  '.woff',
-  '.ttf',
-  '.otf',
-  '.eot',
-  '.svg',
-  '.png',
-  '.jpg',
-  '.jpeg',
-  '.webp',
-  '.ico',
-];
+const CACHE_VERSION = "v1"
+const STATIC_CACHE = `static-${CACHE_VERSION}`
+const ASSET_CACHE = `asset-${CACHE_VERSION}`
 
-function isCacheableRequest(request) {
-  if (request.method !== 'GET') return false;
-  if (CACHEABLE_DESTINATIONS.has(request.destination)) return true;
+function isSameOrigin(url) {
+  return url.origin === self.location.origin
+}
+
+function isApiPath(url) {
+  return url.pathname.startsWith("/api/")
+}
+
+async function cachePut(cacheName, request, response) {
   try {
-    const url = new URL(request.url);
-    if (url.origin !== self.location.origin) return false;
-    const path = url.pathname.toLowerCase();
-    return CACHEABLE_SUFFIXES.some((s) => path.endsWith(s)) || path.includes('/assets/');
+    if (!response || response.status !== 200) return
+    const cache = await caches.open(cacheName)
+    await cache.put(request, response)
   } catch {
-    return false;
+    // ignore
+  }
+}
+
+async function networkFirst(request) {
+  const cache = await caches.open(STATIC_CACHE)
+  try {
+    const response = await fetch(request)
+    await cachePut(STATIC_CACHE, request, response.clone())
+    return response
+  } catch {
+    const cached = await cache.match(request, { ignoreSearch: false })
+    if (cached) return cached
+    // fallback to cached index for SPA
+    const index = await cache.match("/index.html")
+    if (index) return index
+    throw new Error("offline")
   }
 }
 
 async function cacheFirst(request) {
-  const cache = await caches.open(CACHE_NAME);
-  const cached = await cache.match(request);
-  if (cached) return cached;
-  const res = await fetch(request);
-  if (res && res.ok) {
-    cache.put(request, res.clone());
-  }
-  return res;
+  const cache = await caches.open(ASSET_CACHE)
+  const cached = await cache.match(request, { ignoreSearch: false })
+  if (cached) return cached
+  const response = await fetch(request)
+  await cachePut(ASSET_CACHE, request, response.clone())
+  return response
 }
 
 async function staleWhileRevalidate(request) {
-  const cache = await caches.open(CACHE_NAME);
-  const cached = await cache.match(request);
-  const fetchPromise = fetch(request).then((res) => {
-    if (res && res.ok) {
-      cache.put(request, res.clone());
-    }
-    return res;
-  }).catch(() => cached);
-  return cached || fetchPromise;
+  const cache = await caches.open(ASSET_CACHE)
+  const cached = await cache.match(request, { ignoreSearch: false })
+  const fetchPromise = fetch(request)
+    .then((response) => {
+      cachePut(ASSET_CACHE, request, response.clone())
+      return response
+    })
+    .catch(() => null)
+
+  return cached || (await fetchPromise) || fetch(request)
 }
 
-self.addEventListener('install', (event) => {
-  self.skipWaiting();
-  event.waitUntil(caches.open(CACHE_NAME));
-});
+self.addEventListener("install", (event) => {
+  self.skipWaiting()
+  event.waitUntil(
+    (async () => {
+      const cache = await caches.open(STATIC_CACHE)
+      await cache.addAll(["/", "/index.html"]).catch(() => {})
+    })(),
+  )
+})
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil((async () => {
-    const keys = await caches.keys();
-    await Promise.all(keys.map((key) => {
-      if (key !== CACHE_NAME) {
-        return caches.delete(key);
-      }
-      return null;
-    }));
-    await self.clients.claim();
-  })());
-});
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    (async () => {
+      const keys = await caches.keys()
+      await Promise.all(keys.filter((k) => !k.endsWith(CACHE_VERSION)).map((k) => caches.delete(k)))
+      await self.clients.claim()
+    })(),
+  )
+})
 
-self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  if (!isCacheableRequest(request)) return;
-  if (request.destination === 'style') {
-    event.respondWith(staleWhileRevalidate(request));
-    return;
+self.addEventListener("fetch", (event) => {
+  const req = event.request
+  if (!req || req.method !== "GET") return
+
+  const url = new URL(req.url)
+  if (!isSameOrigin(url)) return
+  if (isApiPath(url)) return
+
+  // navigation (HTML)
+  if (req.mode === "navigate") {
+    event.respondWith(networkFirst(req))
+    return
   }
-  event.respondWith(cacheFirst(request));
-});
+
+  const dest = req.destination
+  if (dest === "style" || dest === "script" || dest === "font" || dest === "image") {
+    event.respondWith(cacheFirst(req))
+    return
+  }
+
+  // everything else (e.g. svg imported as fetch)
+  event.respondWith(staleWhileRevalidate(req))
+})
+
