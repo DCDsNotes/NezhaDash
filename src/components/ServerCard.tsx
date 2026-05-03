@@ -31,28 +31,19 @@ function formatDurationValue(uptimeSeconds: number) {
 
 function parseBillingCycle(cycle: string) {
   const c = String(cycle || "").toLowerCase()
-  if (["月", "m", "mo", "month", "monthly"].includes(c)) return { months: 1, cycleLabel: "月" }
-  if (["年", "y", "yr", "year", "annual"].includes(c)) return { months: 12, cycleLabel: "年" }
-  if (["季", "q", "qr", "quarterly"].includes(c)) return { months: 3, cycleLabel: "季" }
-  if (["半", "半年", "h", "half", "semi-annually"].includes(c)) return { months: 6, cycleLabel: "半年" }
-  return { months: 1, cycleLabel: cycle }
+  if (["月", "m", "mo", "month", "monthly"].includes(c)) return { months: 1 }
+  if (["年", "y", "yr", "year", "annual"].includes(c)) return { months: 12 }
+  if (["季", "q", "qr", "quarterly"].includes(c)) return { months: 3 }
+  if (["半", "半年", "h", "half", "semi-annually"].includes(c)) return { months: 6 }
+  return { months: 1 }
 }
 
 function computeBillAndRemaining(parsedData: ReturnType<typeof parsePublicNote>) {
   const billingDataMod = parsedData?.billingDataMod
-  if (!billingDataMod) return { billing: null, remainingTime: null }
+  if (!billingDataMod) return null
 
-  const { months, cycleLabel } = parseBillingCycle(billingDataMod.cycle || "")
-
-  let billing: null | { value: string; cycleLabel?: string; isFree: boolean } = null
-  if (billingDataMod.amount !== undefined && billingDataMod.amount !== null && billingDataMod.amount !== "") {
-    const amount = String(billingDataMod.amount)
-    if (amount === "-1") billing = { value: "按量", cycleLabel, isFree: false }
-    else if (amount === "0") billing = { value: "免费", isFree: true }
-    else billing = { value: amount, cycleLabel, isFree: false }
-  }
-
-  let remainingTime: null | { label: string; value: string; type: "infinity" | "days" | "expired" } = null
+  const { months } = parseBillingCycle(billingDataMod.cycle || "")
+  let remainingTime: { label: string; value: string; type: "infinity" | "days" | "expired" } | null = null
   const endDate = String(billingDataMod.endDate || "")
   if (endDate) {
     if (endDate.startsWith("0000-00-00")) {
@@ -78,7 +69,7 @@ function computeBillAndRemaining(parsedData: ReturnType<typeof parsePublicNote>)
     }
   }
 
-  return { billing, remainingTime }
+  return remainingTime
 }
 
 function getRingTrackColor() {
@@ -102,7 +93,7 @@ export default function ServerCard({ now, serverInfo }: { now: number; serverInf
 
   const info = formatNezhaInfo(now, serverInfo)
   const parsedData = useMemo(() => parsePublicNote(info.public_note), [info.public_note])
-  const { billing, remainingTime } = useMemo(() => computeBillAndRemaining(parsedData), [parsedData])
+  const remainingTime = useMemo(() => computeBillAndRemaining(parsedData), [parsedData])
   const endDateText = useMemo(() => formatBillingEndDate(parsedData?.billingDataMod?.endDate), [parsedData?.billingDataMod?.endDate])
 
   const cpuText = serverInfo.host?.cpu?.[0] || ""
@@ -246,24 +237,8 @@ export default function ServerCard({ now, serverInfo }: { now: number; serverInf
           )}
 
           {endDateText ? (
-            <div className="server-spec">
-              <span className="server-spec-text">{endDateText}</span>
-            </div>
-          ) : null}
-        </div>
-
-        <div className="billing-and-order-link">
-          {billing ? (
-            <div className="billing-info">
-              <span className="text">
-                <span className="text-item value-text">{billing.value}</span>
-                {!billing.isFree && billing.cycleLabel ? (
-                  <>
-                    <span className="text-item">/</span>
-                    <span className="text-item label-text">{billing.cycleLabel}</span>
-                  </>
-                ) : null}
-              </span>
+            <div className="billing-end-date">
+              <span className="billing-end-date-text">{endDateText}</span>
             </div>
           ) : null}
         </div>

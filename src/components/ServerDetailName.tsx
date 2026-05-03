@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 
 import ServerFlag from "@/components/ServerFlag"
-import { cn, formatBillingEndDate, handlePublicNote, parsePublicNote } from "@/lib/utils"
+import { cn, handlePublicNote } from "@/lib/utils"
 import { NezhaServer } from "@/types/nezha-api"
 
 type CpuInfo = {
@@ -38,8 +38,6 @@ export default function ServerDetailName({ server }: { server: NezhaServer }) {
   const cpuText = server.host?.cpu?.[0] || ""
   const cpuInfo = useMemo(() => parseCpuInfo(cpuText), [cpuText])
   const publicNote = useMemo(() => handlePublicNote(server.id, server.public_note || ""), [server.id, server.public_note])
-  const parsedData = useMemo(() => parsePublicNote(publicNote), [publicNote])
-  const endDateText = useMemo(() => formatBillingEndDate(parsedData?.billingDataMod?.endDate), [parsedData?.billingDataMod?.endDate])
 
   // custom slogan from PublicNote.customData.slogan (optional)
   const slogan = useMemo(() => {
@@ -59,11 +57,6 @@ export default function ServerDetailName({ server }: { server: NezhaServer }) {
       <div className="server-name-and-slogan">
         <div className="server-name-group">
           <span className="server-name">{server.name}</span>
-          {endDateText ? (
-            <span className="server-spec">
-              <span className="server-spec-text">{endDateText}</span>
-            </span>
-          ) : null}
         </div>
 
         {slogan ? (

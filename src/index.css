@@ -1280,7 +1280,7 @@
 
 .server-list-item-status.type--ring {
   --ring-size: 76px;
-  --ring-thickness: 11px;
+  --ring-thickness: 9px;
   gap: 8px;
   width: 100%;
   justify-content: space-around;
@@ -1289,7 +1289,7 @@
 @media screen and (max-width: 400px) {
   .server-list-item-status.type--ring {
     --ring-size: 68px;
-    --ring-thickness: 10px;
+    --ring-thickness: 9px;
     padding: 10px 6px 0;
   }
 }
@@ -1309,6 +1309,8 @@
   height: var(--ring-size, 72px);
   border-radius: 50%;
   position: relative;
+  overflow: hidden;
+  transform: translateZ(0);
 }
 
 .server-status-ring .ring-circle::before {
@@ -1317,8 +1319,18 @@
   inset: 0;
   border-radius: 50%;
   background: conic-gradient(var(--ring-color) 0 var(--ring-used), var(--ring-track) 0 100%);
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-thickness, 11px)), #000 0);
-  mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-thickness, 11px)), #000 0);
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - var(--ring-thickness, 11px) - 1px),
+    rgba(0, 0, 0, 0.7) calc(100% - var(--ring-thickness, 11px) - 0.5px),
+    #000 calc(100% - var(--ring-thickness, 11px))
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - var(--ring-thickness, 11px) - 1px),
+    rgba(0, 0, 0, 0.7) calc(100% - var(--ring-thickness, 11px) - 0.5px),
+    #000 calc(100% - var(--ring-thickness, 11px))
+  );
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
@@ -1411,6 +1423,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 20px;
+  padding: 0 10px;
   border-bottom-left-radius: var(--list-item-border-radius);
   border-bottom-right-radius: var(--list-item-border-radius);
   background: rgba(0, 0, 0, 0.3);
@@ -1444,7 +1457,6 @@
 .server-list-item-bill .remaining-time-info {
   display: flex;
   align-items: center;
-  padding-left: 8px;
   flex: 0 1 auto;
   min-width: 0;
 }
@@ -1472,13 +1484,7 @@
   color: #74dbef;
 }
 
-@media screen and (max-width: 720px) {
-  .server-list-item-bill .remaining-time-info {
-    padding-left: 6px;
-  }
-}
-
-.server-list-item-bill .server-spec {
+.server-list-item-bill .billing-end-date {
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -1491,43 +1497,14 @@
 }
 
 @media screen and (max-width: 360px) {
-  .server-list-item-bill .server-spec {
+  .server-list-item-bill .billing-end-date {
     display: none;
   }
 }
 
-.server-list-item-bill .server-spec-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-  font-size: var(--list-item-bill-icon-font-size);
-  opacity: 0.9;
-  color: inherit;
-}
-
-.server-list-item-bill .server-spec-icon {
-  width: 1em;
-  height: 1em;
-}
-
-.server-list-item-bill .server-spec-text {
+.server-list-item-bill .billing-end-date-text {
   font-weight: 400;
   color: inherit;
-}
-
-.server-list-item-bill .billing-and-order-link {
-  display: flex;
-  align-items: center;
-  flex: 0 0 auto;
-  height: 40px;
-  padding-right: 15px;
-  gap: 10px;
-}
-
-.server-list-item-bill .billing-and-order-link .billing-info {
-  line-height: 30px;
-  color: var(--list-item-price-color);
 }
 
 /* Detail layout + skeleton (match current version) */
@@ -1660,17 +1637,6 @@
   font-weight: bold;
 }
 
-.server-head .server-name-group .server-spec {
-  flex: 0 0 auto;
-  margin-left: 16px;
-  line-height: 30px;
-  font-size: 16px;
-  font-weight: 400;
-  color: #ddd;
-  text-align: right;
-  white-space: nowrap;
-}
-
 @media screen and (max-width: 500px) {
   .server-head .server-name-group {
     display: block;
@@ -1679,14 +1645,6 @@
   .server-head .server-name-group .server-name {
     line-height: 24px;
     font-size: 16px;
-  }
-
-  .server-head .server-name-group .server-spec {
-    display: block;
-    margin-left: 0;
-    line-height: 20px;
-    font-size: 12px;
-    text-align: right;
   }
 }
 
@@ -1813,7 +1771,7 @@
 
 .server-status-group--ring {
   --ring-size: 100px;
-  --ring-thickness: 12px;
+  --ring-thickness: 11px;
   justify-content: space-around;
   gap: 16px;
 }
@@ -1835,7 +1793,7 @@
 @media screen and (max-width: 720px) {
   .server-status-group--ring {
     --ring-size: 70px;
-    --ring-thickness: 10px;
+    --ring-thickness: 11px;
     gap: 12px;
   }
 }
