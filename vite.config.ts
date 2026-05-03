@@ -4,48 +4,58 @@ import path from "path"
 import { defineConfig } from "vite"
 
 // https://vite.dev/config/
-export default defineConfig({
-  base: "/",
-  plugins: [react()],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
-  server: {
-    https: {
-      key: fs.readFileSync("./.cert/key.pem"),
-      cert: fs.readFileSync("./.cert/cert.pem"),
-    },
-    proxy: {
-      "/api/v1/ws/server": {
-        target: "ws://localhost:8008",
-        changeOrigin: true,
-        ws: true,
-      },
-      "/api/v1/": {
-        target: "http://localhost:8008",
-        changeOrigin: true,
+export default defineConfig(({ command }) => {
+  const certDir = path.resolve(__dirname, "./.cert")
+  const keyPath = path.join(certDir, "key.pem")
+  const certPath = path.join(certDir, "cert.pem")
+  const https =
+    command === "serve" && fs.existsSync(keyPath) && fs.existsSync(certPath)
+      ? {
+          key: fs.readFileSync(keyPath),
+          cert: fs.readFileSync(certPath),
+        }
+      : undefined
+
+  return {
+    base: "/",
+    plugins: [react()],
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
       },
     },
-    headers: {
-      "Cache-Control": "no-store",
-      Pragma: "no-cache",
-    },
-  },
-  build: {
-    rollupOptions: {
-      output: {
-        entryFileNames: `assets/[name].[hash].js`,
-        chunkFileNames: `assets/[name].[hash].js`,
-        assetFileNames: `assets/[name].[hash].[ext]`,
-        manualChunks(id) {
-          if (id.includes("node_modules")) {
-            return id.toString().split("node_modules/")[1].split("/")[0].toString()
-          }
+    server: {
+      https,
+      proxy: {
+        "/api/v1/ws/server": {
+          target: "ws://localhost:8008",
+          changeOrigin: true,
+          ws: true,
+        },
+        "/api/v1/": {
+          target: "http://localhost:8008",
+          changeOrigin: true,
         },
       },
+      headers: {
+        "Cache-Control": "no-store",
+        Pragma: "no-cache",
+      },
     },
-    chunkSizeWarningLimit: 1500,
-  },
+    build: {
+      rollupOptions: {
+        output: {
+          entryFileNames: `assets/[name].[hash].js`,
+          chunkFileNames: `assets/[name].[hash].js`,
+          assetFileNames: `assets/[name].[hash].[ext]`,
+          manualChunks(id) {
+            if (id.includes("node_modules")) {
+              return id.toString().split("node_modules/")[1].split("/")[0].toString()
+            }
+          },
+        },
+      },
+      chunkSizeWarningLimit: 1500,
+    },
+  }
 })
