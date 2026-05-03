@@ -1565,13 +1565,14 @@
 /* Detail modules (match current version) */
 .server-head {
   display: flex;
+  align-items: center;
   gap: 12px;
   transition: 0.3s;
   padding: 16px;
 }
 
 .server-head .server-flag-box {
-  --flag-size: 72px;
+  --flag-size: 60px;
   position: relative;
   width: calc(var(--flag-size) * 1.33333333);
   height: var(--flag-size);
@@ -1620,7 +1621,7 @@
 
 .server-head .server-name-group .server-name {
   line-height: 30px;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: bold;
   color: #fff;
 }
