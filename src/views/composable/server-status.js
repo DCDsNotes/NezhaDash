@@ -101,10 +101,13 @@ export default (params) => {
     switch (i) {
       case 'cpu':
       {
-        const CoresVal = cpuInfo.value?.cores ? `${cpuInfo.value?.cores}C` : '-';
+        const cpuCount = props.info?.Host?.CPU?.length > 1
+          ? props.info.Host.CPU.length
+          : cpuInfo.value?.cores;
+        const coresVal = cpuCount ? `${cpuCount}C` : '';
         const usedColor = getColor('cpu', serverStatusColorMode);
         const valPercent = `${(props.info.State?.CPU || 0).toFixed(1) * 1}%`;
-        const valText = valPercent;
+        const valText = coresVal;
         return {
           type: 'cpu',
           used: (props.info.State?.CPU || 0).toFixed(1) * 1,
@@ -116,8 +119,8 @@ export default (params) => {
           valPercent,
           label: 'CPU',
           content: {
-            default: cpuInfo.value?.core || CoresVal,
-            mobile: CoresVal,
+            default: cpuInfo.value?.core || coresVal,
+            mobile: coresVal,
           },
         };
       }

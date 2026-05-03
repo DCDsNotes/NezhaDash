@@ -44,12 +44,7 @@
         v-if="showServerSpec"
         class="server-spec"
       >
-        <span
-          v-if="props.platformLogoIconClassName"
-          :class="props.platformLogoIconClassName"
-          class="server-spec-icon"
-        />
-        <span class="server-spec-text">{{ props.cpuMemDiskText }}</span>
+        <span class="server-spec-text">{{ billAndPlan.expirationDate.value }}</span>
       </div>
     </div>
     <div class="billing-and-order-link">
@@ -95,14 +90,6 @@ const props = defineProps({
   info: {
     type: Object,
     default: () => ({}),
-  },
-  platformLogoIconClassName: {
-    type: String,
-    default: '',
-  },
-  cpuMemDiskText: {
-    type: String,
-    default: '',
   },
 });
 
@@ -161,7 +148,7 @@ const tagList = computed(() => {
   return list.slice(0, 5);
 });
 
-const showServerSpec = computed(() => !!props.cpuMemDiskText);
+const showServerSpec = computed(() => !!billAndPlan.value.expirationDate?.value);
 
 const show = computed(() => {
   const checks = [
@@ -253,22 +240,19 @@ const show = computed(() => {
     color: #ddd;
     flex: 0 0 auto;
     white-space: nowrap;
+    text-align: right;
 
     @media screen and (max-width: 360px) {
       display: none;
     }
   }
 
-  .server-spec-icon {
-    font-size: var(--list-item-bill-icon-font-size);
-    opacity: 0.9;
-    color: inherit;
-  }
-
   .server-spec-text {
-    font-weight: 700;
+    font-weight: normal;
+    font-stretch: normal;
     color: inherit;
     letter-spacing: 0.2px;
+    text-align: right;
   }
 
   .tag-list {

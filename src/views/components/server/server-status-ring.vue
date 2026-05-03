@@ -110,15 +110,33 @@ const ringStyle = computed(() => {
     width: var(--ring-size, 72px);
     height: var(--ring-size, 72px);
     border-radius: 50%;
+    background: var(--ring-track);
+    position: relative;
+  }
+
+  .ring::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
     background:
       conic-gradient(
         var(--ring-color) 0 var(--ring-used),
         var(--ring-track) 0 100%
       );
-    position: relative;
+    mask: radial-gradient(
+      farthest-side,
+      transparent calc(100% - var(--ring-thickness, 11px)),
+      #000 0
+    );
+    -webkit-mask: radial-gradient(
+      farthest-side,
+      transparent calc(100% - var(--ring-thickness, 11px)),
+      #000 0
+    );
   }
 
-  .ring::before {
+  .ring::after {
     content: '';
     position: absolute;
     inset: var(--ring-thickness, 11px);
@@ -129,7 +147,7 @@ const ringStyle = computed(() => {
 
   .ring-center {
     position: absolute;
-    inset: var(--ring-thickness, 11px);
+    inset: var(--ring-center-inset, 9px);
     display: flex;
     align-items: center;
     justify-content: center;

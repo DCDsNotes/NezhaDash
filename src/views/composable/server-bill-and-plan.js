@@ -17,6 +17,7 @@ export default (params) => {
     const obj = {
       billing: null,
       remainingTime: null,
+      expirationDate: null,
       bandwidth: null,
       traffic: null,
     };
@@ -105,6 +106,11 @@ export default (params) => {
           // 判断endDate是否超过当前时间，超过则显示剩余时间
           if (endTime > nowTime) {
             const diff = dayjs(endTime).diff(dayjs(), 'day') + 1;
+            obj.expirationDate = {
+              label: '到期',
+              value: dayjs(endTime).format('YYYY-MM-DD'),
+              type: 'autoRenewal-endTime',
+            };
             obj.remainingTime = {
               label: '剩余',
               value: `${diff}天`,
@@ -115,6 +121,11 @@ export default (params) => {
             // endDate如果早于当前时间，按照cycleType计算出超过当前时间的结束时间
             const nextTime = dateUtils.getNextCycleTime(endTime, months, nowTime);
             const diff = dayjs(nextTime).diff(dayjs(), 'day') + 1;
+            obj.expirationDate = {
+              label: '到期',
+              value: dayjs(nextTime).format('YYYY-MM-DD'),
+              type: 'autoRenewal-nextTime',
+            };
             obj.remainingTime = {
               label: '剩余',
               value: `${diff}天`,
@@ -124,6 +135,11 @@ export default (params) => {
           }
         } else if (endTime > nowTime) {
           const diff = dayjs(endTime).diff(dayjs(), 'day') + 1;
+          obj.expirationDate = {
+            label: '到期',
+            value: dayjs(endTime).format('YYYY-MM-DD'),
+            type: 'endTime',
+          };
           obj.remainingTime = {
             label: '剩余',
             value: `${diff}天`,
@@ -131,6 +147,11 @@ export default (params) => {
             type: 'endTime',
           };
         } else {
+          obj.expirationDate = {
+            label: '到期',
+            value: dayjs(endTime).format('YYYY-MM-DD'),
+            type: 'expired',
+          };
           obj.remainingTime = {
             label: '剩余',
             value: '已过期',

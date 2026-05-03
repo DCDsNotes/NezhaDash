@@ -36,8 +36,6 @@
     <server-list-item-bill
       v-if="$config.nazhua.hideListItemBill !== true"
       :info="info"
-      :platform-logo-icon-class-name="platformLogoIconClassName"
-      :cpu-mem-disk-text="cpuAndMemAndDisk"
     />
   </dot-dot-box>
 </template>
@@ -53,10 +51,8 @@ import {
 import {
   useRouter,
 } from 'vue-router';
-import * as hostUtils from '@/utils/host';
 import { getServerKey } from '@/utils/server-key';
 
-import handleServerInfo from '@/views/composable/server-info';
 import ServerRealTime from '@/views/components/server/server-real-time.vue';
 import ServerListItemStatus from './server-list-item-status.vue';
 import ServerListItemBill from './server-list-item-bill.vue';
@@ -69,15 +65,6 @@ const props = defineProps({
 });
 
 const router = useRouter();
-
-/**
- * XCore XGB
- */
-const { cpuAndMemAndDisk } = handleServerInfo({
-  props,
-});
-
-const platformLogoIconClassName = computed(() => hostUtils.getPlatformLogoIconClassName(props.info?.Host?.Platform));
 
 const serverRealTimeListTpls = computed(() => 'duration,transfer,inSpeed,outSpeed');
 
