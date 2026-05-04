@@ -1,11 +1,9 @@
-import { type CSSProperties, useEffect, useMemo, useState } from "react"
-
-import { useQuery } from "@tanstack/react-query"
-
 import MiniLineChart, { type LineChartPoint, type LineChartSeries } from "@/components/MiniLineChart"
 import { fetchMonitor } from "@/lib/nezha-api"
 import { cn } from "@/lib/utils"
 import { type NezhaMonitor } from "@/types/nezha-api"
+import { useQuery } from "@tanstack/react-query"
+import { type CSSProperties, useEffect, useMemo, useState } from "react"
 
 type MinuteOption = { label: string; value: number }
 
@@ -243,7 +241,8 @@ function buildMonitorChartData({
 
     dateList.forEach((time) => {
       const delayValRaw = delayByTime.get(time)
-      const delayVal = typeof delayValRaw === "number" && Number.isFinite(delayValRaw) ? Number((Math.round(delayValRaw * 100) / 100).toFixed(2)) : null
+      const delayVal =
+        typeof delayValRaw === "number" && Number.isFinite(delayValRaw) ? Number((Math.round(delayValRaw * 100) / 100).toFixed(2)) : null
       lineData.push([time, delayVal])
 
       const lossValRaw = lossByTime.get(time)
@@ -439,98 +438,94 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
   }
 
   const hasMonitorData = monitorData.length > 0
-  const cateStyle = (color: string) => ({ ["--cate-color" as `--${string}`]: color } as CSSProperties)
+  const cateStyle = (color: string) => ({ ["--cate-color" as `--${string}`]: color }) as CSSProperties
 
   return (
     <div
-      className={cn("server-monitor-group", "nazha-box", {
-        "chart-type--multi": chartType === "multi",
-        "chart-type--single": chartType === "single",
+      className={cn("server-monitor", "nazha-box", {
+        "server-monitor--multi": chartType === "multi",
+        "server-monitor--single": chartType === "single",
       })}
     >
-      <div className="module-head-group">
-        <div className="left-box">
-          <span className="module-title">网络监控</span>
+      <div className="server-monitor__header">
+        <div className="server-monitor__title-area">
+          <span className="server-monitor__title">网络监控</span>
         </div>
-        <div className="right-box">
-          <div className="chart-type-switch-group" title="监控折线图是否聚合" onClick={toggleChartType}>
-            <span className="label-text">聚合</span>
+        <div className="server-monitor__controls">
+          <div className="server-monitor__toggle server-monitor__toggle--chart-type" title="监控折线图是否聚合" onClick={toggleChartType}>
+            <span className="server-monitor__toggle-label">聚合</span>
             <div
-              className={cn("switch-box", {
-                active: chartType === "multi",
+              className={cn("server-monitor__switch", {
+                "server-monitor__switch--active": chartType === "multi",
               })}
             >
-              <span className="switch-dot" />
+              <span className="server-monitor__switch-dot" />
             </div>
           </div>
-          <div className="refresh-data-group" title="是否自动刷新" onClick={toggleAutoRefresh}>
-            <span className="label-text">刷新</span>
+          <div className="server-monitor__toggle server-monitor__toggle--refresh" title="是否自动刷新" onClick={toggleAutoRefresh}>
+            <span className="server-monitor__toggle-label">刷新</span>
             <div
-              className={cn("switch-box", {
-                active: refreshData,
+              className={cn("server-monitor__switch", {
+                "server-monitor__switch--active": refreshData,
               })}
             >
-              <span className="switch-dot" />
+              <span className="server-monitor__switch-dot" />
             </div>
           </div>
-          <div className="peak-shaving-group" title="过滤太高或太低的数据" onClick={togglePeakShaving}>
-            <span className="label-text">削峰</span>
+          <div className="server-monitor__toggle server-monitor__toggle--peak-shaving" title="过滤太高或太低的数据" onClick={togglePeakShaving}>
+            <span className="server-monitor__toggle-label">削峰</span>
             <div
-              className={cn("switch-box", {
-                active: peakShaving,
+              className={cn("server-monitor__switch", {
+                "server-monitor__switch--active": peakShaving,
               })}
             >
-              <span className="switch-dot" />
+              <span className="server-monitor__switch-dot" />
             </div>
           </div>
-          <div className="last-update-time-group">
-            <span className="last-update-time-label">最近</span>
-            <div className="minutes">
+          <div className="server-monitor__range">
+            <span className="server-monitor__range-label">最近</span>
+            <div className="server-monitor__minutes">
               {minutes.map((m) => (
                 <div
                   key={m.value}
-                  className={cn("minute-item", { active: m.value === minute })}
+                  className={cn("server-monitor__minute", { "server-monitor__minute--active": m.value === minute })}
                   onClick={() => toggleMinute(m.value)}
                 >
                   <span>{m.label}</span>
                 </div>
               ))}
-              <div className="active-arrow" style={minuteActiveArrowStyle} />
+              <div className="server-monitor__minute-indicator" style={minuteActiveArrowStyle} />
             </div>
           </div>
         </div>
       </div>
 
       {isLoading ? (
-        <div className="monitor-placeholder">
-          <div className="placeholder-line placeholder-line--w60" />
-          <div className="placeholder-line placeholder-line--w40" />
-          <div className="placeholder-chart" />
+        <div className="server-monitor__placeholder">
+          <div className="server-monitor__placeholder-line server-monitor__placeholder-line--w60" />
+          <div className="server-monitor__placeholder-line server-monitor__placeholder-line--w40" />
+          <div className="server-monitor__placeholder-chart" />
         </div>
       ) : !hasMonitorData ? (
-        <div className="monitor-empty">暂无监控数据</div>
+        <div className="server-monitor__empty">暂无监控数据</div>
       ) : chartType === "single" ? (
-        <div className={cn("monitor-chart-group", `monitor-chart-len--${chartData.cateList.length}`)}>
+        <div className={cn("server-monitor__charts", `server-monitor__charts--len-${chartData.cateList.length}`)}>
           {chartData.cateList.map((cate, index) => (
-            <div key={cate.id} className="monitor-chart-item">
-              <div className="cate-name-box">
-                <div
-                  className="monitor-cate-item"
-                  style={cateStyle(cate.color)}
-                  title={cate.title}
-                >
-                  <span className="cate-legend" />
-                  <span className="cate-name" title={cate.name}>
+            <div key={cate.id} className="server-monitor__chart">
+              <div className="server-monitor__chart-label">
+                <div className="server-monitor-category" style={cateStyle(cate.color)} title={cate.title}>
+                  <span className="server-monitor-category__legend" />
+                  <span className="server-monitor-category__name" title={cate.name}>
                     {cate.name}
                   </span>
-                  <div className="cate-metrics-row">
-                    <span className="cate-avg-ms cate-metric">
-                      <span className="metric-label">延时</span>
-                      <span className="metric-value">{formatLatency(cate.avg)}</span>
+                  <div className="server-monitor-category__metrics">
+                    <span className="server-monitor-category__metric server-monitor-category__metric--latency">
+                      <span className="server-monitor-category__metric-label">延时</span>
+                      <span className="server-monitor-category__metric-value">{formatLatency(cate.avg)}</span>
                     </span>
-                    <span className="cate-loss-rate cate-metric">
-                      <span className="metric-label">丢包</span>
-                      <span className="metric-value">{formatPercent(cate.loss)}</span>
+                    <span className="server-monitor-category__metric server-monitor-category__metric--loss">
+                      <span className="server-monitor-category__metric-label">丢包</span>
+                      <span className="server-monitor-category__metric-value">{formatPercent(cate.loss)}</span>
                     </span>
                   </div>
                 </div>
@@ -541,29 +536,29 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
         </div>
       ) : (
         <>
-          <div className="monitor-cate-group">
+          <div className="server-monitor__categories">
             {chartData.cateList.map((cate) => (
               <div
                 key={cate.id}
-                className={cn("monitor-cate-item", {
-                  disabled: showCates[cate.id] === false,
+                className={cn("server-monitor-category", {
+                  "server-monitor-category--disabled": showCates[cate.id] === false,
                 })}
                 style={cateStyle(cate.color)}
                 title={cate.title}
                 onClick={() => handleMultiCateClick(cate.id)}
               >
-                <span className="cate-legend" />
-                <span className="cate-name" title={cate.name}>
+                <span className="server-monitor-category__legend" />
+                <span className="server-monitor-category__name" title={cate.name}>
                   {cate.name}
                 </span>
-                <div className="cate-metrics-row">
-                  <span className="cate-avg-ms cate-metric">
-                    <span className="metric-label">延时</span>
-                    <span className="metric-value">{formatLatency(cate.avg)}</span>
+                <div className="server-monitor-category__metrics">
+                  <span className="server-monitor-category__metric server-monitor-category__metric--latency">
+                    <span className="server-monitor-category__metric-label">延时</span>
+                    <span className="server-monitor-category__metric-value">{formatLatency(cate.avg)}</span>
                   </span>
-                  <span className="cate-loss-rate cate-metric">
-                    <span className="metric-label">丢包</span>
-                    <span className="metric-value">{formatPercent(cate.loss)}</span>
+                  <span className="server-monitor-category__metric server-monitor-category__metric--loss">
+                    <span className="server-monitor-category__metric-label">丢包</span>
+                    <span className="server-monitor-category__metric-value">{formatPercent(cate.loss)}</span>
                   </span>
                 </div>
               </div>

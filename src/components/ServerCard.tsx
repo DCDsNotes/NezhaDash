@@ -1,12 +1,11 @@
-import { useMemo } from "react"
-import { useNavigate } from "react-router-dom"
-
 import ServerFlag from "@/components/ServerFlag"
 import { ServerStatusRing } from "@/components/ServerStatusRing"
 import { serverIdToServerKey } from "@/lib/server-key"
 import { getRingTrackColor, getRingUsedColor, getServerCardViewModel } from "@/lib/server-view-model"
 import { cn } from "@/lib/utils"
 import { NezhaServer } from "@/types/nezha-api"
+import { useMemo } from "react"
+import { useNavigate } from "react-router-dom"
 
 export default function ServerCard({ now, serverInfo }: { now: number; serverInfo: NezhaServer }) {
   const navigate = useNavigate()
@@ -18,16 +17,16 @@ export default function ServerCard({ now, serverInfo }: { now: number; serverInf
   }
 
   return (
-    <div className={cn("server-list-item nazha-box", { "server-list-item--offline": info.online === false })}>
-      <div className="server-info-group server-list-item-head" onClick={cardClick}>
-        <div className="server-name-group left-box">
+    <div className={cn("server-card nazha-box", { "server-card--offline": info.online === false })}>
+      <div className="server-card__header" onClick={cardClick}>
+        <div className="server-card__title">
           <ServerFlag country_code={info.country_code} />
-          <span className="server-name">{info.name}</span>
+          <span className="server-card__name">{info.name}</span>
         </div>
       </div>
 
-      <div className="server-list-item-main" onClick={cardClick}>
-        <div className="server-list-item-status type--ring len--3">
+      <div className="server-card__body" onClick={cardClick}>
+        <div className="server-card__status-rings">
           {rings.map((item) => (
             <ServerStatusRing
               key={item.type}
@@ -41,60 +40,60 @@ export default function ServerCard({ now, serverInfo }: { now: number; serverInf
           ))}
         </div>
 
-        <div className="server-real-time-group">
-          <div className="server-real-time-item server-real-time--duration">
-            <div className="item-content">
-              <span className="item-value">{realtime.duration.value}</span>
-              <span className="item-unit item-text">{realtime.duration.unit}</span>
+        <div className="server-metrics">
+          <div className="server-metrics__item server-metrics__item--duration">
+            <div className="server-metrics__content">
+              <span className="server-metrics__value">{realtime.duration.value}</span>
+              <span className="server-metrics__unit">{realtime.duration.unit}</span>
             </div>
-            <span className="item-label">在线</span>
+            <span className="server-metrics__label">在线</span>
           </div>
-          <div className="server-real-time-item server-real-time--transfer">
-            <div className="item-content">
-              <span className="item-value">{realtime.transferStat.value}</span>
-              <span className="item-unit item-text">{realtime.transferStat.unit}</span>
+          <div className="server-metrics__item server-metrics__item--transfer">
+            <div className="server-metrics__content">
+              <span className="server-metrics__value">{realtime.transferStat.value}</span>
+              <span className="server-metrics__unit">{realtime.transferStat.unit}</span>
             </div>
-            <span className="item-label">流量</span>
+            <span className="server-metrics__label">流量</span>
           </div>
-          <div className="server-real-time-item server-real-time--inSpeed">
-            <div className="item-content">
-              <span className="item-value">{realtime.inSpeed.value}</span>
-              <span className="item-unit item-text">{realtime.inSpeed.unit}</span>
+          <div className="server-metrics__item server-metrics__item--in-speed">
+            <div className="server-metrics__content">
+              <span className="server-metrics__value">{realtime.inSpeed.value}</span>
+              <span className="server-metrics__unit">{realtime.inSpeed.unit}</span>
             </div>
-            <span className="item-label">入网</span>
+            <span className="server-metrics__label">入网</span>
           </div>
-          <div className="server-real-time-item server-real-time--outSpeed">
-            <div className="item-content">
-              <span className="item-value">{realtime.outSpeed.value}</span>
-              <span className="item-unit item-text">{realtime.outSpeed.unit}</span>
+          <div className="server-metrics__item server-metrics__item--out-speed">
+            <div className="server-metrics__content">
+              <span className="server-metrics__value">{realtime.outSpeed.value}</span>
+              <span className="server-metrics__unit">{realtime.outSpeed.unit}</span>
             </div>
-            <span className="item-label">出网</span>
+            <span className="server-metrics__label">出网</span>
           </div>
         </div>
       </div>
 
-      <div className="server-list-item-bill">
-        <div className="left-box">
+      <div className="server-card__billing">
+        <div className="server-card__billing-row">
           {billing.remainingTime ? (
-            <div className="remaining-time-info">
-              <span className="icon" aria-hidden="true">
+            <div className="server-card__remaining">
+              <span className="server-card__remaining-icon" aria-hidden="true">
                 <span className="ri-hourglass-fill" />
               </span>
-              <span className="text">
+              <span className="server-card__remaining-text">
                 {billing.remainingTime.type !== "infinity" ? (
                   <>
-                    <span className="text-item label-text">{billing.remainingTime.label}</span>
+                    <span className="server-card__remaining-label">{billing.remainingTime.label}</span>
                     {billing.remainingDays ? (
                       <>
-                        <span className="text-item value-text">{billing.remainingDays.num}</span>
-                        <span className="text-item label-text">{billing.remainingDays.unit}</span>
+                        <span className="server-card__remaining-value">{billing.remainingDays.num}</span>
+                        <span className="server-card__remaining-label">{billing.remainingDays.unit}</span>
                       </>
                     ) : (
-                      <span className="text-item value-text">{billing.remainingTime.value}</span>
+                      <span className="server-card__remaining-value">{billing.remainingTime.value}</span>
                     )}
                   </>
                 ) : (
-                  <span className="text-item value-text">{billing.remainingTime.value}</span>
+                  <span className="server-card__remaining-value">{billing.remainingTime.value}</span>
                 )}
               </span>
             </div>
@@ -103,8 +102,8 @@ export default function ServerCard({ now, serverInfo }: { now: number; serverInf
           )}
 
           {billing.endDateText ? (
-            <div className="billing-end-date">
-              <span className="billing-end-date-text">{billing.endDateText}</span>
+            <div className="server-card__billing-end-date">
+              <span className="server-card__billing-end-date-text">{billing.endDateText}</span>
             </div>
           ) : null}
         </div>

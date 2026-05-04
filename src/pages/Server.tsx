@@ -23,9 +23,7 @@ export default function Servers() {
   const { data: nezhaWsData, lastMessage, connected } = useNezhaWsData()
   const { status, setStatus } = useStatus()
   const [currentGroup, setCurrentGroup] = useState<string>("")
-  const [worldMapWidth, setWorldMapWidth] = useState<number>(() =>
-    typeof window === "undefined" ? 900 : computeWorldMapWidth(window.innerWidth),
-  )
+  const [worldMapWidth, setWorldMapWidth] = useState<number>(() => (typeof window === "undefined" ? 900 : computeWorldMapWidth(window.innerWidth)))
   const worldMapHeight = useMemo(() => Math.ceil((621 / 1280) * (Number(worldMapWidth) || 0)), [worldMapWidth])
 
   const handleTagChange = (newGroup: string) => {
@@ -86,15 +84,12 @@ export default function Servers() {
     return []
   }, [nezhaWsData?.now, nezhaWsData?.servers])
 
-  const sortOptions = useMemo(
-    () => serverSortOptions().map((i) => ({ value: i.value, label: i.label })),
-    [],
-  )
+  const sortOptions = useMemo(() => serverSortOptions().map((i) => ({ value: i.value, label: i.label })), [])
 
   if (!connected && !lastMessage) {
     return (
-      <div className="index-container list-is--card">
-        <div className="scroll-container">
+      <div className="server-page">
+        <div className="server-page__scroll">
           <div className="world-map-box top-world-map">
             <div
               className="world-map-skeleton"
@@ -104,11 +99,11 @@ export default function Servers() {
               }}
             />
           </div>
-          <div className="filter-group">
-            <div className="left-box" />
-            <div className="right-box" />
+          <div className="server-toolbar">
+            <div className="server-toolbar__groups" />
+            <div className="server-toolbar__actions" />
           </div>
-          <div className="server-list-container server-list--card">
+          <div className="server-card-grid">
             {Array.from({ length: 6 }).map((_, i) => (
               <ServerListItemSkeleton key={`skeleton_${i}`} />
             ))}
@@ -120,8 +115,8 @@ export default function Servers() {
 
   if (!nezhaWsData) {
     return (
-      <div className="index-container list-is--card">
-        <div className="scroll-container">
+      <div className="server-page">
+        <div className="server-page__scroll">
           <div className="world-map-box top-world-map">
             <div
               className="world-map-skeleton"
@@ -131,11 +126,11 @@ export default function Servers() {
               }}
             />
           </div>
-          <div className="filter-group">
-            <div className="left-box" />
-            <div className="right-box" />
+          <div className="server-toolbar">
+            <div className="server-toolbar__groups" />
+            <div className="server-toolbar__actions" />
           </div>
-          <div className="server-list-container server-list--card">
+          <div className="server-card-grid">
             {Array.from({ length: 6 }).map((_, i) => (
               <ServerListItemSkeleton key={`skeleton_${i}`} />
             ))}
@@ -155,20 +150,16 @@ export default function Servers() {
     }) || []
 
   filteredServers =
-    status === "all"
-      ? filteredServers
-      : filteredServers.filter((server) => [status].includes(getServerStatus(nezhaWsData.now, server)))
+    status === "all" ? filteredServers : filteredServers.filter((server) => [status].includes(getServerStatus(nezhaWsData.now, server)))
 
   filteredServers = filteredServers.sort((a, b) => serverSortHandler(a, b, sortProp, sortOrder))
 
-  const serverLocations = buildLocationsFromServers(
-    filteredServers.map((server) => getServerMapLocationViewModel(nezhaWsData.now, server)),
-  )
+  const serverLocations = buildLocationsFromServers(filteredServers.map((server) => getServerMapLocationViewModel(nezhaWsData.now, server)))
   const showWorldMap = !(filteredServers.length > 0 && serverLocations.length === 0)
 
   return (
-    <div className="index-container list-is--card">
-      <div className="scroll-container">
+    <div className="server-page">
+      <div className="server-page__scroll">
         <div className="world-map-box top-world-map">
           {showWorldMap ? (
             <WorldMap locations={serverLocations} />
@@ -182,19 +173,13 @@ export default function Servers() {
             />
           )}
         </div>
-        <div className="filter-group">
-          <div className="left-box">
-            {groupOptions.length > 0 && (
-              <ServerOptionBox value={currentGroup} onChange={handleTagChange} options={groupOptions} />
-            )}
+        <div className="server-toolbar">
+          <div className="server-toolbar__groups">
+            {groupOptions.length > 0 && <ServerOptionBox value={currentGroup} onChange={handleTagChange} options={groupOptions} />}
           </div>
-          <div className="right-box">
+          <div className="server-toolbar__actions">
             {onlineOptions.length > 0 && (
-              <ServerOptionBox
-                value={status === "all" ? "" : status}
-                onChange={(val) => setStatus((val || "all") as any)}
-                options={onlineOptions}
-              />
+              <ServerOptionBox value={status === "all" ? "" : status} onChange={(val) => setStatus((val || "all") as any)} options={onlineOptions} />
             )}
             <ServerSortBox
               value={{ prop: sortProp, order: sortOrder }}
@@ -206,7 +191,7 @@ export default function Servers() {
             />
           </div>
         </div>
-        <div className="server-list-container server-list--card">
+        <div className="server-card-grid">
           {filteredServers.map((serverInfo) => (
             <ServerCard now={nezhaWsData.now} key={serverInfo.id} serverInfo={serverInfo} />
           ))}

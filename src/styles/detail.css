@@ -1,5 +1,4 @@
-/* Detail layout + skeleton (match current version) */
-.detail-container {
+.server-detail-page {
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -9,11 +8,11 @@
   min-height: calc(100vh - var(--layout-header-height) - 80px);
 }
 
-.detail-container.server--offline {
+.server-detail-page--offline {
   filter: grayscale(1);
 }
 
-.detail-skeleton-block {
+.server-detail-skeleton {
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.06);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
@@ -21,7 +20,7 @@
   position: relative;
 }
 
-.detail-skeleton-block::before {
+.server-detail-skeleton::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -37,24 +36,23 @@
   animation: shimmer 1.2s ease-in-out infinite;
 }
 
-.detail-skeleton-block--name {
+.server-detail-skeleton--name {
   height: 56px;
 }
 
-.detail-skeleton-block--status {
+.server-detail-skeleton--status {
   height: 170px;
 }
 
-.detail-skeleton-block--info {
+.server-detail-skeleton--info {
   height: 320px;
 }
 
-.detail-skeleton-block--monitor {
+.server-detail-skeleton--monitor {
   height: 420px;
 }
 
-/* Detail modules (match current version) */
-.server-head {
+.server-detail-header {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -62,7 +60,7 @@
   padding: 16px;
 }
 
-.server-head .server-flag-box {
+.server-detail-header__flag {
   --flag-size: 60px;
   position: relative;
   width: calc(var(--flag-size) * 1.33333333);
@@ -71,7 +69,7 @@
   overflow: hidden;
 }
 
-.server-head .server-flag-box .server-flag {
+.server-detail-header__flag .server-flag {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -83,13 +81,13 @@
 }
 
 @media screen and (max-width: 500px) {
-  .server-head .server-flag-box {
+  .server-detail-header__flag {
     --flag-size: 40px;
     border-radius: 6px;
   }
 }
 
-.server-head .server-name-and-slogan {
+.server-detail-header__content {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -98,74 +96,50 @@
 }
 
 @media screen and (max-width: 500px) {
-  .server-head .server-name-and-slogan {
+  .server-detail-header__content {
     padding: 0;
   }
 }
 
-.server-head .server-name-group {
+.server-detail-header__title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   color: #eee;
 }
 
-.server-head .server-name-group .server-name {
+.server-detail-header__name {
   line-height: 30px;
   font-size: 20px;
   font-weight: bold;
   color: #fff;
 }
 
-.server-head .server-name-group .system-os-icon {
-  height: 24px;
-  line-height: 22px;
-  font-size: 20px;
-}
-
-.server-head .server-name-group .core-mem {
-  line-height: 30px;
-  font-size: 16px;
-  font-weight: bold;
-}
-
 @media screen and (max-width: 500px) {
-  .server-head .server-name-group {
+  .server-detail-header__title-row {
     display: block;
   }
 
-  .server-head .server-name-group .server-name {
+  .server-detail-header__name {
     line-height: 24px;
     font-size: 16px;
   }
 }
 
-.server-head .cpu-mem-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-@media screen and (max-width: 500px) {
-  .server-head .cpu-mem-group {
-    display: none;
-  }
-}
-
-.server-head .slogan-content {
+.server-detail-header__note {
   color: #ccc;
   line-height: 18px;
   font-size: 14px;
 }
 
 @media screen and (max-width: 500px) {
-  .server-head .slogan-content {
+  .server-detail-header__note {
     line-height: 16px;
     font-size: 12px;
   }
 }
 
-.server-head .cpu-model-info {
+.server-detail-header__cpu {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -174,7 +148,7 @@
   color: #ddd;
 }
 
-.server-head .cpu-model-info .cpu-company {
+.server-detail-header__cpu-brand {
   height: 22px;
   line-height: 22px;
   padding: 0 5px;
@@ -182,7 +156,7 @@
   background: #e0fcff;
 }
 
-.server-head .cpu-model-info .cpu-company--intel {
+.server-detail-header__cpu-brand--intel {
   text-transform: lowercase;
   color: #fff;
   background: #0068b5;
@@ -190,40 +164,45 @@
   font-weight: 600;
 }
 
-.server-head .cpu-model-info .cpu-company--amd {
+.server-detail-header__cpu-brand--amd {
   font-weight: bold;
   font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
 }
 
-.server-head .cpu-model-info .cpu-company--apple {
+.server-detail-header__cpu-brand--apple {
   font-weight: 600;
-  font-family: PingFang SC, Arial, "Helvetica Neue", Helvetica, sans-serif;
+  font-family:
+    PingFang SC,
+    Arial,
+    "Helvetica Neue",
+    Helvetica,
+    sans-serif;
   border-radius: 3px;
 }
 
-.server-head .cpu-model-info .cpu-model {
+.server-detail-header__cpu-model {
   color: #e0fcff;
 }
 
-.server-head .cpu-model-info .cpu-model-num {
+.server-detail-header__cpu-model-num {
   color: #c7eeff;
 }
 
 @media screen and (max-width: 500px) {
-  .server-head .cpu-model-info {
+  .server-detail-header__cpu {
     padding-left: 0;
     margin-top: -7px;
     line-height: 16px;
   }
 
-  .server-head .cpu-model-info .cpu-company {
+  .server-detail-header__cpu-brand {
     height: 16px;
     line-height: 16px;
     padding: 0 3px;
   }
 }
 
-.server-status-and-real-time {
+.server-detail-status {
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -235,13 +214,13 @@
 }
 
 @media screen and (max-width: 1024px) {
-  .server-status-and-real-time {
+  .server-detail-status {
     --real-time-value-font-size: 26px;
   }
 }
 
 @media screen and (max-width: 720px) {
-  .server-status-and-real-time {
+  .server-detail-status {
     --real-time-value-font-size: 22px;
     --real-time-text-font-size: 14px;
     --real-time-label-font-size: 14px;
@@ -249,19 +228,19 @@
 }
 
 @media screen and (max-width: 320px) {
-  .server-status-and-real-time {
+  .server-detail-status {
     --real-time-value-font-size: 20px;
     --real-time-text-font-size: 12px;
     --real-time-label-font-size: 12px;
   }
 }
 
-.server-status-group {
+.server-detail-status__rings {
   display: flex;
   flex-wrap: wrap;
 }
 
-.server-status-group--ring {
+.server-detail-status__rings--ring {
   --ring-size: 90px;
   --ring-thickness: 9px;
   justify-content: space-around;
@@ -276,32 +255,32 @@
 }
 
 @media screen and (max-width: 1024px) {
-  .server-status-group--ring {
+  .server-detail-status__rings--ring {
     --ring-size: 72px;
     --ring-thickness: 10px;
   }
 }
 
 @media screen and (max-width: 720px) {
-  .server-status-group--ring {
+  .server-detail-status__rings--ring {
     --ring-size: 70px;
     --ring-thickness: 8px;
     gap: 12px;
   }
 }
 
-.server-info-box {
-  --server-info-item-size: 24px;
+.server-detail-info {
+  --server-detail-info-item-size: 24px;
   padding: 20px;
 }
 
 @media screen and (max-width: 480px) {
-  .server-info-box {
-    --server-info-item-size: 30px;
+  .server-detail-info {
+    --server-detail-info-item-size: 30px;
   }
 }
 
-.server-info-box .server-info-group {
+.server-detail-info__group {
   width: 100%;
   display: flex;
   justify-content: space-between;
@@ -310,14 +289,14 @@
   font-size: 14px;
 }
 
-.server-info-box .server-info-group .server-info-label {
+.server-detail-info__label {
   width: 2.4em;
   text-align: center;
-  line-height: var(--server-info-item-size);
+  line-height: var(--server-detail-info-item-size);
   color: #ccc;
 }
 
-.server-info-box .server-info-group .server-info-content {
+.server-detail-info__content {
   flex: 1;
   display: flex;
   justify-content: flex-end;
@@ -327,20 +306,20 @@
   cursor: default;
 }
 
-.server-info-box .server-info-item-group {
+.server-detail-info__items {
   display: flex;
   justify-content: flex-end;
   flex-wrap: wrap;
   gap: 0 12px;
 }
 
-.server-info-box .server-info-item {
+.server-detail-info__item {
   display: flex;
   gap: 0.2em;
   align-items: center;
 }
 
-.server-info-box .server-info-item .server-info-item-icon {
+.server-detail-info__item-icon {
   width: 24px;
   height: 16px;
   display: flex;
@@ -350,29 +329,29 @@
   color: #ccc;
 }
 
-.server-info-box .server-info-item-value {
+.server-detail-info__item-value {
   color: #00fff0;
 }
 
-.server-info-box .transfer--in .server-info-item-value,
-.server-info-box .transfer--out .server-info-item-value {
+.server-detail-info__item--transfer-in .server-detail-info__item-value,
+.server-detail-info__item--transfer-out .server-detail-info__item-value {
   color: #ddd;
 }
 
-.server-info-box .transfer--in .text-value {
+.server-detail-info__item--transfer-in .server-detail-info__transfer-value {
   color: var(--transfer-in-color);
 }
 
-.server-info-box .transfer--out .text-value {
+.server-detail-info__item--transfer-out .server-detail-info__transfer-value {
   color: var(--transfer-out-color);
 }
 
-.server-info-box .server-info-tag-list {
+.server-detail-info__tags {
   display: flex;
   gap: 6px;
 }
 
-.server-info-box .server-info-tag-list .server-info-tag-item {
+.server-detail-info__tag {
   height: 18px;
   padding: 0 5px 0 6px;
   line-height: 18px;
@@ -382,4 +361,3 @@
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
   border-radius: 4px;
 }
-

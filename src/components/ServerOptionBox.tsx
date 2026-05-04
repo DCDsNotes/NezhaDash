@@ -1,6 +1,5 @@
-import { useMemo } from "react"
-
 import { cn } from "@/lib/utils"
+import { useMemo } from "react"
 
 export type ServerOptionItem = {
   key: string
@@ -39,9 +38,9 @@ export function ServerOptionBox({
   return (
     <div
       className={cn(
-        "server-option-box",
+        "server-options",
         {
-          "server-option-box--mobile-hide": !mobileShow,
+          "server-options--mobile-hidden": !mobileShow,
         },
         className,
       )}
@@ -49,17 +48,17 @@ export function ServerOptionBox({
       {safeOptions.map((item) => (
         <div
           key={item.key}
-          className={cn("server-option-item", {
-            "has-icon": !!item.icon,
-            "active": activeValue === item.value,
+          className={cn("server-options__item", {
+            "server-options__item--with-icon": !!item.icon,
+            "server-options__item--active": activeValue === item.value,
           })}
           title={item.title || undefined}
           onClick={() => toggleModelValue(item)}
         >
           {item.icon ? (
-            <i className={cn("option-icon", item.icon)} title={item.label} />
+            <i className={cn("server-options__icon", item.icon)} title={item.label} />
           ) : (
-            <span className="option-label">{item.label}</span>
+            <span className="server-options__label">{item.label}</span>
           )}
         </div>
       ))}

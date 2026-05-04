@@ -1,22 +1,21 @@
-/* Home layout (match current version) */
-.index-container {
+.server-page {
   width: 100%;
   height: 100%;
   overflow: hidden;
 }
 
-.index-container .scroll-container {
+.server-page__scroll {
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding: 20px 0;
 }
 
-.index-container .bottom-world-map {
+.server-page .bottom-world-map {
   margin-top: 30px;
 }
 
-.filter-group {
+.server-toolbar {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
@@ -26,15 +25,15 @@
   margin: auto;
 }
 
-.filter-group .left-box,
-.filter-group .right-box {
+.server-toolbar__groups,
+.server-toolbar__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
 }
 
 /* Option box */
-.server-option-box {
+.server-options {
   display: flex;
   flex-wrap: wrap;
   padding: 0;
@@ -42,12 +41,12 @@
 }
 
 @media screen and (max-width: 768px) {
-  .server-option-box--mobile-hide {
+  .server-options--mobile-hidden {
     display: none;
   }
 }
 
-.server-option-box .server-option-item {
+.server-options__item {
   display: flex;
   align-items: center;
   height: 36px;
@@ -59,12 +58,12 @@
   cursor: pointer;
 }
 
-.server-option-box .server-option-item.has-icon {
+.server-options__item--with-icon {
   padding: 0 10px;
 }
 
 @media screen and (max-width: 768px) {
-  .server-option-box .server-option-item {
+  .server-options__item {
     height: 30px;
     padding: 0 10px;
     border-radius: 3px;
@@ -73,12 +72,12 @@
   }
 }
 
-.server-option-box .server-option-item .option-icon {
+.server-options__icon {
   line-height: 1;
   font-size: 18px;
 }
 
-.server-option-box .server-option-item .option-label {
+.server-options__label {
   color: #fff;
   font-weight: 700;
   font-size: 14px;
@@ -86,17 +85,16 @@
 }
 
 @media screen and (min-width: 768px) {
-  .server-option-box .server-option-item:hover .option-label {
+  .server-options__item:hover .server-options__label {
     color: var(--option-high-color);
   }
 }
 
-.server-option-box .server-option-item.active {
+.server-options__item--active {
   background: var(--option-high-color-active);
 }
 
-/* Sort box */
-.server-sort-box {
+.server-sort {
   display: flex;
   flex-wrap: wrap;
   padding: 0;
@@ -105,22 +103,22 @@
 }
 
 @media screen and (max-width: 768px) {
-  .server-sort-box--mobile-hide {
+  .server-sort--mobile-hidden {
     display: none;
   }
 }
 
-.server-sort-box .sort-select-wrapper {
+.server-sort__trigger {
   position: relative;
 }
 
 @media screen and (min-width: 768px) {
-  .server-sort-box .sort-select-wrapper {
+  .server-sort__trigger {
     cursor: pointer;
   }
 }
 
-.server-sort-box .sort-select-selected {
+.server-sort__selected {
   display: flex;
   align-items: center;
   height: 36px;
@@ -133,7 +131,7 @@
 }
 
 @media screen and (max-width: 768px) {
-  .server-sort-box .sort-select-selected {
+  .server-sort__selected {
     height: 30px;
     padding: 0 10px;
     border-radius: 3px;
@@ -141,12 +139,12 @@
   }
 }
 
-.server-sort-box .sort-select-selected-value {
+.server-sort__selected-value {
   color: #fff;
   font-weight: 700;
 }
 
-.server-sort-box .sort-select-selected-icon {
+.server-sort__order-icon {
   margin-left: 8px;
   color: #fff;
   display: flex;
@@ -157,20 +155,20 @@
 }
 
 @media screen and (min-width: 768px) {
-  .server-sort-box .sort-select-selected-icon {
+  .server-sort__order-icon {
     cursor: pointer;
   }
 
-  .server-sort-box .sort-select-selected-icon:hover {
+  .server-sort__order-icon:hover {
     background: rgba(255, 255, 255, 0.1);
   }
 
-  .server-sort-box .sort-select-selected-icon:active {
+  .server-sort__order-icon:active {
     background: rgba(255, 255, 255, 0.2);
   }
 }
 
-.server-sort-select-dropdown {
+.server-sort-dropdown {
   z-index: 500;
   background: rgba(0, 0, 0, 0.8);
   border-radius: 6px;
@@ -182,20 +180,20 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-.server-sort-select-dropdown--mobile {
+.server-sort-dropdown--mobile {
   min-width: 280px;
   max-width: 90vw;
   max-height: 70vh;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
-.sort-select-options {
+.server-sort-dropdown__options {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.server-sort-item {
+.server-sort-dropdown__item {
   display: flex;
   align-items: center;
   height: 36px;
@@ -207,32 +205,27 @@
   cursor: pointer;
 }
 
-.server-sort-item .option-label {
+.server-sort-dropdown__label {
   color: #fff;
   font-weight: 700;
   font-size: 14px;
   transition: all 0.3s linear;
 }
 
-.server-sort-item:hover .option-label {
+.server-sort-dropdown__item:hover .server-sort-dropdown__label {
   color: var(--option-high-color);
 }
 
-.server-sort-item.active {
+.server-sort-dropdown__item--active {
   background: var(--option-high-color-active);
 }
 
-/* Server list container (card) */
-.server-list-container.server-list--card {
+.server-card-grid {
   --list-padding: 20px;
   --list-gap-size: 20px;
+  --list-item-num: 2;
   --list-item-width: calc(
-    (
-      var(--list-container-width)
-      - (var(--list-padding) * 2)
-      - (var(--list-gap-size) * (var(--list-item-num) - 1))
-    )
-    / var(--list-item-num)
+    (var(--list-container-width) - (var(--list-padding) * 2) - (var(--list-gap-size) * (var(--list-item-num) - 1))) / var(--list-item-num)
   );
   position: relative;
   display: flex;
@@ -244,24 +237,24 @@
 }
 
 @media screen and (max-width: 1440px) {
-  .server-list-container.server-list--card {
+  .server-card-grid {
     --list-gap-size: 10px;
   }
 }
 
 @media screen and (max-width: 1024px) {
-  .server-list-container.server-list--card {
+  .server-card-grid {
     --list-item-num: 2;
   }
 }
 
 @media screen and (max-width: 680px) {
-  .server-list-container.server-list--card {
+  .server-card-grid {
     --list-item-num: 1;
   }
 }
 
-.server-list-item-skeleton {
+.server-card-skeleton {
   --list-item-border-radius: 12px;
   width: var(--list-item-width);
   height: 270px;
@@ -272,7 +265,7 @@
   position: relative;
 }
 
-.server-list-item-skeleton::before {
+.server-card-skeleton::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -297,15 +290,14 @@
   }
 }
 
-/* Server card (match current version) */
-.server-list-item {
+.server-card {
   --list-item-border-radius: 12px;
   width: var(--list-item-width);
   color: #fff;
   transition: 0.3s;
 }
 
-.server-list-item .server-info-group {
+.server-card__header {
   --list-item-head-height: 50px;
   display: flex;
   justify-content: space-between;
@@ -320,19 +312,19 @@
 }
 
 @media screen and (max-width: 768px) {
-  .server-list-item .server-info-group {
+  .server-card__header {
     cursor: default;
     --list-item-head-height: 40px;
   }
 }
 
-.server-list-item .server-info-group.server-list-item-head {
+.server-card__header {
   flex-wrap: wrap;
   overflow: hidden;
   height: var(--list-item-head-height, 50px);
 }
 
-.server-list-item .server-info-group .left-box {
+.server-card__title {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -356,22 +348,22 @@
   display: inline-block;
 }
 
-.server-list-item .server-info-group .server-name {
+.server-card__name {
   height: 30px;
   line-height: 32px;
   font-size: 14px;
   font-weight: 700;
 }
 
-.server-list-item.server-list-item--offline {
+.server-card--offline {
   filter: grayscale(1);
 }
 
-.server-list-item.server-list-item--offline .server-info-group .server-name {
+.server-card--offline .server-card__name {
   color: #666;
 }
 
-.server-list-item-main {
+.server-card__body {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -385,26 +377,26 @@
 }
 
 @media screen and (max-width: 1280px) {
-  .server-list-item-main {
+  .server-card__body {
     padding: 10px 0 15px;
     --real-time-value-font-size: 20px;
   }
 }
 
 @media screen and (max-width: 1024px) {
-  .server-list-item-main {
+  .server-card__body {
     --real-time-value-font-size: 22px;
   }
 }
 
 @media screen and (max-width: 800px) {
-  .server-list-item-main {
+  .server-card__body {
     --real-time-value-font-size: 20px;
   }
 }
 
 @media screen and (max-width: 720px) {
-  .server-list-item-main {
+  .server-card__body {
     --real-time-value-font-size: 22px;
     --real-time-text-font-size: 12px;
     --real-time-label-font-size: 12px;
@@ -413,18 +405,15 @@
 }
 
 @media screen and (max-width: 320px) {
-  .server-list-item-main {
+  .server-card__body {
     --real-time-value-font-size: 20px;
   }
 }
 
-.server-list-item-status {
+.server-card__status-rings {
   display: flex;
   justify-content: space-between;
   padding: 6px 0 0;
-}
-
-.server-list-item-status.type--ring {
   --ring-size: 76px;
   --ring-thickness: 9px;
   gap: 8px;
@@ -433,7 +422,7 @@
 }
 
 @media screen and (max-width: 400px) {
-  .server-list-item-status.type--ring {
+  .server-card__status-rings {
     --ring-size: 70px;
     --ring-thickness: 8px;
     padding: 10px 6px 0;
@@ -487,7 +476,9 @@
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8), 0 0 1px rgba(255, 255, 255, 0.2);
+  text-shadow:
+    1px 1px 2px rgba(0, 0, 0, 0.8),
+    0 0 1px rgba(255, 255, 255, 0.2);
   z-index: 1;
 }
 
@@ -511,12 +502,12 @@
   color: #ddd;
 }
 
-.server-real-time-group {
+.server-metrics {
   display: flex;
   align-items: center;
 }
 
-.server-real-time-group .server-real-time-item {
+.server-metrics__item {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -525,46 +516,46 @@
   cursor: default;
 }
 
-.server-real-time-group .server-real-time-item .item-value {
+.server-metrics__value {
   line-height: 1em;
   font-size: var(--real-time-value-font-size, 24px);
 }
 
-.server-real-time-group .server-real-time-item .item-content {
+.server-metrics__content {
   display: flex;
   align-items: flex-end;
   gap: 2px;
 }
 
-.server-real-time-group .server-real-time-item .item-text {
+.server-metrics__unit {
   line-height: 1.3em;
   font-size: var(--real-time-text-font-size, 12px);
   color: #ddd;
 }
 
-.server-real-time-group .server-real-time-item .item-label {
+.server-metrics__label {
   line-height: 1.2em;
   font-size: var(--real-time-label-font-size, 14px);
   color: #ddd;
 }
 
-.server-real-time-group .server-real-time--duration .item-value {
+.server-metrics__item--duration .server-metrics__value {
   color: var(--duration-color);
 }
 
-.server-real-time-group .server-real-time--transfer .item-value {
+.server-metrics__item--transfer .server-metrics__value {
   color: var(--transfer-color);
 }
 
-.server-real-time-group .server-real-time--inSpeed .item-value {
+.server-metrics__item--in-speed .server-metrics__value {
   color: var(--net-speed-in-color);
 }
 
-.server-real-time-group .server-real-time--outSpeed .item-value {
+.server-metrics__item--out-speed .server-metrics__value {
   color: var(--net-speed-out-color);
 }
 
-.server-list-item-bill {
+.server-card__billing {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -584,14 +575,14 @@
 }
 
 @media screen and (max-width: 720px) {
-  .server-list-item-bill {
+  .server-card__billing {
     --list-item-bill-height: 30px;
     --list-item-bill-font-size: 12px;
     --list-item-bill-icon-font-size: 14px;
   }
 }
 
-.server-list-item-bill .left-box {
+.server-card__billing-row {
   display: flex;
   flex: 1;
   min-width: 0;
@@ -600,14 +591,14 @@
   gap: 10px;
 }
 
-.server-list-item-bill .remaining-time-info {
+.server-card__remaining {
   display: flex;
   align-items: center;
   flex: 0 1 auto;
   min-width: 0;
 }
 
-.server-list-item-bill .remaining-time-info .icon {
+.server-card__remaining-icon {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -618,7 +609,7 @@
   color: #74dbef;
 }
 
-.server-list-item-bill .remaining-time-info .text {
+.server-card__remaining-text {
   display: flex;
   align-items: center;
   line-height: var(--list-item-bill-height);
@@ -626,11 +617,11 @@
   min-width: 0;
 }
 
-.server-list-item-bill .remaining-time-info .value-text {
+.server-card__remaining-value {
   color: #74dbef;
 }
 
-.server-list-item-bill .billing-end-date {
+.server-card__billing-end-date {
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -643,13 +634,12 @@
 }
 
 @media screen and (max-width: 360px) {
-  .server-list-item-bill .billing-end-date {
+  .server-card__billing-end-date {
     display: none;
   }
 }
 
-.server-list-item-bill .billing-end-date-text {
+.server-card__billing-end-date-text {
   font-weight: 400;
   color: inherit;
 }
-

@@ -1,7 +1,6 @@
+import { cn } from "@/lib/utils"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-
-import { cn } from "@/lib/utils"
 
 import { ServerSortDropdownMenu, SortOption } from "./ServerSortDropdownMenu"
 
@@ -169,17 +168,17 @@ export function ServerSortBox({
   return (
     <div
       className={cn(
-        "server-sort-box",
+        "server-sort",
         {
-          "server-sort-box--mobile-hide": !mobileShow,
+          "server-sort--mobile-hidden": !mobileShow,
         },
         className,
       )}
     >
-      <div ref={triggerRef} className="sort-select-wrapper" onClick={toggleDropdown}>
-        <div className="sort-select-selected">
-          <span className="sort-select-selected-value">{selectedLabel}</span>
-          <span className="sort-select-selected-icon" onClick={toggleOrder}>
+      <div ref={triggerRef} className="server-sort__trigger" onClick={toggleDropdown}>
+        <div className="server-sort__selected">
+          <span className="server-sort__selected-value">{selectedLabel}</span>
+          <span className="server-sort__order-icon" onClick={toggleOrder}>
             {activeValue.order === "desc" ? <span className="ri-arrow-down-line" /> : <span className="ri-arrow-up-line" />}
           </span>
         </div>

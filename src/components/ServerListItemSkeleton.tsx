@@ -1,4 +1,3 @@
 export function ServerListItemSkeleton() {
-  return <div className="server-list-item-skeleton" />
+  return <div className="server-card-skeleton" />
 }
-

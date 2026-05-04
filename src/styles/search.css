@@ -1,5 +1,4 @@
-/* Search box (match current version) */
-.search-box-background {
+.server-search__backdrop {
   position: fixed;
   top: 0;
   left: 0;
@@ -9,7 +8,7 @@
   z-index: 1000;
 }
 
-.search-box-group {
+.server-search__panel {
   position: fixed;
   left: 50%;
   top: 150px;
@@ -22,7 +21,7 @@
 }
 
 @media screen and (max-width: 640px) {
-  .search-box-group {
+  .server-search__panel {
     width: auto;
     top: 100px;
     left: 20px;
@@ -32,7 +31,7 @@
   }
 }
 
-.search-box-group .search-box {
+.server-search__input-wrap {
   position: relative;
   width: 100%;
   padding-right: 40px;
@@ -40,7 +39,7 @@
   background: #eee;
 }
 
-.search-box-group .search-box .search-box-input {
+.server-search__input {
   width: 100%;
   height: 40px;
   padding: 0 15px;
@@ -52,7 +51,7 @@
   transition: 0.3s;
 }
 
-.search-box-group .search-box .clear-btn {
+.server-search__clear {
   position: absolute;
   top: 0;
   right: 0;
@@ -64,12 +63,12 @@
   transition: 0.3s;
 }
 
-.search-box-group .search-box .clear-btn .clear-icon {
+.server-search__clear-icon {
   font-size: 20px;
   color: #666;
 }
 
-.search-box-group .search-list {
+.server-search__results {
   margin-top: 10px;
   height: 300px;
   overflow-x: hidden;
@@ -77,30 +76,30 @@
 }
 
 @media screen and (max-width: 640px) {
-  .search-box-group .search-list {
+  .server-search__results {
     height: 50vh;
   }
 }
 
-.search-box-group .search-list::-webkit-scrollbar {
+.server-search__results::-webkit-scrollbar {
   width: 8px;
 }
 
-.search-box-group .search-list::-webkit-scrollbar-track {
+.server-search__results::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 4px;
 }
 
-.search-box-group .search-list::-webkit-scrollbar-thumb {
+.server-search__results::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.3);
   border-radius: 4px;
 }
 
-.search-box-group .search-list::-webkit-scrollbar-thumb:hover {
+.server-search__results::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.5);
 }
 
-.search-active-btn {
+.server-search__trigger {
   position: fixed;
   right: 20px;
   bottom: 20px;
@@ -116,17 +115,17 @@
   transition: 0.3s;
 }
 
-.search-active-btn .icon {
+.server-search__trigger-icon {
   line-height: 1;
   font-size: 24px;
   color: #eee;
 }
 
-.search-active-btn:hover {
+.server-search__trigger:hover {
   background: rgba(0, 0, 0, 0.9);
 }
 
-.search-list-item {
+.server-search__result {
   cursor: pointer;
   display: flex;
   flex-wrap: wrap;
@@ -134,21 +133,21 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.search-list-item .server-name {
+.server-search__result-name {
   flex: 1;
   line-height: 30px;
   font-size: 16px;
   font-weight: bold;
 }
 
-.search-list-item .server-tag-list {
+.server-search__result-tags {
   display: flex;
   align-items: center;
   gap: 6px;
   height: 30px;
 }
 
-.search-list-item .server-tag-list .tag-item {
+.server-search__result-tag {
   height: 18px;
   padding: 0 4px;
   line-height: 18px;
@@ -158,4 +157,3 @@
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
   border-radius: 4px;
 }
-

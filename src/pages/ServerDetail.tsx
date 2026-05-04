@@ -15,9 +15,7 @@ import { useNavigate, useParams } from "react-router-dom"
 export default function ServerDetail() {
   const navigate = useNavigate()
   const { data: nezhaWsData, lastMessage, connected } = useNezhaWsData()
-  const [worldMapWidth, setWorldMapWidth] = useState<number>(() =>
-    typeof window === "undefined" ? 900 : computeWorldMapWidth(window.innerWidth),
-  )
+  const [worldMapWidth, setWorldMapWidth] = useState<number>(() => (typeof window === "undefined" ? 900 : computeWorldMapWidth(window.innerWidth)))
   const worldMapHeight = useMemo(() => Math.ceil((621 / 1280) * (Number(worldMapWidth) || 0)), [worldMapWidth])
 
   useEffect(() => {
@@ -61,7 +59,7 @@ export default function ServerDetail() {
   if (!serverId) {
     if (!connected || !lastMessage || !nezhaWsData) {
       return (
-        <div className={cn("detail-container", "is-loading")}>
+        <div className="server-detail-page">
           <div className="world-map-box top-world-map">
             <div
               className="world-map-skeleton"
@@ -71,10 +69,10 @@ export default function ServerDetail() {
               }}
             />
           </div>
-          <div className="detail-skeleton-block detail-skeleton-block--name" />
-          <div className="detail-skeleton-block detail-skeleton-block--status" />
-          <div className="detail-skeleton-block detail-skeleton-block--info" />
-          <div className="detail-skeleton-block detail-skeleton-block--monitor" />
+          <div className="server-detail-skeleton server-detail-skeleton--name" />
+          <div className="server-detail-skeleton server-detail-skeleton--status" />
+          <div className="server-detail-skeleton server-detail-skeleton--info" />
+          <div className="server-detail-skeleton server-detail-skeleton--monitor" />
         </div>
       )
     }
@@ -87,8 +85,8 @@ export default function ServerDetail() {
 
   return (
     <div
-      className={cn("detail-container", "server-info", {
-        "server--offline": server && !isOnline,
+      className={cn("server-detail-page", {
+        "server-detail-page--offline": server && !isOnline,
       })}
     >
       <div className="world-map-box top-world-map">

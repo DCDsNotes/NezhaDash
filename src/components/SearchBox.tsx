@@ -1,11 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react"
-
-import { useNavigate } from "react-router-dom"
-
 import { useNezhaWsData } from "@/hooks/use-nezha-ws-data"
 import { serverIdToServerKey } from "@/lib/server-key"
 import { getServerSearchViewModel, matchServerSearchWord } from "@/lib/server-view-model"
 import { type NezhaServer } from "@/types/nezha-api"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { useNavigate } from "react-router-dom"
 
 function buildTagList(server: NezhaServer) {
   return getServerSearchViewModel(server).tagList
@@ -18,12 +16,12 @@ function matchServer(server: NezhaServer, word: string) {
 function SearchListItem({ server, onOpenDetail }: { server: NezhaServer; onOpenDetail: (s: NezhaServer) => void }) {
   const tagList = useMemo(() => buildTagList(server), [server])
   return (
-    <div className="search-list-item" onClick={() => onOpenDetail(server)}>
-      <div className="server-name">{server.name}</div>
+    <div className="server-search__result" onClick={() => onOpenDetail(server)}>
+      <div className="server-search__result-name">{server.name}</div>
       {tagList.length > 0 ? (
-        <div className="server-tag-list">
+        <div className="server-search__result-tags">
           {tagList.map((tag, idx) => (
-            <span key={`${server.id}_tag_${idx}`} className="tag-item">
+            <span key={`${server.id}_tag_${idx}`} className="server-search__result-tag">
               {tag}
             </span>
           ))}
@@ -134,16 +132,16 @@ export default function SearchBox() {
 
   return (
     <>
-      {show ? <div className="search-box-background" onClick={closeSearch} /> : null}
+      {show ? <div className="server-search__backdrop" onClick={closeSearch} /> : null}
       {show ? (
-        <div className="search-box-group">
-          <div className="search-box">
+        <div className="server-search__panel">
+          <div className="server-search__input-wrap">
             <input
               ref={inputRef}
               value={searchWord}
               type="text"
               placeholder="可搜索服务器名称、标签、系统、国别代码"
-              className="search-box-input"
+              className="server-search__input"
               onChange={(e) => setSearchWord(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleSearch(searchWord)
@@ -151,13 +149,13 @@ export default function SearchBox() {
               onBlur={() => handleSearch(searchWord)}
             />
             {searchWord ? (
-              <span className="clear-btn" onClick={clearSearchWord}>
-                <i className="clear-icon ri-close-fill" />
+              <span className="server-search__clear" onClick={clearSearchWord}>
+                <i className="server-search__clear-icon ri-close-fill" />
               </span>
             ) : null}
           </div>
-          <div className="result-server-list-container">
-            <div className="search-list">
+          <div className="server-search__results-wrap">
+            <div className="server-search__results">
               {searchResult.map((item) => (
                 <SearchListItem key={item.id} server={item} onOpenDetail={onOpenDetail} />
               ))}
@@ -166,8 +164,8 @@ export default function SearchBox() {
         </div>
       ) : null}
 
-      <div className="search-active-btn" onClick={openSearch} title="搜索 (Ctrl/Cmd+K)">
-        <span className="icon">
+      <div className="server-search__trigger" onClick={openSearch} title="搜索 (Ctrl/Cmd+K)">
+        <span className="server-search__trigger-icon">
           <i className="ri-search-line" />
         </span>
       </div>
