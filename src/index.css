@@ -1077,9 +1077,10 @@
 
 /* Server list container (card) */
 .server-list-container.server-list--card {
+  --list-container-width: min(960px, 100vw);
   --list-padding: 20px;
   --list-gap-size: 20px;
-  --list-item-num: 3;
+  --list-item-num: 2;
   --list-item-width: calc(
     (
       var(--list-container-width)
