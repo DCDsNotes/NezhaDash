@@ -1,4 +1,3 @@
-/* eslint-disable no-bitwise */
 /**
  * Generate stable, short server key for routes.
  *
@@ -163,4 +162,3 @@ function md5Hex(str: string) {
 export function serverIdToServerKey(serverId: number | string) {
   return md5Hex(String(serverId)).slice(0, 8)
 }
-

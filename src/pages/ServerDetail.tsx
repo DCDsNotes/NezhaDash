@@ -3,18 +3,18 @@ import ServerDetailMonitor from "@/components/ServerDetailMonitor"
 import ServerDetailName from "@/components/ServerDetailName"
 import ServerDetailStatusBox from "@/components/ServerDetailStatusBox"
 import WorldMap from "@/components/WorldMap"
-import { useWebSocketContext } from "@/hooks/use-websocket-context"
+import { useNezhaWsData } from "@/hooks/use-nezha-ws-data"
 import { countryCoordinates } from "@/lib/geo-limit"
 import { computeWorldMapWidth } from "@/lib/layout"
 import { serverIdToServerKey } from "@/lib/server-key"
-import { cn, formatNezhaInfo } from "@/lib/utils"
-import { NezhaWebsocketResponse } from "@/types/nezha-api"
+import { getServerStatus } from "@/lib/server-view-model"
+import { cn } from "@/lib/utils"
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 
 export default function ServerDetail() {
   const navigate = useNavigate()
-  const { lastMessage, connected } = useWebSocketContext()
+  const { data: nezhaWsData, lastMessage, connected } = useNezhaWsData()
   const [worldMapWidth, setWorldMapWidth] = useState<number>(() =>
     typeof window === "undefined" ? 900 : computeWorldMapWidth(window.innerWidth),
   )
@@ -32,14 +32,8 @@ export default function ServerDetail() {
   }, [])
 
   const { serverKey } = useParams()
-
-  if (!serverKey) {
-    navigate("/404")
-    return null
-  }
-
-  const nezhaWsData = connected && lastMessage ? (JSON.parse(lastMessage.data) as NezhaWebsocketResponse) : null
-  const server = nezhaWsData?.servers?.find((s) => serverIdToServerKey(s.id) === serverKey)
+  const activeWsData = connected ? nezhaWsData : null
+  const server = serverKey ? activeWsData?.servers?.find((s) => serverIdToServerKey(s.id) === serverKey) : undefined
   const serverId = server?.id
 
   const locations = useMemo(() => {
@@ -58,6 +52,11 @@ export default function ServerDetail() {
       },
     ]
   }, [server])
+
+  if (!serverKey) {
+    navigate("/404")
+    return null
+  }
 
   if (!serverId) {
     if (!connected || !lastMessage || !nezhaWsData) {
@@ -84,7 +83,7 @@ export default function ServerDetail() {
   }
 
   const wsNow = nezhaWsData?.now ?? Date.now()
-  const isOnline = server ? formatNezhaInfo(wsNow, server).online : true
+  const isOnline = server ? getServerStatus(wsNow, server) === "online" : true
 
   return (
     <div

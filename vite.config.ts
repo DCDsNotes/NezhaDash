@@ -3,6 +3,8 @@ import fs from "fs"
 import path from "path"
 import { defineConfig } from "vite"
 
+process.env.BROWSERSLIST_IGNORE_OLD_DATA = "1"
+
 // https://vite.dev/config/
 export default defineConfig(({ command }) => {
   const certDir = path.resolve(__dirname, "./.cert")
@@ -49,9 +51,11 @@ export default defineConfig(({ command }) => {
           chunkFileNames: `assets/[name].[hash].js`,
           assetFileNames: `assets/[name].[hash].[ext]`,
           manualChunks(id) {
-            if (id.includes("node_modules")) {
-              return id.toString().split("node_modules/")[1].split("/")[0].toString()
-            }
+            if (!id.includes("node_modules")) return
+            if (/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return "react"
+            if (/[\\/]node_modules[\\/]@tanstack[\\/]/.test(id)) return "tanstack"
+            if (/[\\/]node_modules[\\/](framer-motion|motion-dom|motion-utils)[\\/]/.test(id)) return "motion"
+            if (/[\\/]node_modules[\\/](i18next|react-i18next)[\\/]/.test(id)) return "i18n"
           },
         },
       },

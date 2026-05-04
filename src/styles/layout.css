@@ -1,0 +1,245 @@
+.scrollbar-hidden {
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none; /* Chrome, Safari 和 Opera */
+}
+
+.nazha-layout {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+}
+
+.nazha-layout-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  background: var(--layout-bg-color) url("/bg.webp") no-repeat 50% 100%;
+  background-size: 100% auto;
+}
+
+.nazha-layout-main {
+  position: relative;
+  z-index: 10;
+  min-height: 100vh;
+  background: var(--layout-main-bg-color);
+}
+
+.nazha-container {
+  width: var(--list-container-width);
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.nazha-detail-container {
+  width: var(--detail-container-width);
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.nazha-header,
+.layout-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  min-height: var(--layout-header-height);
+  background-position: 0% 0%;
+  background-image: radial-gradient(transparent 1px, rgba(0, 0, 0, 0.8) 2px);
+  background-size: 3px 3px;
+  backdrop-filter: saturate(50%) blur(3px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+@media screen and (max-width: 450px) {
+  .layout-header.layout-header--show-server-stat {
+    padding-top: 10px;
+  }
+}
+
+.layout-header .site-name {
+  line-height: calc(var(--layout-header-height) - 20px);
+  font-size: 20px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+
+@media screen and (max-width: 720px) {
+  .layout-header .site-name {
+    font-size: 18px;
+  }
+}
+
+.layout-header .layer-header-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 20px;
+  width: var(--layout-header-container-width, 100%);
+  margin: auto;
+  padding: 10px 20px;
+  transition: width 0.3s;
+}
+
+.layout-header .right-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding-right: 20px;
+  color: #ddd;
+}
+
+.server-count-group {
+  display: flex;
+  gap: 10px;
+}
+
+.server-count-group .server-count {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: #ddd;
+  line-height: 30px;
+  font-size: 16px;
+}
+
+.server-count-group .server-count .icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  font-size: 18px;
+}
+
+.server-count-group .server-count .value {
+  font-weight: 400;
+}
+
+.server-count-group .server-count.server-count--online {
+  color: var(--server-online-color);
+}
+
+.server-count-group .server-count.server-count--offline {
+  color: var(--server-offline-color);
+}
+
+/* remixicon does not ship `ri-global-off-line`; emulate it */
+.ri-global-off-line:before {
+  content: "\edcf"; /* ri-global-line */
+}
+
+.ri-global-off-line {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ri-global-off-line:after {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 2px;
+  background: currentColor;
+  transform: rotate(-45deg);
+  border-radius: 2px;
+  opacity: 0.85;
+}
+
+.server-stat-group {
+  min-width: 160px;
+}
+
+@media screen and (max-width: 450px) {
+  .server-stat-group {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 28px;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    flex-direction: row-reverse;
+    gap: 10px;
+  }
+
+  .server-stat-group .server-stat-label {
+    display: none;
+  }
+
+  .server-stat-group .server-stat-content {
+    gap: 10px;
+  }
+}
+
+.server-stat-group .server-stat {
+  display: flex;
+  gap: 8px;
+  line-height: 16px;
+  font-size: 12px;
+}
+
+.server-stat-group .server-stat .server-stat-content {
+  flex: 1;
+  display: flex;
+}
+
+.server-stat-group .server-stat .server-stat-item {
+  flex: 1;
+}
+
+.server-stat-group .server-stat--transfer .server-stat-item--in .text-value {
+  color: var(--transfer-in-color);
+}
+
+.server-stat-group .server-stat--transfer .server-stat-item--out .text-value {
+  color: var(--transfer-out-color);
+}
+
+.server-stat-group .server-stat--net-speed .server-stat-item--in .text-value {
+  color: var(--net-speed-in-color);
+}
+
+.server-stat-group .server-stat--net-speed .server-stat-item--out .text-value {
+  color: var(--net-speed-out-color);
+}
+
+.nezha-user-info-group {
+  display: flex;
+  align-items: center;
+  gap: 0 20px;
+}
+
+.nezha-user-info-group .dashboard-url {
+  display: flex;
+  align-items: center;
+  gap: 0 5px;
+  color: #ddd;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.nezha-user-info-group .dashboard-url:hover {
+  color: #ff9a00;
+}
+
+.layout-footer {
+  padding: 20px 20px 40px;
+  font-size: 12px;
+  color: #ccc;
+}
+
+.layout-footer .copyright-text {
+  display: flex;
+  justify-content: center;
+}
+

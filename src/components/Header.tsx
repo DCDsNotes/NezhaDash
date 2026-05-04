@@ -1,15 +1,15 @@
+import { useNezhaWsData } from "@/hooks/use-nezha-ws-data"
 import { useWebSocketContext } from "@/hooks/use-websocket-context"
 import { fetchLoginUser, fetchSetting } from "@/lib/nezha-api"
-import { calcBinary } from "@/lib/server-spec"
-import { cn, formatNezhaInfo } from "@/lib/utils"
-import { NezhaWebsocketResponse } from "@/types/nezha-api"
+import { getServerHeaderStats, getServerStatusCounts } from "@/lib/server-view-model"
+import { cn } from "@/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import { AnimatePresence, m } from "framer-motion"
 import { type CSSProperties, useEffect, useMemo, useRef } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
 
-import { LoadingSpinner } from "./loading/Loader"
+import { LoadingSpinner } from "./loading/loading-spinner"
 
 function Header() {
   const navigate = useNavigate()
@@ -21,55 +21,22 @@ function Header() {
     refetchOnWindowFocus: true,
   })
 
-  const { lastMessage, connected } = useWebSocketContext()
+  const { data: parsedWsData, connected } = useNezhaWsData()
 
   const siteName = settingData?.data?.config?.site_name
 
-  const nezhaWsData = connected && lastMessage ? (JSON.parse(lastMessage.data) as NezhaWebsocketResponse) : null
+  const nezhaWsData = connected ? parsedWsData : null
 
   const serverCount = useMemo(() => {
     if (!connected || !nezhaWsData || !Array.isArray(nezhaWsData.servers)) {
       return null
     }
-    const total = nezhaWsData.servers.length
-    const online = nezhaWsData.servers.reduce((acc, s) => (formatNezhaInfo(nezhaWsData.now, s).online ? acc + 1 : acc), 0)
-    const offline = Math.max(total - online, 0)
-    return { total, online, offline }
+    return getServerStatusCounts(nezhaWsData.now, nezhaWsData.servers)
   }, [connected, nezhaWsData?.now, nezhaWsData?.servers])
 
   const serverStat = useMemo(() => {
     if (!connected || !nezhaWsData || !Array.isArray(nezhaWsData.servers)) return null
-    let transferIn = 0
-    let transferOut = 0
-    let speedIn = 0
-    let speedOut = 0
-    nezhaWsData.servers.forEach((s) => {
-      const online = formatNezhaInfo(nezhaWsData.now, s).online
-      if (!online) return
-      transferIn += Number(s.state?.net_in_transfer || 0)
-      transferOut += Number(s.state?.net_out_transfer || 0)
-      speedIn += Number(s.state?.net_in_speed || 0)
-      speedOut += Number(s.state?.net_out_speed || 0)
-    })
-
-    function formatBinary(bytes: number, decimals = 1) {
-      const stats = calcBinary(bytes)
-      if (stats.t > 1) return { value: Number(stats.t.toFixed(decimals)), unit: "T" }
-      if (stats.g > 1) return { value: Number(stats.g.toFixed(decimals)), unit: "G" }
-      if (stats.m > 1) return { value: Number(stats.m.toFixed(decimals)), unit: "M" }
-      return { value: Math.max(1, Number(stats.k.toFixed(decimals))), unit: "K" }
-    }
-
-    return {
-      transfer: {
-        inData: formatBinary(transferIn),
-        outData: formatBinary(transferOut),
-      },
-      netSpeed: {
-        inData: formatBinary(speedIn),
-        outData: formatBinary(speedOut),
-      },
-    }
+    return getServerHeaderStats(nezhaWsData.now, nezhaWsData.servers)
   }, [connected, nezhaWsData?.now, nezhaWsData?.servers])
 
   useEffect(() => {

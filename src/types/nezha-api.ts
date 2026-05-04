@@ -82,14 +82,6 @@ export interface MonitorResponse {
   data: NezhaMonitor[]
 }
 
-export type ServerMonitorChart = {
-  [key: string]: {
-    created_at: number
-    avg_delay: number
-    packet_loss?: number
-  }[]
-}
-
 export interface NezhaMonitor {
   monitor_id: number
   monitor_name: string
@@ -98,48 +90,6 @@ export interface NezhaMonitor {
   created_at: number[]
   avg_delay: number[]
   packet_loss?: number[]
-}
-
-export interface ServiceResponse {
-  success: boolean
-  data: {
-    services: {
-      [key: string]: ServiceData
-    }
-    cycle_transfer_stats: CycleTransferStats
-  }
-}
-
-export interface ServiceData {
-  service_name: string
-  current_up: number
-  current_down: number
-  total_up: number
-  total_down: number
-  delay: number[]
-  up: number[]
-  down: number[]
-}
-
-export interface CycleTransferStats {
-  [key: string]: CycleTransferData
-}
-
-export interface CycleTransferData {
-  name: string
-  from: string
-  to: string
-  max: number
-  min: number
-  server_name: {
-    [key: string]: string
-  }
-  transfer: {
-    [key: string]: number
-  }
-  next_update: {
-    [key: string]: string
-  }
 }
 
 type SettingConfig = {

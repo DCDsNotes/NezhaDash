@@ -1,137 +1,16 @@
-import dayjs from "dayjs"
 import { useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 
 import ServerFlag from "@/components/ServerFlag"
 import { ServerStatusRing } from "@/components/ServerStatusRing"
 import { serverIdToServerKey } from "@/lib/server-key"
-import { formatBinaryUsageGT, getCpuCoresFromCpuText, calcBinary } from "@/lib/server-spec"
-import { cn, formatBillingEndDate, formatNezhaInfo, getNextCycleTime, parsePublicNote } from "@/lib/utils"
+import { getRingTrackColor, getRingUsedColor, getServerCardViewModel } from "@/lib/server-view-model"
+import { cn } from "@/lib/utils"
 import { NezhaServer } from "@/types/nezha-api"
-
-function formatBinaryValue(bytes: number, decimals: { t: number; g: number; m: number; k: number } = { t: 2, g: 2, m: 1, k: 1 }) {
-  const stats = calcBinary(bytes)
-  if (stats.p && stats.p > 1) return { value: Number(stats.p.toFixed(1)), unit: "P" }
-  if (stats.t > 1) return { value: Number(stats.t.toFixed(decimals.t)), unit: "T" }
-  if (stats.g > 1) return { value: Number(stats.g.toFixed(decimals.g)), unit: "G" }
-  if (stats.m > 1) return { value: Number(stats.m.toFixed(decimals.m)), unit: "M" }
-  return { value: Number(stats.k.toFixed(decimals.k)), unit: "K" }
-}
-
-function formatDurationValue(uptimeSeconds: number) {
-  const total = Math.max(Number(uptimeSeconds) || 0, 0)
-  const days = Math.floor(total / 86400)
-  if (days > 0) return { value: days, unit: "天" }
-  const hours = Math.floor((total % 86400) / 3600)
-  if (hours > 0) return { value: hours, unit: "小时" }
-  const minutes = Math.floor((total % 3600) / 60)
-  if (minutes > 0) return { value: minutes, unit: "分钟" }
-  return { value: Math.floor(total % 60), unit: "秒" }
-}
-
-function parseBillingCycle(cycle: string) {
-  const c = String(cycle || "").toLowerCase()
-  if (["月", "m", "mo", "month", "monthly"].includes(c)) return { months: 1 }
-  if (["年", "y", "yr", "year", "annual"].includes(c)) return { months: 12 }
-  if (["季", "q", "qr", "quarterly"].includes(c)) return { months: 3 }
-  if (["半", "半年", "h", "half", "semi-annually"].includes(c)) return { months: 6 }
-  return { months: 1 }
-}
-
-function computeBillAndRemaining(parsedData: ReturnType<typeof parsePublicNote>) {
-  const billingDataMod = parsedData?.billingDataMod
-  if (!billingDataMod) return null
-
-  const { months } = parseBillingCycle(billingDataMod.cycle || "")
-  let remainingTime: { label: string; value: string; type: "infinity" | "days" | "expired" } | null = null
-  const endDate = String(billingDataMod.endDate || "")
-  if (endDate) {
-    if (endDate.startsWith("0000-00-00")) {
-      remainingTime = { label: "剩余", value: "长期有效", type: "infinity" }
-    } else {
-      const nowTime = Date.now()
-      const endTime = dayjs(endDate).valueOf()
-      if (billingDataMod.autoRenewal === "1") {
-        if (endTime > nowTime) {
-          const diff = dayjs(endTime).diff(dayjs(), "day") + 1
-          remainingTime = { label: "剩余", value: `${diff}天`, type: "days" }
-        } else {
-          const nextTime = getNextCycleTime(endTime, months, nowTime)
-          const diff = dayjs(nextTime).diff(dayjs(), "day") + 1
-          remainingTime = { label: "剩余", value: `${diff}天`, type: "days" }
-        }
-      } else if (endTime > nowTime) {
-        const diff = dayjs(endTime).diff(dayjs(), "day") + 1
-        remainingTime = { label: "剩余", value: `${diff}天`, type: "days" }
-      } else {
-        remainingTime = { label: "剩余", value: "已过期", type: "expired" }
-      }
-    }
-  }
-
-  return remainingTime
-}
-
-function getRingTrackColor() {
-  return "rgba(255, 255, 255, 0.25)"
-}
-
-function getRingUsedColor(type: "cpu" | "mem" | "disk") {
-  if (type === "cpu") return "#0088FF"
-  if (type === "mem") return "#0AA344"
-  return "#70F3FF"
-}
-
-function splitDaysText(value: string) {
-  const m = String(value || "").match(/^(\d+)(天)$/)
-  if (!m) return null
-  return { num: m[1], unit: m[2] }
-}
 
 export default function ServerCard({ now, serverInfo }: { now: number; serverInfo: NezhaServer }) {
   const navigate = useNavigate()
-
-  const info = formatNezhaInfo(now, serverInfo)
-  const parsedData = useMemo(() => parsePublicNote(info.public_note), [info.public_note])
-  const remainingTime = useMemo(() => computeBillAndRemaining(parsedData), [parsedData])
-  const endDateText = useMemo(() => formatBillingEndDate(parsedData?.billingDataMod?.endDate), [parsedData?.billingDataMod?.endDate])
-
-  const cpuText = serverInfo.host?.cpu?.[0] || ""
-  const cpuCoreText = useMemo(() => {
-    const cores = getCpuCoresFromCpuText(cpuText)
-    return cores ? `${cores}C` : ""
-  }, [cpuText])
-
-  const memUsedBytes = serverInfo.state?.mem_used || 0
-  const memTotalBytes = serverInfo.host?.mem_total || 0
-  const memValText = useMemo(() => {
-    return formatBinaryUsageGT(memUsedBytes, memTotalBytes)
-  }, [memTotalBytes, memUsedBytes])
-
-  const diskUsedBytes = serverInfo.state?.disk_used || 0
-  const diskTotalBytes = serverInfo.host?.disk_total || 0
-  const diskValText = useMemo(() => {
-    return formatBinaryUsageGT(diskUsedBytes, diskTotalBytes)
-  }, [diskTotalBytes, diskUsedBytes])
-
-  const transferStat = useMemo(() => {
-    const inTransfer = serverInfo.state?.net_in_transfer || 0
-    const outTransfer = serverInfo.state?.net_out_transfer || 0
-    const total = inTransfer + outTransfer
-    let ruleStat = total
-    const trafficType = parsedData?.planDataMod?.trafficType
-    if (trafficType === "1") {
-      ruleStat = outTransfer
-    } else if (trafficType === "3") {
-      ruleStat = outTransfer >= inTransfer ? outTransfer : inTransfer
-    }
-    return formatBinaryValue(ruleStat)
-  }, [parsedData?.planDataMod?.trafficType, serverInfo.state?.net_in_transfer, serverInfo.state?.net_out_transfer])
-
-  const inSpeed = useMemo(() => formatBinaryValue(serverInfo.state?.net_in_speed || 0, { t: 2, g: 2, m: 1, k: 1 }), [serverInfo.state?.net_in_speed])
-  const outSpeed = useMemo(() => formatBinaryValue(serverInfo.state?.net_out_speed || 0, { t: 2, g: 2, m: 1, k: 1 }), [serverInfo.state?.net_out_speed])
-  const duration = useMemo(() => formatDurationValue(serverInfo.state?.uptime || 0), [serverInfo.state?.uptime])
-  const remainingDays = useMemo(() => (remainingTime?.type === "days" ? splitDaysText(remainingTime.value) : null), [remainingTime?.type, remainingTime?.value])
+  const { billing, info, realtime, rings } = useMemo(() => getServerCardViewModel(now, serverInfo), [now, serverInfo])
 
   const cardClick = () => {
     sessionStorage.setItem("fromMainPage", "true")
@@ -149,58 +28,45 @@ export default function ServerCard({ now, serverInfo }: { now: number; serverInf
 
       <div className="server-list-item-main" onClick={cardClick}>
         <div className="server-list-item-status type--ring len--3">
-          <ServerStatusRing
-            type="cpu"
-            used={Number(info.cpu.toFixed(1))}
-            colors={{ used: getRingUsedColor("cpu"), total: getRingTrackColor() }}
-            valPercent={`${Number(info.cpu.toFixed(1))}%`}
-            valText={cpuCoreText}
-            label="CPU"
-          />
-          <ServerStatusRing
-            type="mem"
-            used={Number(info.mem.toFixed(1))}
-            colors={{ used: getRingUsedColor("mem"), total: getRingTrackColor() }}
-            valPercent={`${Number(info.mem.toFixed(1))}%`}
-            valText={memValText}
-            label="内存"
-          />
-          <ServerStatusRing
-            type="disk"
-            used={Number(info.disk.toFixed(1))}
-            colors={{ used: getRingUsedColor("disk"), total: getRingTrackColor() }}
-            valPercent={`${Number(info.disk.toFixed(1))}%`}
-            valText={diskValText}
-            label="磁盘"
-          />
+          {rings.map((item) => (
+            <ServerStatusRing
+              key={item.type}
+              type={item.type}
+              used={item.used}
+              colors={{ used: getRingUsedColor(item.type), total: getRingTrackColor() }}
+              valPercent={item.valPercent}
+              valText={item.valText}
+              label={item.label}
+            />
+          ))}
         </div>
 
         <div className="server-real-time-group">
           <div className="server-real-time-item server-real-time--duration">
             <div className="item-content">
-              <span className="item-value">{duration.value}</span>
-              <span className="item-unit item-text">{duration.unit}</span>
+              <span className="item-value">{realtime.duration.value}</span>
+              <span className="item-unit item-text">{realtime.duration.unit}</span>
             </div>
             <span className="item-label">在线</span>
           </div>
           <div className="server-real-time-item server-real-time--transfer">
             <div className="item-content">
-              <span className="item-value">{transferStat.value}</span>
-              <span className="item-unit item-text">{transferStat.unit}</span>
+              <span className="item-value">{realtime.transferStat.value}</span>
+              <span className="item-unit item-text">{realtime.transferStat.unit}</span>
             </div>
             <span className="item-label">流量</span>
           </div>
           <div className="server-real-time-item server-real-time--inSpeed">
             <div className="item-content">
-              <span className="item-value">{inSpeed.value}</span>
-              <span className="item-unit item-text">{inSpeed.unit}</span>
+              <span className="item-value">{realtime.inSpeed.value}</span>
+              <span className="item-unit item-text">{realtime.inSpeed.unit}</span>
             </div>
             <span className="item-label">入网</span>
           </div>
           <div className="server-real-time-item server-real-time--outSpeed">
             <div className="item-content">
-              <span className="item-value">{outSpeed.value}</span>
-              <span className="item-unit item-text">{outSpeed.unit}</span>
+              <span className="item-value">{realtime.outSpeed.value}</span>
+              <span className="item-unit item-text">{realtime.outSpeed.unit}</span>
             </div>
             <span className="item-label">出网</span>
           </div>
@@ -209,26 +75,26 @@ export default function ServerCard({ now, serverInfo }: { now: number; serverInf
 
       <div className="server-list-item-bill">
         <div className="left-box">
-          {remainingTime ? (
+          {billing.remainingTime ? (
             <div className="remaining-time-info">
               <span className="icon" aria-hidden="true">
                 <span className="ri-hourglass-fill" />
               </span>
               <span className="text">
-                {remainingTime.type !== "infinity" ? (
+                {billing.remainingTime.type !== "infinity" ? (
                   <>
-                    <span className="text-item label-text">{remainingTime.label}</span>
-                    {remainingDays ? (
+                    <span className="text-item label-text">{billing.remainingTime.label}</span>
+                    {billing.remainingDays ? (
                       <>
-                        <span className="text-item value-text">{remainingDays.num}</span>
-                        <span className="text-item label-text">{remainingDays.unit}</span>
+                        <span className="text-item value-text">{billing.remainingDays.num}</span>
+                        <span className="text-item label-text">{billing.remainingDays.unit}</span>
                       </>
                     ) : (
-                      <span className="text-item value-text">{remainingTime.value}</span>
+                      <span className="text-item value-text">{billing.remainingTime.value}</span>
                     )}
                   </>
                 ) : (
-                  <span className="text-item value-text">{remainingTime.value}</span>
+                  <span className="text-item value-text">{billing.remainingTime.value}</span>
                 )}
               </span>
             </div>
@@ -236,9 +102,9 @@ export default function ServerCard({ now, serverInfo }: { now: number; serverInf
             <div />
           )}
 
-          {endDateText ? (
+          {billing.endDateText ? (
             <div className="billing-end-date">
-              <span className="billing-end-date-text">{endDateText}</span>
+              <span className="billing-end-date-text">{billing.endDateText}</span>
             </div>
           ) : null}
         </div>

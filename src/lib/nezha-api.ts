@@ -1,4 +1,4 @@
-import { LoginUserResponse, MonitorResponse, ServerGroupResponse, ServiceResponse, SettingResponse } from "@/types/nezha-api"
+import { LoginUserResponse, MonitorResponse, ServerGroupResponse, SettingResponse } from "@/types/nezha-api"
 
 let lastestRefreshTokenAt = 0
 
@@ -29,15 +29,6 @@ export const fetchLoginUser = async (): Promise<LoginUserResponse> => {
 
 export const fetchMonitor = async (server_id: number): Promise<MonitorResponse> => {
   const response = await fetch(`/api/v1/service/${server_id}`)
-  const data = await response.json()
-  if (data.error) {
-    throw new Error(data.error)
-  }
-  return data
-}
-
-export const fetchService = async (): Promise<ServiceResponse> => {
-  const response = await fetch("/api/v1/service")
   const data = await response.json()
   if (data.error) {
     throw new Error(data.error)

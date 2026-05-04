@@ -2,33 +2,17 @@ import { useEffect, useMemo, useRef, useState } from "react"
 
 import { useNavigate } from "react-router-dom"
 
-import { useWebSocketContext } from "@/hooks/use-websocket-context"
+import { useNezhaWsData } from "@/hooks/use-nezha-ws-data"
 import { serverIdToServerKey } from "@/lib/server-key"
-import { parsePublicNote } from "@/lib/utils"
-import { type NezhaServer, type NezhaWebsocketResponse } from "@/types/nezha-api"
+import { getServerSearchViewModel, matchServerSearchWord } from "@/lib/server-view-model"
+import { type NezhaServer } from "@/types/nezha-api"
 
 function buildTagList(server: NezhaServer) {
-  const note = parsePublicNote(server.public_note || "")
-  const plan = note?.planDataMod
-  const list: string[] = []
-  if (plan?.networkRoute) list.push(...String(plan.networkRoute).split(",").filter(Boolean))
-  if (plan?.extra) list.push(...String(plan.extra).split(",").filter(Boolean))
-  return list.slice(0, 3)
+  return getServerSearchViewModel(server).tagList
 }
 
 function matchServer(server: NezhaServer, word: string) {
-  const w = word.toLowerCase()
-  if (String(server.name || "").toLowerCase().includes(w)) return true
-
-  const note = parsePublicNote(server.public_note || "")
-  const plan = note?.planDataMod
-
-  const networkRoute = String(plan?.networkRoute || "").toLowerCase()
-  const extra = String(plan?.extra || "").toLowerCase()
-  const platform = String(server.host?.platform || "").toLowerCase()
-  const countryCode = String(server.country_code || "").toLowerCase()
-
-  return [networkRoute, extra, platform, countryCode].some((s) => s.includes(w))
+  return matchServerSearchWord(server, word)
 }
 
 function SearchListItem({ server, onOpenDetail }: { server: NezhaServer; onOpenDetail: (s: NezhaServer) => void }) {
@@ -51,9 +35,9 @@ function SearchListItem({ server, onOpenDetail }: { server: NezhaServer; onOpenD
 
 export default function SearchBox() {
   const navigate = useNavigate()
-  const { lastMessage, connected } = useWebSocketContext()
+  const { data: parsedWsData, connected } = useNezhaWsData()
 
-  const nezhaWsData = connected && lastMessage ? (JSON.parse(lastMessage.data) as NezhaWebsocketResponse) : null
+  const nezhaWsData = connected ? parsedWsData : null
   const serverList = useMemo(() => (nezhaWsData?.servers && Array.isArray(nezhaWsData.servers) ? nezhaWsData.servers : []), [nezhaWsData?.servers])
 
   const [show, setShow] = useState(false)
@@ -190,4 +174,3 @@ export default function SearchBox() {
     </>
   )
 }
-

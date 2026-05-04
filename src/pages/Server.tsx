@@ -3,14 +3,13 @@ import { ServerListItemSkeleton } from "@/components/ServerListItemSkeleton"
 import { ServerOptionBox, type ServerOptionItem } from "@/components/ServerOptionBox"
 import { ServerSortBox } from "@/components/ServerSortBox"
 import WorldMap, { buildLocationsFromServers } from "@/components/WorldMap"
+import { useNezhaWsData } from "@/hooks/use-nezha-ws-data"
 import { useSort } from "@/hooks/use-sort"
 import { useStatus } from "@/hooks/use-status"
-import { useWebSocketContext } from "@/hooks/use-websocket-context"
 import { computeWorldMapWidth } from "@/lib/layout"
 import { fetchServerGroup } from "@/lib/nezha-api"
 import { serverSortHandler, serverSortOptions } from "@/lib/server-sort"
-import { formatNezhaInfo } from "@/lib/utils"
-import { NezhaWebsocketResponse } from "@/types/nezha-api"
+import { getServerMapLocationViewModel, getServerStatus, getServerStatusCounts } from "@/lib/server-view-model"
 import { ServerGroup } from "@/types/nezha-api"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useMemo, useState } from "react"
@@ -21,7 +20,7 @@ export default function Servers() {
     queryKey: ["server-group"],
     queryFn: () => fetchServerGroup(),
   })
-  const { lastMessage, connected } = useWebSocketContext()
+  const { data: nezhaWsData, lastMessage, connected } = useNezhaWsData()
   const { status, setStatus } = useStatus()
   const [currentGroup, setCurrentGroup] = useState<string>("")
   const [worldMapWidth, setWorldMapWidth] = useState<number>(() =>
@@ -53,8 +52,6 @@ export default function Servers() {
     return () => window.removeEventListener("resize", handleResize)
   }, [])
 
-  const nezhaWsData = lastMessage ? (JSON.parse(lastMessage.data) as NezhaWebsocketResponse) : null
-
   const groupOptions = useMemo(() => {
     const opts: ServerOptionItem[] = []
     const groups = groupData?.data
@@ -79,9 +76,7 @@ export default function Servers() {
   const onlineOptions = useMemo<ServerOptionItem[]>(() => {
     const ws = nezhaWsData
     if (!ws || !Array.isArray(ws.servers)) return []
-    const total = ws.servers.length
-    const online = ws.servers.reduce((acc, s) => (formatNezhaInfo(ws.now, s).online ? acc + 1 : acc), 0)
-    const offline = Math.max(total - online, 0)
+    const { offline, online, total } = getServerStatusCounts(ws.now, ws.servers)
     if (total !== online) {
       return [
         { key: "online", label: "在线", value: "online", title: `${online}台` },
@@ -162,17 +157,12 @@ export default function Servers() {
   filteredServers =
     status === "all"
       ? filteredServers
-      : filteredServers.filter((server) => [status].includes(formatNezhaInfo(nezhaWsData.now, server).online ? "online" : "offline"))
+      : filteredServers.filter((server) => [status].includes(getServerStatus(nezhaWsData.now, server)))
 
   filteredServers = filteredServers.sort((a, b) => serverSortHandler(a, b, sortProp, sortOrder))
 
   const serverLocations = buildLocationsFromServers(
-    filteredServers.map((s) => ({
-      id: s.id,
-      name: s.name,
-      country_code: s.country_code,
-      online: formatNezhaInfo(nezhaWsData.now, s).online,
-    })),
+    filteredServers.map((server) => getServerMapLocationViewModel(nezhaWsData.now, server)),
   )
   const showWorldMap = !(filteredServers.length > 0 && serverLocations.length === 0)
 

@@ -238,7 +238,6 @@ function buildMonitorChartData({
 
     let delayTotal = 0
     let delayCount = 0
-    let sampleCount = 0
     let lossTotal = 0
     let lossCount = 0
 
@@ -252,7 +251,6 @@ function buildMonitorChartData({
       lossLineData.push([time, lossVal])
 
       if (delayByTime.has(time)) {
-        sampleCount += 1
         if (typeof delayVal === "number" && Number.isFinite(delayVal) && delayVal > 0) {
           delayTotal += delayVal
           delayCount += 1
