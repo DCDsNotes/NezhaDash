@@ -1786,14 +1786,14 @@
 
 @media screen and (max-width: 1024px) {
   .server-status-group--ring {
-    --ring-size: 76px;
+    --ring-size: 72px;
     --ring-thickness: 10px;
   }
 }
 
 @media screen and (max-width: 720px) {
   .server-status-group--ring {
-    --ring-size: 72px;
+    --ring-size: 70px;
     --ring-thickness: 8px;
     gap: 12px;
   }
