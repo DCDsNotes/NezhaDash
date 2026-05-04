@@ -4,7 +4,7 @@
  * - Network-first for navigation documents
  */
 
-const CACHE_VERSION = "v1"
+const CACHE_VERSION = "v2"
 const STATIC_CACHE = `static-${CACHE_VERSION}`
 const ASSET_CACHE = `asset-${CACHE_VERSION}`
 
@@ -26,27 +26,42 @@ async function cachePut(cacheName, request, response) {
   }
 }
 
+function offlineResponse() {
+  return new Response("", {
+    status: 504,
+    statusText: "Network unavailable",
+  })
+}
+
+async function safeFetch(request) {
+  try {
+    return await fetch(request)
+  } catch {
+    return null
+  }
+}
+
 async function networkFirst(request) {
   const cache = await caches.open(STATIC_CACHE)
-  try {
-    const response = await fetch(request)
+  const response = await safeFetch(request)
+  if (response) {
     await cachePut(STATIC_CACHE, request, response.clone())
     return response
-  } catch {
-    const cached = await cache.match(request, { ignoreSearch: false })
-    if (cached) return cached
-    // fallback to cached index for SPA
-    const index = await cache.match("/index.html")
-    if (index) return index
-    throw new Error("offline")
   }
+
+  const cached = await cache.match(request, { ignoreSearch: false })
+  if (cached) return cached
+  const index = await cache.match("/index.html")
+  if (index) return index
+  return offlineResponse()
 }
 
 async function cacheFirst(request) {
   const cache = await caches.open(ASSET_CACHE)
   const cached = await cache.match(request, { ignoreSearch: false })
   if (cached) return cached
-  const response = await fetch(request)
+  const response = await safeFetch(request)
+  if (!response) return offlineResponse()
   await cachePut(ASSET_CACHE, request, response.clone())
   return response
 }
@@ -61,7 +76,8 @@ async function staleWhileRevalidate(request) {
     })
     .catch(() => null)
 
-  return cached || (await fetchPromise) || fetch(request)
+  const response = await fetchPromise
+  return cached || response || offlineResponse()
 }
 
 self.addEventListener("install", (event) => {
@@ -107,4 +123,3 @@ self.addEventListener("fetch", (event) => {
   // everything else (e.g. svg imported as fetch)
   event.respondWith(staleWhileRevalidate(req))
 })
-

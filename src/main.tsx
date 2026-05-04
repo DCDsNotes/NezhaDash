@@ -28,7 +28,7 @@ const rootEl = document.getElementById("root")!
 ReactDOM.createRoot(rootEl).render(
   <MotionProvider>
     <QueryClientProvider client={queryClient}>
-      <WebSocketProvider url="/api/v1/ws/server">
+      <WebSocketProvider path="/ws/server">
         <StatusProvider>
           <SortProvider>
             <App />
@@ -61,8 +61,11 @@ requestAnimationFrame(() => {
 
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {
-      // ignore
-    })
+    navigator.serviceWorker
+      .register("/sw.js", { updateViaCache: "none" })
+      .then((registration) => registration.update())
+      .catch(() => {
+        // ignore
+      })
   })
 }

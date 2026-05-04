@@ -1,13 +1,15 @@
 import React, { useEffect, useRef, useState } from "react"
 
+import { nezhaWebSocketUrl } from "@/lib/nezha-endpoints"
+
 import { WebSocketContext, WebSocketContextType } from "./websocket-context"
 
 interface WebSocketProviderProps {
-  url: string
+  path: string
   children: React.ReactNode
 }
 
-export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ url, children }) => {
+export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ path, children }) => {
   const [lastMessage, setLastMessage] = useState<{ data: string } | null>(null)
   const [messageHistory, setMessageHistory] = useState<{ data: string }[]>([]) // 新增历史消息状态
   const [connected, setConnected] = useState(false)
@@ -17,6 +19,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ url, child
   const maxReconnectAttempts = 30
   const reconnectAttempts = useRef(0)
   const isConnecting = useRef(false)
+  const wsUrlRef = useRef("")
 
   const cleanup = () => {
     if (ws.current) {
@@ -48,10 +51,8 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ url, child
     isConnecting.current = true
 
     try {
-      const wsUrl = new URL(url, window.location.origin)
-      wsUrl.protocol = wsUrl.protocol.replace("http", "ws")
-
-      ws.current = new WebSocket(wsUrl.toString())
+      wsUrlRef.current = nezhaWebSocketUrl(path)
+      ws.current = new WebSocket(wsUrlRef.current)
 
       ws.current.onopen = () => {
         console.log("WebSocket connected")
@@ -85,11 +86,11 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ url, child
       }
 
       ws.current.onerror = (error) => {
-        console.error("WebSocket error:", error)
+        console.error(`WebSocket error (${wsUrlRef.current}):`, error)
         isConnecting.current = false
       }
     } catch (error) {
-      console.error("WebSocket connection error:", error)
+      console.error(`WebSocket connection error (${wsUrlRef.current || path}):`, error)
       isConnecting.current = false
     }
   }
@@ -117,7 +118,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ url, child
       cleanup()
       window.removeEventListener("beforeunload", handleBeforeUnload)
     }
-  }, [url])
+  }, [path])
 
   const contextValue: WebSocketContextType = {
     lastMessage,
