@@ -1288,8 +1288,8 @@
 
 @media screen and (max-width: 400px) {
   .server-list-item-status.type--ring {
-    --ring-size: 68px;
-    --ring-thickness: 9px;
+    --ring-size: 70px;
+    --ring-thickness: 8px;
     padding: 10px 6px 0;
   }
 }
@@ -1305,8 +1305,8 @@
 }
 
 .server-status-ring .ring-circle {
-  width: var(--ring-size, 72px);
-  height: var(--ring-size, 72px);
+  width: var(--ring-size, 76px);
+  height: var(--ring-size, 76px);
   border-radius: 50%;
   position: relative;
   overflow: hidden;
@@ -1321,15 +1321,15 @@
   background: conic-gradient(var(--ring-color) 0 var(--ring-used), var(--ring-track) 0 100%);
   -webkit-mask: radial-gradient(
     farthest-side,
-    transparent calc(100% - var(--ring-thickness, 11px) - 1px),
+    transparent calc(100% - var(--ring-thickness, 9px) - 1px),
     rgba(0, 0, 0, 0.7) calc(100% - var(--ring-thickness, 11px) - 0.5px),
-    #000 calc(100% - var(--ring-thickness, 11px))
+    #000 calc(100% - var(--ring-thickness, 9px))
   );
   mask: radial-gradient(
     farthest-side,
-    transparent calc(100% - var(--ring-thickness, 11px) - 1px),
-    rgba(0, 0, 0, 0.7) calc(100% - var(--ring-thickness, 11px) - 0.5px),
-    #000 calc(100% - var(--ring-thickness, 11px))
+    transparent calc(100% - var(--ring-thickness, 9px) - 1px),
+    rgba(0, 0, 0, 0.7) calc(100% - var(--ring-thickness, 9px) - 0.5px),
+    #000 calc(100% - var(--ring-thickness, 9px))
   );
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
@@ -1771,8 +1771,8 @@
 }
 
 .server-status-group--ring {
-  --ring-size: 100px;
-  --ring-thickness: 11px;
+  --ring-size: 90px;
+  --ring-thickness: 9px;
   justify-content: space-around;
   gap: 16px;
 }
@@ -1787,14 +1787,14 @@
 @media screen and (max-width: 1024px) {
   .server-status-group--ring {
     --ring-size: 76px;
-    --ring-thickness: 11px;
+    --ring-thickness: 10px;
   }
 }
 
 @media screen and (max-width: 720px) {
   .server-status-group--ring {
-    --ring-size: 70px;
-    --ring-thickness: 11px;
+    --ring-size: 72px;
+    --ring-thickness: 8px;
     gap: 12px;
   }
 }
