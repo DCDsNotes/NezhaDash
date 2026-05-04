@@ -51,6 +51,7 @@ export default defineConfig(({ command }) => {
           chunkFileNames: `assets/[name].[hash].js`,
           assetFileNames: `assets/[name].[hash].[ext]`,
           manualChunks(id) {
+            if (id.includes("commonjsHelpers")) return "react"
             if (!id.includes("node_modules")) return
             if (/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return "react"
             if (/[\\/]node_modules[\\/]@tanstack[\\/]/.test(id)) return "tanstack"
