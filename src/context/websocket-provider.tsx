@@ -9,17 +9,23 @@ interface WebSocketProviderProps {
   children: React.ReactNode
 }
 
+const MESSAGE_IDLE_TIMEOUT = 30_000
+const STALE_CHECK_INTERVAL = 5_000
+const RECONNECT_BASE_DELAY = 3_000
+const RECONNECT_MAX_DELAY = 30_000
+
 export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ path, children }) => {
   const [lastMessage, setLastMessage] = useState<{ data: string } | null>(null)
-  const [messageHistory, setMessageHistory] = useState<{ data: string }[]>([]) // 新增历史消息状态
   const [connected, setConnected] = useState(false)
   const [needReconnect, setNeedReconnect] = useState(false)
   const ws = useRef<WebSocket | null>(null)
-  const reconnectTimeout = useRef<NodeJS.Timeout>(null)
-  const maxReconnectAttempts = 30
+  const reconnectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const staleCheckInterval = useRef<ReturnType<typeof setInterval> | null>(null)
   const reconnectAttempts = useRef(0)
   const isConnecting = useRef(false)
   const wsUrlRef = useRef("")
+  const lastMessageAt = useRef(0)
+  const shouldReconnect = useRef(true)
 
   const cleanup = () => {
     if (ws.current) {
@@ -38,7 +44,36 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ path, chil
       clearTimeout(reconnectTimeout.current)
       reconnectTimeout.current = null
     }
+    if (staleCheckInterval.current) {
+      clearInterval(staleCheckInterval.current)
+      staleCheckInterval.current = null
+    }
     setConnected(false)
+  }
+
+  const scheduleReconnect = () => {
+    if (!shouldReconnect.current || reconnectTimeout.current) return
+
+    const delay = Math.min(RECONNECT_BASE_DELAY * 2 ** reconnectAttempts.current, RECONNECT_MAX_DELAY)
+    reconnectTimeout.current = setTimeout(() => {
+      reconnectTimeout.current = null
+      reconnectAttempts.current++
+      connect()
+    }, delay)
+  }
+
+  const startStaleCheck = () => {
+    if (staleCheckInterval.current) {
+      clearInterval(staleCheckInterval.current)
+    }
+
+    staleCheckInterval.current = setInterval(() => {
+      if (!ws.current || ws.current.readyState !== WebSocket.OPEN) return
+      if (!lastMessageAt.current || Date.now() - lastMessageAt.current <= MESSAGE_IDLE_TIMEOUT) return
+
+      console.warn(`WebSocket stale (${wsUrlRef.current}), reconnecting`)
+      reconnect()
+    }, STALE_CHECK_INTERVAL)
   }
 
   const connect = () => {
@@ -48,6 +83,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ path, chil
     }
 
     cleanup()
+    shouldReconnect.current = true
     isConnecting.current = true
 
     try {
@@ -59,6 +95,8 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ path, chil
         setConnected(true)
         reconnectAttempts.current = 0
         isConnecting.current = false
+        lastMessageAt.current = Date.now()
+        startStaleCheck()
       }
 
       ws.current.onclose = () => {
@@ -67,31 +105,23 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ path, chil
         ws.current = null
         isConnecting.current = false
 
-        if (reconnectAttempts.current < maxReconnectAttempts) {
-          reconnectTimeout.current = setTimeout(() => {
-            reconnectAttempts.current++
-            connect()
-          }, 3000)
-        }
+        scheduleReconnect()
       }
 
       ws.current.onmessage = (event) => {
-        const newMessage = { data: event.data }
-        setLastMessage(newMessage)
-        // 更新历史消息，保持最新的30条记录
-        setMessageHistory((prev) => {
-          const updated = [newMessage, ...prev]
-          return updated.slice(0, 30)
-        })
+        lastMessageAt.current = Date.now()
+        setLastMessage({ data: event.data })
       }
 
       ws.current.onerror = (error) => {
         console.error(`WebSocket error (${wsUrlRef.current}):`, error)
         isConnecting.current = false
+        scheduleReconnect()
       }
     } catch (error) {
       console.error(`WebSocket connection error (${wsUrlRef.current || path}):`, error)
       isConnecting.current = false
+      scheduleReconnect()
     }
   }
 
@@ -99,7 +129,11 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ path, chil
     reconnectAttempts.current = 0
     // 等待一个小延时确保清理完成
     cleanup()
-    setTimeout(() => {
+    if (!shouldReconnect.current) return
+
+    reconnectTimeout.current = setTimeout(() => {
+      reconnectTimeout.current = null
+      if (!shouldReconnect.current) return
       connect()
     }, 1000)
   }
@@ -115,6 +149,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ path, chil
     window.addEventListener("beforeunload", handleBeforeUnload)
 
     return () => {
+      shouldReconnect.current = false
       cleanup()
       window.removeEventListener("beforeunload", handleBeforeUnload)
     }
@@ -123,7 +158,6 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ path, chil
   const contextValue: WebSocketContextType = {
     lastMessage,
     connected,
-    messageHistory,
     reconnect,
     needReconnect,
     setNeedReconnect,
