@@ -53,7 +53,7 @@ export default function ServerCard({ now, serverInfo }: { now: number; serverInf
               <span className="server-metrics__value">{realtime.transferStat.value}</span>
               <span className="server-metrics__unit">{realtime.transferStat.unit}</span>
             </div>
-            <span className="server-metrics__label">本月</span>
+            <span className="server-metrics__label">流量</span>
           </div>
           <div className="server-metrics__item server-metrics__item--in-speed">
             <div className="server-metrics__content">

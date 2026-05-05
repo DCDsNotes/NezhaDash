@@ -1,6 +1,5 @@
 import dayjs from "dayjs"
 
-import { formatBytes } from "@/lib/format"
 import { GetOsName } from "@/lib/logo-class"
 import {
   formatBillingEndDate,
@@ -188,7 +187,7 @@ function parseTrafficQuotaBytes(trafficVol: string | undefined) {
 
   const unit = match[2].toUpperCase().replace(/B$/, "")
   const power = { "": 0, K: 1, M: 2, G: 3, T: 4, P: 5 }[unit] ?? 0
-  return value * 1024 ** power
+  return value * 1000 ** power
 }
 
 function hasTrafficPlan(parsedData: PublicNoteData | null) {
@@ -201,7 +200,19 @@ function formatHeaderBinary(bytes: number, decimals = 1) {
   if (stats.t > 1) return { value: Number(stats.t.toFixed(decimals)), unit: "T" }
   if (stats.g > 1) return { value: Number(stats.g.toFixed(decimals)), unit: "G" }
   if (stats.m > 1) return { value: Number(stats.m.toFixed(decimals)), unit: "M" }
-  return { value: Math.max(1, Number(stats.k.toFixed(decimals))), unit: "K" }
+  return { value: Number(stats.k.toFixed(decimals)), unit: "K" }
+}
+
+function formatHeaderDecimal(bytes: number, decimals = 1) {
+  const value = Math.max(Number(bytes) || 0, 0)
+  const k = value / 1000
+  const m = k / 1000
+  const g = m / 1000
+  const t = g / 1000
+  if (t > 1) return { value: Number(t.toFixed(decimals)), unit: "T" }
+  if (g > 1) return { value: Number(g.toFixed(decimals)), unit: "G" }
+  if (m > 1) return { value: Number(m.toFixed(decimals)), unit: "M" }
+  return { value: Number(k.toFixed(decimals)), unit: "K" }
 }
 
 function formatLoad(server: NezhaServer) {
@@ -212,12 +223,26 @@ function formatLoad(server: NezhaServer) {
 }
 
 function formatTransferShort(bytes: number) {
-  const stats = calcBinary(bytes)
-  if (stats.p && stats.p > 1) return `${Number(stats.p.toFixed(1))}P`
-  if (stats.t > 1) return `${Number(stats.t.toFixed(2))}T`
-  if (stats.g > 1) return `${Number(stats.g.toFixed(2))}G`
-  if (stats.m > 1) return `${Number(stats.m.toFixed(1))}M`
-  return `${Number(stats.k.toFixed(1))}K`
+  const value = Math.max(Number(bytes) || 0, 0)
+  const k = value / 1000
+  const m = k / 1000
+  const g = m / 1000
+  const t = g / 1000
+  const p = t / 1000
+  if (p > 1) return `${Number(p.toFixed(1))}P`
+  if (t > 1) return `${Number(t.toFixed(2))}T`
+  if (g > 1) return `${Number(g.toFixed(2))}G`
+  if (m > 1) return `${Number(m.toFixed(1))}M`
+  return `${Number(k.toFixed(1))}K`
+}
+
+function formatTrafficBytes(bytes: number, decimals = 2) {
+  const value = Math.max(Number(bytes) || 0, 0)
+  if (!value) return "0 B"
+
+  const sizes = ["B", "KB", "MB", "GB", "TB", "PB"]
+  const i = Math.min(Math.floor(Math.log(value) / Math.log(1000)), sizes.length - 1)
+  return `${Number((value / 1000 ** i).toFixed(decimals))} ${sizes[i]}`
 }
 
 function getTrafficTypeLabel(trafficType: string | undefined) {
@@ -277,6 +302,23 @@ export function formatBinaryValue(
   if (stats.g > 1) return { value: Number(stats.g.toFixed(decimals.g)), unit: "G" }
   if (stats.m > 1) return { value: Number(stats.m.toFixed(decimals.m)), unit: "M" }
   return { value: Number(stats.k.toFixed(decimals.k)), unit: "K" }
+}
+
+export function formatTrafficValue(
+  bytes: number,
+  decimals: { t: number; g: number; m: number; k: number } = { t: 2, g: 2, m: 1, k: 1 },
+): NumberUnit {
+  const value = Math.max(Number(bytes) || 0, 0)
+  const k = value / 1000
+  const m = k / 1000
+  const g = m / 1000
+  const t = g / 1000
+  const p = t / 1000
+  if (p > 1) return { value: Number(p.toFixed(1)), unit: "P" }
+  if (t > 1) return { value: Number(t.toFixed(decimals.t)), unit: "T" }
+  if (g > 1) return { value: Number(g.toFixed(decimals.g)), unit: "G" }
+  if (m > 1) return { value: Number(m.toFixed(decimals.m)), unit: "M" }
+  return { value: Number(k.toFixed(decimals.k)), unit: "K" }
 }
 
 export function formatDurationValue(uptimeSeconds: number): NumberUnit {
@@ -346,7 +388,7 @@ export function getCpuCoreLabel(server: NezhaServer) {
 export function getServerRealtimeViewModel(server: NezhaServer, trafficType?: string, transferCounter = getTransferCounter(server)) {
   return {
     duration: formatDurationValue(server.state?.uptime || 0),
-    transferStat: formatBinaryValue(getTrafficRuleBytes(transferCounter, trafficType)),
+    transferStat: formatTrafficValue(getTrafficRuleBytes(transferCounter, trafficType)),
     inSpeed: formatBinaryValue(server.state?.net_in_speed || 0),
     outSpeed: formatBinaryValue(server.state?.net_out_speed || 0),
   }
@@ -413,8 +455,8 @@ export function getServerHeaderStats(now: number, servers: NezhaServer[]) {
 
   return {
     transfer: {
-      inData: formatHeaderBinary(transferIn),
-      outData: formatHeaderBinary(transferOut),
+      inData: formatHeaderDecimal(transferIn),
+      outData: formatHeaderDecimal(transferOut),
     },
     netSpeed: {
       inData: formatHeaderBinary(speedIn),
@@ -493,21 +535,21 @@ function getDefaultDetailTransferItems(server: NezhaServer): TransferInfoItem[] 
       key: "in",
       label: "入",
       value: formatTransferShort(transfer.in),
-      title: formatBytes(transfer.in),
+      title: formatTrafficBytes(transfer.in),
       variant: "in",
     },
     {
       key: "out",
       label: "出",
       value: formatTransferShort(transfer.out),
-      title: formatBytes(transfer.out),
+      title: formatTrafficBytes(transfer.out),
       variant: "out",
     },
     {
       key: "total",
       label: "双向",
       value: formatTransferShort(transferTotal),
-      title: formatBytes(transferTotal),
+      title: formatTrafficBytes(transferTotal),
       variant: "total",
     },
   ]
@@ -534,14 +576,14 @@ function getDetailTransferItems(now: number, server: NezhaServer, parsedData: Pu
       key: "used",
       label: "已用",
       value: formatTransferShort(usedBytes),
-      title: `${formatBytes(usedBytes)} / ${formatBytes(quotaBytes)} (${getTrafficTypeLabel(plan?.trafficType)})`,
+      title: `${formatTrafficBytes(usedBytes)} / ${formatTrafficBytes(quotaBytes)} (${getTrafficTypeLabel(plan?.trafficType)})`,
       variant: "used",
     },
     {
       key: "remaining",
       label: "剩余",
       value: formatTransferShort(remainingBytes),
-      title: formatBytes(remainingBytes),
+      title: formatTrafficBytes(remainingBytes),
       variant: "remaining",
     },
   ]
