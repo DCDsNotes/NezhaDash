@@ -34,6 +34,25 @@ export type ServerStatusRingViewModel = {
   valText: string
 }
 
+export type TransferInfoItem = {
+  key: string
+  label: string
+  value: string
+  title?: string
+  variant?: "in" | "out" | "total" | "used" | "remaining"
+}
+
+type TransferCounter = {
+  in: number
+  out: number
+}
+
+type TransferSnapshot = TransferCounter & {
+  periodKey: string
+}
+
+const TRANSFER_SNAPSHOT_PREFIX = "nezha_transfer_snapshot"
+
 function roundPercent(value: number) {
   return Number(value.toFixed(1))
 }
@@ -57,12 +76,124 @@ function parseBillingCycle(cycle: string) {
   return { months: 1 }
 }
 
-function getTrafficRuleBytes(server: NezhaServer, trafficType: string | undefined) {
-  const inTransfer = server.state?.net_in_transfer || 0
-  const outTransfer = server.state?.net_out_transfer || 0
-  if (trafficType === "1") return outTransfer
+function getTransferCounter(server: NezhaServer): TransferCounter {
+  return {
+    in: Number(server.state?.net_in_transfer || 0),
+    out: Number(server.state?.net_out_transfer || 0),
+  }
+}
+
+function getTrafficRuleBytes(counter: TransferCounter, trafficType: string | undefined) {
+  const inTransfer = counter.in
+  const outTransfer = counter.out
+  if (trafficType === "1") return inTransfer
   if (trafficType === "3") return outTransfer >= inTransfer ? outTransfer : inTransfer
   return inTransfer + outTransfer
+}
+
+function getSnapshotStorage() {
+  if (typeof window === "undefined") return null
+  try {
+    return window.localStorage
+  } catch {
+    return null
+  }
+}
+
+function readTransferSnapshot(key: string): TransferSnapshot | null {
+  const storage = getSnapshotStorage()
+  if (!storage) return null
+
+  try {
+    const raw = storage.getItem(key)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (typeof parsed?.periodKey !== "string") return null
+    return {
+      periodKey: parsed.periodKey,
+      in: Number(parsed.in || 0),
+      out: Number(parsed.out || 0),
+    }
+  } catch {
+    return null
+  }
+}
+
+function writeTransferSnapshot(key: string, snapshot: TransferSnapshot) {
+  const storage = getSnapshotStorage()
+  if (!storage) return
+
+  try {
+    storage.setItem(key, JSON.stringify(snapshot))
+  } catch {
+    // Ignore storage failures; rendering should not depend on localStorage.
+  }
+}
+
+function getPeriodTransferDelta(server: NezhaServer, scope: string, periodKey: string): TransferCounter {
+  const current = getTransferCounter(server)
+  const storageKey = `${TRANSFER_SNAPSHOT_PREFIX}:${server.id}:${scope}`
+  const snapshot = readTransferSnapshot(storageKey)
+
+  if (!snapshot || snapshot.periodKey !== periodKey || current.in < snapshot.in || current.out < snapshot.out) {
+    writeTransferSnapshot(storageKey, { periodKey, ...current })
+    return { in: 0, out: 0 }
+  }
+
+  return {
+    in: current.in - snapshot.in,
+    out: current.out - snapshot.out,
+  }
+}
+
+function getDayPeriodKey(now: number) {
+  return dayjs(now || Date.now()).format("YYYY-MM-DD")
+}
+
+function getMonthlyResetDate(base: dayjs.Dayjs, resetDay: number) {
+  return base.date(Math.min(resetDay, base.daysInMonth())).endOf("day")
+}
+
+function getBillingTransferPeriodKey(now: number, startDate: string | undefined) {
+  const anchor = dayjs(startDate)
+  if (!anchor.isValid()) return ""
+
+  const current = dayjs(now || Date.now())
+  const resetDay = anchor.date()
+  const currentReset = getMonthlyResetDate(current, resetDay)
+  const previousReset = current.isAfter(currentReset)
+    ? currentReset
+    : getMonthlyResetDate(current.subtract(1, "month"), resetDay)
+  const nextReset = current.isAfter(currentReset) ? getMonthlyResetDate(current.add(1, "month"), resetDay) : currentReset
+
+  const start = previousReset.add(1, "day").startOf("day")
+  return `${start.format("YYYY-MM-DD")}_${nextReset.format("YYYY-MM-DD")}`
+}
+
+function getMonthlyTransferPeriodKey(now: number, startDate: string | undefined) {
+  const billingPeriodKey = getBillingTransferPeriodKey(now, startDate)
+  if (billingPeriodKey) return billingPeriodKey
+
+  const current = dayjs(now || Date.now())
+  return `${current.startOf("month").format("YYYY-MM-DD")}_${current.endOf("month").format("YYYY-MM-DD")}`
+}
+
+function parseTrafficQuotaBytes(trafficVol: string | undefined) {
+  const raw = String(trafficVol || "").trim()
+  const match = raw.match(/(\d+(?:\.\d+)?)\s*(P|PB|T|TB|G|GB|M|MB|K|KB|B)\b/i)
+  if (!match) return null
+
+  const value = Number(match[1])
+  if (!Number.isFinite(value) || value <= 0) return null
+
+  const unit = match[2].toUpperCase().replace(/B$/, "")
+  const power = { "": 0, K: 1, M: 2, G: 3, T: 4, P: 5 }[unit] ?? 0
+  return value * 1024 ** power
+}
+
+function hasTrafficPlan(parsedData: PublicNoteData | null) {
+  const plan = parsedData?.planDataMod
+  return !!plan?.trafficType && parseTrafficQuotaBytes(plan.trafficVol) != null
 }
 
 function formatHeaderBinary(bytes: number, decimals = 1) {
@@ -90,9 +221,17 @@ function formatTransferShort(bytes: number) {
 }
 
 function getTrafficTypeLabel(trafficType: string | undefined) {
-  if (trafficType === "1") return "单向出"
+  if (trafficType === "1") return "单向入"
   if (trafficType === "3") return "单向取最大"
   return "双向"
+}
+
+function formatCpuModelText(text: string) {
+  return String(text || "")
+    .replace(/\b\d+\s+(?:Virtual|Physics|Physical)\s+Cores?\b/gi, "")
+    .replace(/\b\d+\s+vCPUs?\b/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/^[\s,;|/()_-]+|[\s,;|/()_-]+$/g, "")
 }
 
 function getTemperatureIconClass(label: string) {
@@ -204,10 +343,10 @@ export function getCpuCoreLabel(server: NezhaServer) {
   return cores ? `${cores}C` : ""
 }
 
-export function getServerRealtimeViewModel(server: NezhaServer, trafficType?: string) {
+export function getServerRealtimeViewModel(server: NezhaServer, trafficType?: string, transferCounter = getTransferCounter(server)) {
   return {
     duration: formatDurationValue(server.state?.uptime || 0),
-    transferStat: formatBinaryValue(getTrafficRuleBytes(server, trafficType)),
+    transferStat: formatBinaryValue(getTrafficRuleBytes(transferCounter, trafficType)),
     inSpeed: formatBinaryValue(server.state?.net_in_speed || 0),
     outSpeed: formatBinaryValue(server.state?.net_out_speed || 0),
   }
@@ -227,10 +366,11 @@ export function getServerBillingViewModel(publicNote: string) {
 export function getServerCardViewModel(now: number, server: NezhaServer) {
   const info = normalizeServer(now, server)
   const billing = getServerBillingViewModel(info.public_note)
+  const monthlyTransfer = getPeriodTransferDelta(server, "billing", getMonthlyTransferPeriodKey(now, billing.parsedData?.billingDataMod?.startDate))
   return {
     info,
     billing,
-    realtime: getServerRealtimeViewModel(server, billing.parsedData?.planDataMod?.trafficType),
+    realtime: getServerRealtimeViewModel(server, billing.parsedData?.planDataMod?.trafficType, monthlyTransfer),
     rings: getCardStatusRings(now, server),
   }
 }
@@ -264,8 +404,9 @@ export function getServerHeaderStats(now: number, servers: NezhaServer[]) {
 
   servers.forEach((server) => {
     if (getServerStatus(now, server) !== "online") return
-    transferIn += Number(server.state?.net_in_transfer || 0)
-    transferOut += Number(server.state?.net_out_transfer || 0)
+    const dailyTransfer = getPeriodTransferDelta(server, "day", getDayPeriodKey(now))
+    transferIn += dailyTransfer.in
+    transferOut += dailyTransfer.out
     speedIn += Number(server.state?.net_in_speed || 0)
     speedOut += Number(server.state?.net_out_speed || 0)
   })
@@ -343,16 +484,76 @@ export function getServerDetailNameViewModel(server: NezhaServer) {
   }
 }
 
+function getDefaultDetailTransferItems(server: NezhaServer): TransferInfoItem[] {
+  const transfer = getTransferCounter(server)
+  const transferTotal = transfer.in + transfer.out
+
+  return [
+    {
+      key: "in",
+      label: "入",
+      value: formatTransferShort(transfer.in),
+      title: formatBytes(transfer.in),
+      variant: "in",
+    },
+    {
+      key: "out",
+      label: "出",
+      value: formatTransferShort(transfer.out),
+      title: formatBytes(transfer.out),
+      variant: "out",
+    },
+    {
+      key: "total",
+      label: "双向",
+      value: formatTransferShort(transferTotal),
+      title: formatBytes(transferTotal),
+      variant: "total",
+    },
+  ]
+}
+
+function getDetailTransferItems(now: number, server: NezhaServer, parsedData: PublicNoteData | null): TransferInfoItem[] {
+  if (!hasTrafficPlan(parsedData)) {
+    return getDefaultDetailTransferItems(server)
+  }
+
+  const plan = parsedData?.planDataMod
+  const periodKey = getBillingTransferPeriodKey(now, parsedData?.billingDataMod?.startDate)
+  const quotaBytes = parseTrafficQuotaBytes(plan?.trafficVol)
+  if (!periodKey || quotaBytes == null) {
+    return getDefaultDetailTransferItems(server)
+  }
+
+  const billingTransfer = getPeriodTransferDelta(server, "billing", periodKey)
+  const usedBytes = getTrafficRuleBytes(billingTransfer, plan?.trafficType)
+  const remainingBytes = Math.max(quotaBytes - usedBytes, 0)
+
+  return [
+    {
+      key: "used",
+      label: "已用",
+      value: formatTransferShort(usedBytes),
+      title: `${formatBytes(usedBytes)} / ${formatBytes(quotaBytes)} (${getTrafficTypeLabel(plan?.trafficType)})`,
+      variant: "used",
+    },
+    {
+      key: "remaining",
+      label: "剩余",
+      value: formatTransferShort(remainingBytes),
+      title: formatBytes(remainingBytes),
+      variant: "remaining",
+    },
+  ]
+}
+
 export function getServerDetailInfoViewModel(now: number, server: NezhaServer) {
   const info = normalizeServer(now, server)
   const parsedData = parsePublicNote(info.public_note)
-  const transferIn = server.state?.net_in_transfer || 0
-  const transferOut = server.state?.net_out_transfer || 0
-  const transferTotal = transferIn + transferOut
 
   return {
     info,
-    cpuList: server.host?.cpu || [],
+    cpuList: (server.host?.cpu || []).map(formatCpuModelText).filter(Boolean),
     gpuList: server.host?.gpu || [],
     temperatureItems: (server.state?.temperatures || []).map((item) => ({
       iconClass: getTemperatureIconClass(item.Name),
@@ -368,11 +569,7 @@ export function getServerDetailInfoViewModel(now: number, server: NezhaServer) {
     udpText: server.state?.udp_conn_count ?? "-",
     bootTime: server.host?.boot_time ? dayjs(server.host.boot_time * 1000).format("YYYY.MM.DD HH:mm:ss") : "-",
     lastActive: info.last_active_time_string ? dayjs(info.last_active_time_string).format("YYYY.MM.DD HH:mm:ss") : "-",
-    transferInText: formatTransferShort(transferIn),
-    transferOutText: formatTransferShort(transferOut),
-    transferTotalText: formatTransferShort(transferTotal),
-    transferTotalTitle: formatBytes(transferTotal),
-    trafficTypeLabel: getTrafficTypeLabel(parsedData?.planDataMod?.trafficType),
+    transferItems: getDetailTransferItems(now, server, parsedData),
     tagList: getPublicNoteTags(parsedData, { includeIp: true }),
   }
 }

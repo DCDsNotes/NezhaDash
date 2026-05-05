@@ -84,7 +84,7 @@ function Header() {
             <div className="server-stat-group">
               <div className="server-stat server-stat--transfer">
                 <span className="server-stat-label">
-                  <span className="text">流量</span>
+                  <span className="text">今日</span>
                 </span>
                 <div className="server-stat-content">
                   <span className="server-stat-item server-stat-item--in">

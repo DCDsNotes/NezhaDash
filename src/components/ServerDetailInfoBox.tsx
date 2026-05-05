@@ -4,7 +4,7 @@ import { useMemo } from "react"
 
 export default function ServerDetailInfoBox({ now, server }: { now: number; server: NezhaServer }) {
   const viewModel = useMemo(() => getServerDetailInfoViewModel(now, server), [now, server])
-  const { bootTime, cpuList, gpuList, lastActive, platformVersion, systemLabel, tagList, temperatureItems, trafficTypeLabel } = viewModel
+  const { bootTime, cpuList, gpuList, lastActive, platformVersion, systemLabel, tagList, temperatureItems } = viewModel
 
   return (
     <div className="server-detail-info nazha-box">
@@ -101,22 +101,22 @@ export default function ServerDetailInfoBox({ now, server }: { now: number; serv
         <div className="server-detail-info__label">流量</div>
         <div className="server-detail-info__content">
           <div className="server-detail-info__items">
-            <span className="server-detail-info__item server-detail-info__item--transfer-in">
-              <span className="server-detail-info__item-label">入</span>
-              <span className="server-detail-info__item-value">
-                <span className="server-detail-info__transfer-value">{viewModel.transferInText}</span>
+            {viewModel.transferItems.map((item) => (
+              <span
+                key={item.key}
+                className={`server-detail-info__item server-detail-info__item--transfer-${item.variant || item.key}`}
+                title={item.title}
+              >
+                <span className="server-detail-info__item-label">{item.label}</span>
+                <span className="server-detail-info__item-value">
+                  {item.variant === "in" || item.variant === "out" ? (
+                    <span className="server-detail-info__transfer-value">{item.value}</span>
+                  ) : (
+                    item.value
+                  )}
+                </span>
               </span>
-            </span>
-            <span className="server-detail-info__item server-detail-info__item--transfer-out">
-              <span className="server-detail-info__item-label">出</span>
-              <span className="server-detail-info__item-value">
-                <span className="server-detail-info__transfer-value">{viewModel.transferOutText}</span>
-              </span>
-            </span>
-            <span className="server-detail-info__item server-detail-info__item--transfer-total" title={viewModel.transferTotalTitle}>
-              <span className="server-detail-info__item-label">{trafficTypeLabel}</span>
-              <span className="server-detail-info__item-value">{viewModel.transferTotalText}</span>
-            </span>
+            ))}
           </div>
         </div>
       </div>
