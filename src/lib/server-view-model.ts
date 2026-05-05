@@ -69,6 +69,10 @@ function parseBillingCycle(cycle: string) {
   return { months: 1 }
 }
 
+function isAutoRenewalEnabled(value: unknown) {
+  return String(value || "") === "1"
+}
+
 function getTransferCounter(server: NezhaServer): TransferCounter {
   return {
     in: Number(server.state?.net_in_transfer || 0),
@@ -161,7 +165,7 @@ function formatTrafficBytes(bytes: number, decimals = 2) {
 }
 
 function getTrafficTypeLabel(trafficType: string | undefined) {
-  if (trafficType === "1") return "单向入"
+  if (trafficType === "1") return "单向"
   if (trafficType === "3") return "单向取最大"
   return "双向"
 }
@@ -247,7 +251,32 @@ export function formatDurationValue(uptimeSeconds: number): NumberUnit {
   return { value: Math.floor(total % 60), unit: "秒" }
 }
 
-export function computeRemainingTime(parsedData: PublicNoteData | null): RemainingTimeViewModel | null {
+function getEffectiveBillingEndTime(billingDataMod: PublicNoteData["billingDataMod"], nowTime = Date.now()) {
+  if (!billingDataMod) return null
+
+  const { months } = parseBillingCycle(billingDataMod.cycle || "")
+  const endDate = String(billingDataMod.endDate || "")
+  if (!endDate || endDate.startsWith("0000-00-00")) return null
+
+  const endTime = dayjs(endDate).valueOf()
+  if (!Number.isFinite(endTime)) return null
+  if (!isAutoRenewalEnabled(billingDataMod.autoRenewal) || endTime > nowTime) return endTime
+
+  return getNextCycleTime(endTime, months, nowTime)
+}
+
+function formatEffectiveBillingEndDate(parsedData: PublicNoteData | null, nowTime = Date.now()) {
+  const billingDataMod = parsedData?.billingDataMod
+  const endDate = String(billingDataMod?.endDate || "")
+  if (endDate.startsWith("0000-00-00")) return "长期有效"
+
+  const effectiveEndTime = getEffectiveBillingEndTime(billingDataMod, nowTime)
+  if (effectiveEndTime == null) return formatBillingEndDate(endDate)
+
+  return dayjs(effectiveEndTime).format("YYYY-MM-DD")
+}
+
+export function computeRemainingTime(parsedData: PublicNoteData | null, nowTime = Date.now()): RemainingTimeViewModel | null {
   const billingDataMod = parsedData?.billingDataMod
   if (!billingDataMod) return null
 
@@ -259,20 +288,19 @@ export function computeRemainingTime(parsedData: PublicNoteData | null): Remaini
     return { label: "剩余", value: "长期有效", type: "infinity" }
   }
 
-  const nowTime = Date.now()
   const endTime = dayjs(endDate).valueOf()
-  if (billingDataMod.autoRenewal === "1") {
+  if (isAutoRenewalEnabled(billingDataMod.autoRenewal)) {
     if (endTime > nowTime) {
-      const diff = dayjs(endTime).diff(dayjs(), "day") + 1
+      const diff = dayjs(endTime).diff(dayjs(nowTime), "day") + 1
       return { label: "剩余", value: `${diff}天`, type: "days" }
     }
     const nextTime = getNextCycleTime(endTime, months, nowTime)
-    const diff = dayjs(nextTime).diff(dayjs(), "day") + 1
+    const diff = dayjs(nextTime).diff(dayjs(nowTime), "day") + 1
     return { label: "剩余", value: `${diff}天`, type: "days" }
   }
 
   if (endTime > nowTime) {
-    const diff = dayjs(endTime).diff(dayjs(), "day") + 1
+    const diff = dayjs(endTime).diff(dayjs(nowTime), "day") + 1
     return { label: "剩余", value: `${diff}天`, type: "days" }
   }
   return { label: "剩余", value: "已过期", type: "expired" }
@@ -309,20 +337,20 @@ export function getServerRealtimeViewModel(server: NezhaServer, trafficType?: st
   }
 }
 
-export function getServerBillingViewModel(publicNote: string) {
+export function getServerBillingViewModel(publicNote: string, now = Date.now()) {
   const parsedData = parsePublicNote(publicNote)
-  const remainingTime = computeRemainingTime(parsedData)
+  const remainingTime = computeRemainingTime(parsedData, now)
   return {
     parsedData,
     remainingTime,
     remainingDays: remainingTime?.type === "days" ? splitDaysText(remainingTime.value) : null,
-    endDateText: formatBillingEndDate(parsedData?.billingDataMod?.endDate),
+    endDateText: formatEffectiveBillingEndDate(parsedData, now),
   }
 }
 
 export function getServerCardViewModel(now: number, server: NezhaServer) {
   const info = normalizeServer(now, server)
-  const billing = getServerBillingViewModel(info.public_note)
+  const billing = getServerBillingViewModel(info.public_note, now)
   const billingTransfer = getServerTransferStatsCounter(server, "billing")
   return {
     info,
@@ -334,7 +362,7 @@ export function getServerCardViewModel(now: number, server: NezhaServer) {
 
 export function getServerDetailStatusViewModel(now: number, server: NezhaServer) {
   const info = normalizeServer(now, server)
-  const billing = getServerBillingViewModel(info.public_note)
+  const billing = getServerBillingViewModel(info.public_note, now)
   const billingTransfer = getServerTransferStatsCounter(server, "billing")
   return {
     info,
