@@ -11,6 +11,17 @@ export interface NezhaServer {
   country_code: string
   host: NezhaServerHost
   state: NezhaServerStatus
+  transfer_stats?: NezhaServerTransferStats
+}
+
+export interface NezhaServerTransferUsage {
+  in: number
+  out: number
+}
+
+export interface NezhaServerTransferStats {
+  today?: NezhaServerTransferUsage
+  billing?: NezhaServerTransferUsage
 }
 
 export interface NezhaServerHost {
