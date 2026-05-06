@@ -38,7 +38,6 @@ export type TransferInfoItem = {
   label: string
   value: string
   title?: string
-  popover?: string
   variant?: "in" | "out" | "total" | "used" | "remaining"
 }
 
@@ -512,11 +511,7 @@ function getDetailTransferItems(server: NezhaServer, parsedData: PublicNoteData 
   }
 
   const billingTransfer = getServerTransferStatsCounter(server, "billing")
-  const todayTransfer = getServerTransferStatsCounter(server, "today")
-  const totalTransfer = getTransferCounter(server)
   const usedBytes = getTrafficRuleBytes(billingTransfer, plan?.trafficType)
-  const todayUsedBytes = getTrafficRuleBytes(todayTransfer, plan?.trafficType)
-  const totalBytes = totalTransfer.in + totalTransfer.out
   const remainingBytes = Math.max(quotaBytes - usedBytes, 0)
 
   return [
@@ -525,7 +520,6 @@ function getDetailTransferItems(server: NezhaServer, parsedData: PublicNoteData 
       label: "已用",
       value: formatTransferShort(usedBytes),
       title: `${formatTrafficBytes(usedBytes)} / ${formatTrafficBytes(quotaBytes)} (${getTrafficTypeLabel(plan?.trafficType)})`,
-      popover: `今日使用 ${formatTrafficBytes(todayUsedBytes)}`,
       variant: "used",
     },
     {
@@ -533,7 +527,6 @@ function getDetailTransferItems(server: NezhaServer, parsedData: PublicNoteData 
       label: "剩余",
       value: formatTransferShort(remainingBytes),
       title: formatTrafficBytes(remainingBytes),
-      popover: `总流量 ${formatTrafficBytes(totalBytes)}`,
       variant: "remaining",
     },
   ]

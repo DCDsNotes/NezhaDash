@@ -1,11 +1,10 @@
 import { getServerDetailInfoViewModel } from "@/lib/server-view-model"
 import { NezhaServer } from "@/types/nezha-api"
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 
 export default function ServerDetailInfoBox({ now, server }: { now: number; server: NezhaServer }) {
   const viewModel = useMemo(() => getServerDetailInfoViewModel(now, server), [now, server])
   const { bootTime, cpuList, gpuList, lastActive, platformVersion, systemLabel, tagList, temperatureItems } = viewModel
-  const [openTransferPopover, setOpenTransferPopover] = useState<string | null>(null)
 
   return (
     <div className="server-detail-info nazha-box">
@@ -105,24 +104,8 @@ export default function ServerDetailInfoBox({ now, server }: { now: number; serv
             {viewModel.transferItems.map((item) => (
               <span
                 key={item.key}
-                className={`server-detail-info__item server-detail-info__item--transfer-${item.variant || item.key}${item.popover ? " server-detail-info__item--transfer-popover" : ""}`}
-                title={item.popover ? undefined : item.title}
-                role={item.popover ? "button" : undefined}
-                tabIndex={item.popover ? 0 : undefined}
-                onClick={
-                  item.popover
-                    ? () => setOpenTransferPopover((current) => (current === item.key ? null : item.key))
-                    : undefined
-                }
-                onKeyDown={
-                  item.popover
-                    ? (event) => {
-                        if (event.key !== "Enter" && event.key !== " ") return
-                        event.preventDefault()
-                        setOpenTransferPopover((current) => (current === item.key ? null : item.key))
-                      }
-                    : undefined
-                }
+                className={`server-detail-info__item server-detail-info__item--transfer-${item.variant || item.key}`}
+                title={item.title}
               >
                 <span className="server-detail-info__item-label">{item.label}</span>
                 <span className="server-detail-info__item-value">
@@ -132,9 +115,6 @@ export default function ServerDetailInfoBox({ now, server }: { now: number; serv
                     item.value
                   )}
                 </span>
-                {item.popover && openTransferPopover === item.key ? (
-                  <span className="server-detail-info__transfer-popover">{item.popover}</span>
-                ) : null}
               </span>
             ))}
           </div>
