@@ -1,11 +1,11 @@
 import { useNezhaWsData } from "@/hooks/use-nezha-ws-data"
 import { useWebSocketContext } from "@/hooks/use-websocket-context"
 import { fetchLoginUser, fetchSetting } from "@/lib/nezha-api"
-import { getServerHeaderStats, getServerStatusCounts } from "@/lib/server-view-model"
+import { getServerDailyTransferList, getServerHeaderStats, getServerStatusCounts, type ServerDailyTransferViewModel } from "@/lib/server-view-model"
 import { cn } from "@/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import { AnimatePresence, m } from "framer-motion"
-import { type CSSProperties, useEffect, useMemo, useRef } from "react"
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
 
@@ -21,27 +21,46 @@ function Header() {
     refetchOnWindowFocus: true,
   })
 
-  const { data: parsedWsData, connected } = useNezhaWsData()
+  const { data: parsedWsData } = useNezhaWsData()
+  const [showTransferPanel, setShowTransferPanel] = useState(false)
 
   const siteName = settingData?.data?.config?.site_name
 
-  const nezhaWsData = connected ? parsedWsData : null
+  const nezhaWsData = parsedWsData
 
   const serverCount = useMemo(() => {
-    if (!connected || !nezhaWsData || !Array.isArray(nezhaWsData.servers)) {
+    if (!nezhaWsData || !Array.isArray(nezhaWsData.servers)) {
       return null
     }
     return getServerStatusCounts(nezhaWsData.now, nezhaWsData.servers)
-  }, [connected, nezhaWsData?.now, nezhaWsData?.servers])
+  }, [nezhaWsData?.now, nezhaWsData?.servers])
 
   const serverStat = useMemo(() => {
-    if (!connected || !nezhaWsData || !Array.isArray(nezhaWsData.servers)) return null
+    if (!nezhaWsData || !Array.isArray(nezhaWsData.servers)) return null
     return getServerHeaderStats(nezhaWsData.now, nezhaWsData.servers)
-  }, [connected, nezhaWsData?.now, nezhaWsData?.servers])
+  }, [nezhaWsData?.now, nezhaWsData?.servers])
+
+  const dailyTransferList = useMemo(() => {
+    if (!nezhaWsData || !Array.isArray(nezhaWsData.servers)) return []
+    return getServerDailyTransferList(nezhaWsData.now, nezhaWsData.servers)
+  }, [nezhaWsData?.now, nezhaWsData?.servers])
 
   useEffect(() => {
     document.title = siteName || "哪吒监控"
   }, [siteName])
+
+  useEffect(() => {
+    if (!showTransferPanel) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return
+      event.stopPropagation()
+      setShowTransferPanel(false)
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [showTransferPanel])
 
   return (
     <div
@@ -81,7 +100,7 @@ function Header() {
           ) : null}
 
           {serverStat ? (
-            <div className="server-stat-group">
+            <div className="server-stat-group" onClick={() => setShowTransferPanel(true)} title="查看今日各服务器流量">
               <div className="server-stat server-stat--transfer">
                 <span className="server-stat-label">
                   <span className="text">今日</span>
@@ -119,10 +138,53 @@ function Header() {
             </div>
           ) : null}
 
+          {showTransferPanel ? <ServerDailyTransferPanel list={dailyTransferList} onClose={() => setShowTransferPanel(false)} /> : null}
+
           <DashboardLink />
         </div>
       </div>
     </div>
+  )
+}
+
+function ServerDailyTransferPanel({ list, onClose }: { list: ServerDailyTransferViewModel[]; onClose: () => void }) {
+  return (
+    <>
+      <div className="server-search__backdrop" onClick={onClose} />
+      <div className="server-search__panel server-transfer-panel">
+        <div className="server-transfer-panel__head">
+          <div className="server-transfer-panel__title">今日流量</div>
+          <button className="server-transfer-panel__close" type="button" onClick={onClose} title="关闭">
+            <i className="ri-close-line" />
+          </button>
+        </div>
+        <div className="server-transfer-panel__sub">统计周期 0:00:00-23:59:59</div>
+        <div className="server-transfer-panel__list">
+          {list.map((item) => (
+            <div key={item.id} className="server-transfer-panel__item">
+              <div className="server-transfer-panel__name">
+                <span className={cn("server-transfer-panel__dot", { "server-transfer-panel__dot--offline": !item.online })} />
+                <span className="server-transfer-panel__name-text">{item.name}</span>
+              </div>
+              <div className="server-transfer-panel__values">
+                <span className="server-transfer-panel__value server-transfer-panel__value--in" title={item.transferInTitle}>
+                  <i className="ri-download-line" />
+                  <span>{item.transferIn}</span>
+                </span>
+                <span className="server-transfer-panel__value server-transfer-panel__value--out" title={item.transferOutTitle}>
+                  <i className="ri-upload-line" />
+                  <span>{item.transferOut}</span>
+                </span>
+                <span className="server-transfer-panel__value server-transfer-panel__value--total" title={item.transferTotalTitle}>
+                  <i className="ri-exchange-line" />
+                  <span>{item.transferTotal}</span>
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
   )
 }
 

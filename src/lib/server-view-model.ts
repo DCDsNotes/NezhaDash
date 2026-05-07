@@ -41,6 +41,19 @@ export type TransferInfoItem = {
   variant?: "in" | "out" | "total" | "used" | "remaining"
 }
 
+export type ServerDailyTransferViewModel = {
+  id: number
+  name: string
+  online: boolean
+  transferIn: string
+  transferOut: string
+  transferTotal: string
+  transferInTitle: string
+  transferOutTitle: string
+  transferTotalTitle: string
+  totalBytes: number
+}
+
 type TransferCounter = {
   in: number
   out: number
@@ -407,6 +420,27 @@ export function getServerHeaderStats(now: number, servers: NezhaServer[]) {
       outData: formatHeaderBinary(speedOut),
     },
   }
+}
+
+export function getServerDailyTransferList(now: number, servers: NezhaServer[]): ServerDailyTransferViewModel[] {
+  return servers
+    .map((server) => {
+      const transfer = getServerTransferStatsCounter(server, "today")
+      const total = transfer.in + transfer.out
+      return {
+        id: server.id,
+        name: server.name,
+        online: getServerStatus(now, server) === "online",
+        transferIn: formatTransferShort(transfer.in),
+        transferOut: formatTransferShort(transfer.out),
+        transferTotal: formatTransferShort(total),
+        transferInTitle: formatTrafficBytes(transfer.in),
+        transferOutTitle: formatTrafficBytes(transfer.out),
+        transferTotalTitle: formatTrafficBytes(total),
+        totalBytes: total,
+      }
+    })
+    .sort((a, b) => b.totalBytes - a.totalBytes)
 }
 
 export function getServerMapLocationViewModel(now: number, server: NezhaServer) {

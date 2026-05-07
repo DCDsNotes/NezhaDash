@@ -148,6 +148,7 @@
 
 .server-stat-group {
   min-width: 160px;
+  cursor: pointer;
 }
 
 @media screen and (max-width: 450px) {
@@ -203,6 +204,163 @@
 
 .server-stat-group .server-stat--net-speed .server-stat-item--out .text-value {
   color: var(--net-speed-out-color);
+}
+
+.server-transfer-panel {
+  width: 640px;
+  padding: 22px;
+}
+
+.server-transfer-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.server-transfer-panel__title {
+  line-height: 24px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.server-transfer-panel__close {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  color: #ddd;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+
+.server-transfer-panel__close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.server-transfer-panel__sub {
+  margin-top: 4px;
+  line-height: 20px;
+  font-size: 12px;
+  color: #aaa;
+}
+
+.server-transfer-panel__list {
+  margin-top: 14px;
+  max-height: min(420px, 60vh);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.server-transfer-panel__list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.server-transfer-panel__list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.server-transfer-panel__list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.server-transfer-panel__list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.server-transfer-panel__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.server-transfer-panel__name {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.server-transfer-panel__dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--server-online-color);
+}
+
+.server-transfer-panel__dot--offline {
+  background: var(--server-offline-color);
+}
+
+.server-transfer-panel__name-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 22px;
+  font-size: 14px;
+  color: #eee;
+}
+
+.server-transfer-panel__values {
+  display: grid;
+  grid-template-columns: repeat(3, 82px);
+  align-items: center;
+  gap: 8px;
+}
+
+.server-transfer-panel__value {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  line-height: 22px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.server-transfer-panel__value--in {
+  color: var(--transfer-in-color);
+}
+
+.server-transfer-panel__value--out {
+  color: var(--transfer-out-color);
+}
+
+.server-transfer-panel__value--total {
+  color: #ddd;
+}
+
+@media screen and (max-width: 640px) {
+  .server-transfer-panel {
+    width: auto;
+    padding: 18px;
+  }
+
+  .server-transfer-panel__item {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .server-transfer-panel__values {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .server-transfer-panel__value {
+    justify-content: flex-start;
+  }
 }
 
 .nezha-user-info-group {
