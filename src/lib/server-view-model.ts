@@ -423,24 +423,22 @@ export function getServerHeaderStats(now: number, servers: NezhaServer[]) {
 }
 
 export function getServerDailyTransferList(now: number, servers: NezhaServer[]): ServerDailyTransferViewModel[] {
-  return servers
-    .map((server) => {
-      const transfer = getServerTransferStatsCounter(server, "today")
-      const total = transfer.in + transfer.out
-      return {
-        id: server.id,
-        name: server.name,
-        online: getServerStatus(now, server) === "online",
-        transferIn: formatTransferShort(transfer.in),
-        transferOut: formatTransferShort(transfer.out),
-        transferTotal: formatTransferShort(total),
-        transferInTitle: formatTrafficBytes(transfer.in),
-        transferOutTitle: formatTrafficBytes(transfer.out),
-        transferTotalTitle: formatTrafficBytes(total),
-        totalBytes: total,
-      }
-    })
-    .sort((a, b) => b.totalBytes - a.totalBytes)
+  return servers.map((server) => {
+    const transfer = getServerTransferStatsCounter(server, "today")
+    const total = transfer.in + transfer.out
+    return {
+      id: server.id,
+      name: server.name,
+      online: getServerStatus(now, server) === "online",
+      transferIn: formatTransferShort(transfer.in),
+      transferOut: formatTransferShort(transfer.out),
+      transferTotal: formatTransferShort(total),
+      transferInTitle: formatTrafficBytes(transfer.in),
+      transferOutTitle: formatTrafficBytes(transfer.out),
+      transferTotalTitle: formatTrafficBytes(total),
+      totalBytes: total,
+    }
+  })
 }
 
 export function getServerMapLocationViewModel(now: number, server: NezhaServer) {
