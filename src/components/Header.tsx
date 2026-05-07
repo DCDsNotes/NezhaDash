@@ -154,9 +154,6 @@ function ServerDailyTransferPanel({ list, onClose }: { list: ServerDailyTransfer
       <div className="server-search__panel server-transfer-panel">
         <div className="server-transfer-panel__head">
           <div className="server-transfer-panel__title">今日流量</div>
-          <button className="server-transfer-panel__close" type="button" onClick={onClose} title="关闭">
-            <i className="ri-close-line" />
-          </button>
         </div>
         <div className="server-transfer-panel__sub">统计周期 0:00:00-23:59:59</div>
         <div className="server-transfer-panel__list">
