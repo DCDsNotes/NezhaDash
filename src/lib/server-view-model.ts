@@ -77,8 +77,8 @@ function parseBillingCycle(cycle: string) {
   const c = String(cycle || "").toLowerCase()
   if (["月", "m", "mo", "month", "monthly"].includes(c)) return { months: 1 }
   if (["年", "y", "yr", "year", "annual"].includes(c)) return { months: 12 }
-  if (["季", "q", "qr", "quarterly"].includes(c)) return { months: 3 }
-  if (["半", "半年", "h", "half", "semi-annually"].includes(c)) return { months: 6 }
+  if (["季", "季度", "q", "qr", "quarter", "quarterly"].includes(c)) return { months: 3 }
+  if (["半", "半年", "h", "half", "halfyear", "half-year", "semi-annually"].includes(c)) return { months: 6 }
   return { months: 1 }
 }
 
