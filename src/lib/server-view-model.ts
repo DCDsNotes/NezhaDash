@@ -75,11 +75,15 @@ function calcPercent(used: unknown, total: unknown) {
 
 function parseBillingCycle(cycle: string) {
   const c = String(cycle || "").toLowerCase()
-  if (["月", "m", "mo", "month", "monthly"].includes(c)) return { months: 1 }
-  if (["年", "y", "yr", "year", "annual"].includes(c)) return { months: 12 }
-  if (["季", "q", "qr", "quarterly"].includes(c)) return { months: 3 }
-  if (["半", "半年", "h", "half", "semi-annually"].includes(c)) return { months: 6 }
-  return { months: 1 }
+  if (["天", "日", "d", "day", "daily"].includes(c)) return { amount: 1, unit: "day" as const }
+  if (["周", "星期", "w", "week", "weekly"].includes(c)) return { amount: 1, unit: "week" as const }
+  if (["月", "m", "mo", "month", "monthly"].includes(c)) return { amount: 1, unit: "month" as const }
+  if (["年", "y", "yr", "year", "annual", "annually"].includes(c)) return { amount: 1, unit: "year" as const }
+  if (["季度", "季", "q", "qr", "quarter", "quarterly"].includes(c)) return { amount: 3, unit: "month" as const }
+  if (["半年", "半", "h", "half", "semiannual", "semi-annually", "semiannually"].includes(c)) {
+    return { amount: 6, unit: "month" as const }
+  }
+  return { amount: 1, unit: "month" as const }
 }
 
 function isAutoRenewalEnabled(value: unknown) {
@@ -267,7 +271,7 @@ export function formatDurationValue(uptimeSeconds: number): NumberUnit {
 function getEffectiveBillingEndTime(billingDataMod: PublicNoteData["billingDataMod"], nowTime = Date.now()) {
   if (!billingDataMod) return null
 
-  const { months } = parseBillingCycle(billingDataMod.cycle || "")
+  const { amount, unit } = parseBillingCycle(billingDataMod.cycle || "")
   const endDate = String(billingDataMod.endDate || "")
   if (!endDate || endDate.startsWith("0000-00-00")) return null
 
@@ -275,7 +279,7 @@ function getEffectiveBillingEndTime(billingDataMod: PublicNoteData["billingDataM
   if (!Number.isFinite(endTime)) return null
   if (!isAutoRenewalEnabled(billingDataMod.autoRenewal) || endTime > nowTime) return endTime
 
-  return getNextCycleTime(endTime, months, nowTime)
+  return getNextCycleTime(endTime, amount, nowTime, unit)
 }
 
 function formatEffectiveBillingEndDate(parsedData: PublicNoteData | null, nowTime = Date.now()) {
@@ -293,7 +297,7 @@ export function computeRemainingTime(parsedData: PublicNoteData | null, nowTime 
   const billingDataMod = parsedData?.billingDataMod
   if (!billingDataMod) return null
 
-  const { months } = parseBillingCycle(billingDataMod.cycle || "")
+  const { amount, unit } = parseBillingCycle(billingDataMod.cycle || "")
   const endDate = String(billingDataMod.endDate || "")
   if (!endDate) return null
 
@@ -307,7 +311,7 @@ export function computeRemainingTime(parsedData: PublicNoteData | null, nowTime 
       const diff = dayjs(endTime).diff(dayjs(nowTime), "day") + 1
       return { label: "剩余", value: `${diff}天`, type: "days" }
     }
-    const nextTime = getNextCycleTime(endTime, months, nowTime)
+    const nextTime = getNextCycleTime(endTime, amount, nowTime, unit)
     const diff = dayjs(nextTime).diff(dayjs(nowTime), "day") + 1
     return { label: "剩余", value: `${diff}天`, type: "days" }
   }

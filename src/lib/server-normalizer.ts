@@ -104,18 +104,25 @@ export function normalizeServer(now: number, serverInfo: NezhaServer) {
 
 export type NormalizedServer = ReturnType<typeof normalizeServer>
 
-export function getNextCycleTime(startDate: number, months: number, specifiedDate: number): number {
+type BillingCycleUnit = "day" | "week" | "month" | "year"
+
+export function getNextCycleTime(
+  startDate: number,
+  amount: number,
+  specifiedDate: number,
+  unit: BillingCycleUnit = "month",
+): number {
   const start = dayjs(startDate)
   const checkDate = dayjs(specifiedDate)
 
-  if (!start.isValid() || months <= 0) {
-    throw new Error("参数无效：请检查起始日期、周期月份数和指定日期。")
+  if (!start.isValid() || amount <= 0) {
+    throw new Error("参数无效：请检查起始日期、周期值、周期单位和指定日期。")
   }
 
   let nextDate = start
   let shouldContinue = true
   while (shouldContinue) {
-    nextDate = nextDate.add(months, "month")
+    nextDate = nextDate.add(amount, unit)
     shouldContinue = nextDate.valueOf() <= checkDate.valueOf()
   }
 
