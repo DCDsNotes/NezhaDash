@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query"
 import { AnimatePresence, m } from "framer-motion"
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
+import { createPortal } from "react-dom"
 import { useNavigate } from "react-router-dom"
 
 import { LoadingSpinner } from "./loading/loading-spinner"
@@ -52,6 +53,9 @@ function Header() {
   useEffect(() => {
     if (!showTransferPanel) return
 
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return
       event.stopPropagation()
@@ -59,7 +63,10 @@ function Header() {
     }
 
     window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown)
+      document.body.style.overflow = previousOverflow
+    }
   }, [showTransferPanel])
 
   return (
@@ -148,7 +155,7 @@ function Header() {
 }
 
 function ServerDailyTransferPanel({ list, onClose }: { list: ServerDailyTransferViewModel[]; onClose: () => void }) {
-  return (
+  return createPortal(
     <>
       <div className="server-search__backdrop" onClick={onClose} />
       <div className="server-search__panel server-transfer-panel">
@@ -181,7 +188,8 @@ function ServerDailyTransferPanel({ list, onClose }: { list: ServerDailyTransfer
           ))}
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   )
 }
 
