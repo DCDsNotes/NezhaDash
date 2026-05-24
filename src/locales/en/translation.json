@@ -1,0 +1,8 @@
+{
+  "refreshing": "Refreshing",
+  "error": {
+    "pageNotFound": "Page not found",
+    "backToHome": "Back to home",
+    "somethingWentWrong": "Something went wrong"
+  }
+}

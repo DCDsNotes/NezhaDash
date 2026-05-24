@@ -1,0 +1,106 @@
+:root {
+  --layout-header-height: 60px;
+
+  --list-container-width: 960px;
+  --detail-container-width: 900px;
+
+  --global-background-color: #181f30;
+  --global-text-color: #ddd;
+  --global-link-color: #2ca9e1;
+
+  --layout-main-bg-color: rgba(20, 30, 40, 0.75);
+  --layout-bg-color: #181f30;
+
+  --world-map-point-color: #fff143;
+
+  --server-online-color: #74dbef;
+  --server-offline-color: #f5b199;
+
+  --duration-color: #89c3eb;
+  --transfer-color: #f9ed69;
+  --transfer-in-color: var(--transfer-color);
+  --transfer-out-color: #90f2ff;
+  --net-speed-color: #90f2ff;
+  --net-speed-in-color: #f5b199;
+  --net-speed-out-color: #89c3eb;
+  --conn-color: #90f2ff;
+  --conn-tcp-color: #89c3eb;
+  --conn-udp-color: #2ca9e1;
+  --load-color: #90f2ff;
+  --process-color: #f5b199;
+  --cpu-text-color: #89c3eb;
+  --mem-text-color: #2ca9e1;
+  --disk-text-color: #90f2ff;
+  --swap-text-color: #f5b199;
+
+  --list-item-price-color: #eee;
+  --list-item-buy-link-color: #ffc300;
+  --list-item-buy-link-color-hover: #ff9900;
+  --public-note-tag-color: #ccc;
+  --public-note-tag-bg: linear-gradient(125deg, #676ef7, #41459c);
+
+  --option-high-color: #74dbef;
+  --option-high-color-active: rgba(116, 219, 239, 0.35);
+
+  --server-status-value-color: #a1eafb;
+  --server-status-label-color: #ddd;
+  --server-status-content-color: #eee;
+
+  --background: 222 33% 14%;
+  --foreground: 0 0% 87%;
+  --card: 222 33% 14%;
+  --card-foreground: 0 0% 87%;
+  --popover: 222 33% 14%;
+  --popover-foreground: 0 0% 87%;
+  --primary: 0 0% 87%;
+  --primary-foreground: 222 33% 14%;
+  --secondary: 222 22% 20%;
+  --secondary-foreground: 0 0% 87%;
+  --muted: 222 22% 20%;
+  --muted-foreground: 0 0% 78%;
+  --accent: 222 22% 20%;
+  --accent-foreground: 0 0% 87%;
+  --destructive: 0 62.8% 40%;
+  --destructive-foreground: 0 0% 87%;
+  --border: 222 22% 20%;
+  --input: 222 22% 20%;
+  --ring: 0 0% 87%;
+  --radius: 1rem;
+  --chart-1: 220 70% 50%;
+  --chart-2: 340 75% 55%;
+  --chart-3: 30 80% 55%;
+  --chart-4: 280 65% 60%;
+  --chart-5: 160 60% 45%;
+  --chart-6: 180 50% 50%;
+  --chart-7: 216 50% 50%;
+  --chart-8: 252 50% 50%;
+  --chart-9: 288 50% 50%;
+  --chart-10: 324 50% 50%;
+}
+
+@media screen and (max-width: 1920px) and (min-width: 1025px) {
+  :root {
+    --detail-container-width: 760px;
+  }
+}
+
+@media screen and (max-width: 1024px) {
+  :root {
+    --list-container-width: 800px;
+    --detail-container-width: 800px;
+  }
+}
+
+@media screen and (max-width: 800px) {
+  :root {
+    --list-container-width: 720px;
+    --detail-container-width: 720px;
+  }
+}
+
+@media screen and (max-width: 720px) {
+  :root {
+    --list-container-width: 100vw;
+    --detail-container-width: 100vw;
+  }
+}

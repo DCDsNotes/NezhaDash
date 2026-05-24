@@ -1,0 +1,141 @@
+.world-map-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.world-map-skeleton {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.world-map-group {
+  width: var(--world-map-width, 1280px);
+  height: var(--world-map-height, 621px);
+  position: relative;
+}
+
+.world-map-group .world-map-img {
+  width: var(--world-map-width, 1280px);
+  height: var(--world-map-height, 621px);
+  background: url("/world-map.svg") 50% 50% no-repeat;
+  background-size: 100%;
+  opacity: 0.75;
+}
+
+.world-map-group .world-map-point-container {
+  position: absolute;
+  inset: 0;
+}
+
+.world-map-group .world-map-tips {
+  position: absolute;
+  padding: 5px 10px;
+  border-radius: 5px;
+  line-height: 20px;
+  white-space: pre;
+  color: #eee;
+  background: rgba(0, 0, 0, 0.8);
+  box-shadow: 1px 4px 8px rgba(48, 56, 65, 0.4);
+  z-index: 100;
+}
+
+.world-map-group .world-map-tips::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border: 5px solid transparent;
+  border-bottom-color: rgba(0, 0, 0, 0.8);
+  transform: translateX(-50%);
+}
+
+@media screen and (max-width: 500px) {
+  .world-map-group .world-map-tips {
+    line-height: 16px;
+    font-size: 12px;
+  }
+  .world-map-group .world-map-tips::before {
+    display: none;
+  }
+}
+
+.world-map-point {
+  --map-point-size: 6px;
+  --map-point-scale: 1;
+  position: absolute;
+  left: var(--map-point-left);
+  top: var(--map-point-top);
+  width: 16px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+}
+
+.world-map-point:hover {
+  z-index: 100;
+}
+
+.world-map-point .point-block {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(var(--map-point-size) * var(--map-point-scale));
+  height: calc(var(--map-point-size) * var(--map-point-scale));
+  transform: translate(-50%, -50%);
+  background: var(--world-map-point-color, #fff143);
+  border-radius: 50%;
+}
+
+.world-map-point .point-block::before,
+.world-map-point .point-block::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(var(--map-point-size) * var(--map-point-scale) + (8px * var(--map-point-scale)));
+  height: calc(var(--map-point-size) * var(--map-point-scale) + (8px * var(--map-point-scale)));
+  transform: translate(-50%, -50%);
+  border: calc(2px * var(--map-point-scale)) solid var(--world-map-point-color, #fff143);
+  border-radius: 50%;
+  opacity: 0;
+  will-change: transform, opacity;
+  pointer-events: none;
+  animation: world-map-point-pulse 2.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  animation-fill-mode: both;
+}
+
+.world-map-point .point-block::before {
+  animation-delay: var(--map-point-delay, 0s);
+}
+
+.world-map-point .point-block::after {
+  animation-delay: calc(var(--map-point-delay, 0s) + 1.2s);
+}
+
+@keyframes world-map-point-pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.75);
+    opacity: 0;
+  }
+  12% {
+    transform: translate(-50%, -50%) scale(0.85);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.9);
+    opacity: 0;
+  }
+}
+
+@media screen and (max-width: 720px) {
+  .world-map-point {
+    --map-point-scale: 0.5;
+  }
+}
+
+/* (keep group points same as single) */
+

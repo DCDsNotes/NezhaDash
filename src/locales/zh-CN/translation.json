@@ -1,0 +1,8 @@
+{
+  "refreshing": "刷新中",
+  "error": {
+    "pageNotFound": "页面不存在",
+    "backToHome": "回到主页",
+    "somethingWentWrong": "出错了"
+  }
+}

@@ -1,0 +1,18 @@
+.nazha-box {
+  --border-radius: 12px;
+  color: #eee;
+  border-radius: var(--border-radius);
+  box-shadow: 2px 4px 6px rgba(0, 0, 0, 0.4);
+  background-image: radial-gradient(transparent 1px, rgba(0, 0, 0, 0.6) 1px);
+  background-size: 3px 3px;
+  backdrop-filter: saturate(50%) blur(3px);
+}
+
+@media screen and (max-width: 768px) {
+  .nazha-box {
+    background-color: rgba(0, 0, 0, 0.8);
+    background-image: none;
+    backdrop-filter: none;
+  }
+}
+

@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: "Microsoft YaHei", "微软雅黑", "PingFang SC", "HanHei SC", "Helvetica Neue", "Helvetica", "STHeitiSC-Light", Arial, sans-serif;
+  line-height: 1.8;
+  font-weight: 400;
+
+  color-scheme: dark;
+  color: #ddd;
+  background-color: #181f30;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    @apply scroll-smooth;
+  }
+  body {
+    @apply text-foreground;
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+    background: var(--global-background-color);
+  }
+
+  a {
+    color: var(--global-link-color);
+    transition: color 150ms linear;
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  a:hover {
+    color: #08a;
+  }
+}
+
+@layer utilities {
+  .step {
+    counter-increment: step;
+  }
+
+  .step:before {
+    @apply absolute inline-flex h-9 w-9 items-center justify-center rounded-full border-4 border-background bg-muted text-center -indent-px font-mono text-base font-medium;
+    @apply ml-[-50px] mt-[-4px];
+    content: counter(step);
+  }
+}
+
+@media (max-width: 640px) {
+  .container {
+    @apply px-4;
+  }
+}
+
+::selection {
+  @apply bg-stone-300 dark:bg-stone-800;
+}
