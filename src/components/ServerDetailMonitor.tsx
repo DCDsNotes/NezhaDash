@@ -342,7 +342,7 @@ function readLocalChartType() {
 export default function ServerDetailMonitor({ now, serverId }: { now: number; serverId: number }) {
   const [minute, setMinute] = useState<number>(1440)
   const [peakShaving, setPeakShaving] = useState<boolean>(() => readLocalBool("nazhua_monitor_peak_shaving", false))
-  const [refreshData, setRefreshData] = useState<boolean>(() => readLocalBool("nazhua_monitor_refresh_data", true))
+  const [refreshData, setRefreshData] = useState<boolean>(() => readLocalBool("nazhua_monitor_refresh_data", false))
   const [chartType, setChartType] = useState<"single" | "multi">(() => readLocalChartType())
   const [showCates, setShowCates] = useState<Record<number, boolean>>({})
 
@@ -350,8 +350,9 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
     queryKey: ["monitor", serverId],
     queryFn: () => fetchMonitor(serverId),
     refetchOnMount: true,
-    refetchOnWindowFocus: true,
-    refetchInterval: refreshData ? 10000 : false,
+    refetchOnWindowFocus: false,
+    staleTime: 30000,
+    refetchInterval: refreshData ? 60000 : false,
   })
 
   const monitorData = useMemo(() => (monitorResp?.success && Array.isArray(monitorResp.data) ? monitorResp.data : []), [monitorResp])
@@ -370,6 +371,7 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
   }, [monitorData])
 
   const minutes = baseMinutes
+  const chartNowTime = Math.floor((normalizeTimestampMs(now) || Date.now()) / 60000) * 60000
 
   const minuteActiveArrowStyle = useMemo(() => {
     const index = minutes.findIndex((m) => m.value === minute)
@@ -381,11 +383,11 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
       buildMonitorChartData({
         monitorData,
         minute,
-        nowServerTime: normalizeTimestampMs(now) || Date.now(),
+        nowServerTime: chartNowTime,
         peakShaving,
         showCates,
       }),
-    [monitorData, minute, now, peakShaving, showCates],
+    [chartNowTime, monitorData, minute, peakShaving, showCates],
   )
 
   function togglePeakShaving() {
