@@ -29,8 +29,8 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Install Bun
-        run: npm install -g bun
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Resolve version/tag
         id: version
@@ -71,6 +71,10 @@ jobs:
            echo "tag=${tag}" >> "$GITHUB_OUTPUT"
            echo "version=${version}" >> "$GITHUB_OUTPUT"
            echo "is_auto=${is_auto:-false}" >> "$GITHUB_OUTPUT"
+           # Publish as an official "Latest" release (not draft / not pre-release).
+           echo "draft=false" >> "$GITHUB_OUTPUT"
+           echo "prerelease=false" >> "$GITHUB_OUTPUT"
+
       - name: Generate release notes
         shell: bash
         run: |
@@ -101,42 +105,12 @@ jobs:
           if-no-files-found: error
 
       - name: Create release and upload asset
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ steps.version.outputs.tag }}
-        run: |
-          set -euo pipefail
-
-          retry() {
-            local attempt=1
-            local max_attempts=4
-            local delay=5
-            until "$@"; do
-              if (( attempt >= max_attempts )); then
-                return 1
-              fi
-              echo "Command failed, retrying in ${delay}s... (${attempt}/${max_attempts})"
-              sleep "${delay}"
-              attempt=$((attempt + 1))
-              delay=$((delay * 2))
-            done
-          }
-
-          if gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
-            retry gh release edit "${RELEASE_TAG}" \
-              --repo "${GITHUB_REPOSITORY}" \
-              --title "Release ${RELEASE_TAG}" \
-              --notes-file release_notes.md \
-              --latest
-            retry gh release upload "${RELEASE_TAG}" dist.zip \
-              --repo "${GITHUB_REPOSITORY}" \
-              --clobber
-          else
-            retry gh release create "${RELEASE_TAG}" dist.zip \
-              --repo "${GITHUB_REPOSITORY}" \
-              --target "${GITHUB_SHA}" \
-              --title "Release ${RELEASE_TAG}" \
-              --notes-file release_notes.md \
-              --latest
-          fi
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          draft: ${{ steps.version.outputs.draft }}
+          prerelease: ${{ steps.version.outputs.prerelease }}
+          body_path: release_notes.md
+          files: dist.zip

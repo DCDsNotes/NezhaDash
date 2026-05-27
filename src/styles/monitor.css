@@ -163,7 +163,7 @@
   color: #fff;
 }
 
-.server-monitor-category__metric--max {
+.server-monitor-category__metric--average {
   text-align: right;
   color: #89c3eb;
 }
@@ -174,7 +174,7 @@
   }
 
   .server-monitor-category__metric--current,
-  .server-monitor-category__metric--max {
+  .server-monitor-category__metric--average {
     text-align: left;
   }
 }
