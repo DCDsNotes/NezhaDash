@@ -1,4 +1,5 @@
 import MiniLineChart, { type LineChartSeries } from "@/components/MiniLineChart"
+import { useNearViewport } from "@/hooks/use-near-viewport"
 import { fetchServerSpeedHistory } from "@/lib/nezha-api"
 import { cn } from "@/lib/utils"
 import { type NezhaServer, type NezhaServerSpeedHistory } from "@/types/nezha-api"
@@ -79,6 +80,7 @@ function appendCurrentPoint(points: SpeedPoint[], point: SpeedPoint) {
 }
 
 export default function ServerDetailSpeed({ now, server }: { now: number; server: NezhaServer }) {
+  const { ref: speedRef, nearViewport } = useNearViewport<HTMLDivElement>()
   const nowTime = normalizeTimestampMs(now) || Date.now()
   const chartNowTime = Math.floor(nowTime / 60000) * 60000
   const inSpeed = Math.max(Number(server.state?.net_in_speed || 0), 0)
@@ -87,6 +89,7 @@ export default function ServerDetailSpeed({ now, server }: { now: number; server
   const { data: speedResp, isLoading } = useQuery({
     queryKey: ["server-speed", server.id],
     queryFn: () => fetchServerSpeedHistory(server.id),
+    enabled: nearViewport,
     refetchOnMount: true,
     refetchOnWindowFocus: false,
     staleTime: 30000,
@@ -154,7 +157,7 @@ export default function ServerDetailSpeed({ now, server }: { now: number; server
   ]
 
   return (
-    <div className="server-speed server-monitor nazha-box">
+    <div ref={speedRef} className="server-speed server-monitor nazha-box">
       <div className="server-monitor__header">
         <div className="server-monitor__title-area">
           <span className="server-monitor__title">24小时网速</span>
@@ -185,7 +188,7 @@ export default function ServerDetailSpeed({ now, server }: { now: number; server
         ))}
       </div>
 
-      {isLoading && chartData.points.length <= 1 ? (
+      {(!nearViewport || isLoading) && chartData.points.length <= 1 ? (
         <div className="server-monitor__placeholder">
           <div className="server-monitor__placeholder-chart" />
         </div>

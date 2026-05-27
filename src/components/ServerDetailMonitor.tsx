@@ -1,4 +1,5 @@
 import MiniLineChart, { type LineChartPoint, type LineChartSeries } from "@/components/MiniLineChart"
+import { useNearViewport } from "@/hooks/use-near-viewport"
 import { fetchMonitor } from "@/lib/nezha-api"
 import { cn } from "@/lib/utils"
 import { type NezhaMonitor } from "@/types/nezha-api"
@@ -340,15 +341,17 @@ function readLocalChartType() {
 }
 
 export default function ServerDetailMonitor({ now, serverId }: { now: number; serverId: number }) {
+  const { ref: monitorRef, nearViewport } = useNearViewport<HTMLDivElement>()
   const [minute, setMinute] = useState<number>(1440)
   const [peakShaving, setPeakShaving] = useState<boolean>(() => readLocalBool("nazhua_monitor_peak_shaving", false))
-  const [refreshData, setRefreshData] = useState<boolean>(() => readLocalBool("nazhua_monitor_refresh_data", false))
+  const [refreshData, setRefreshData] = useState<boolean>(() => readLocalBool("nazhua_monitor_refresh_data", true))
   const [chartType, setChartType] = useState<"single" | "multi">(() => readLocalChartType())
   const [showCates, setShowCates] = useState<Record<number, boolean>>({})
 
   const { data: monitorResp, isLoading } = useQuery({
     queryKey: ["monitor", serverId],
     queryFn: () => fetchMonitor(serverId),
+    enabled: nearViewport,
     refetchOnMount: true,
     refetchOnWindowFocus: false,
     staleTime: 30000,
@@ -444,6 +447,7 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
 
   return (
     <div
+      ref={monitorRef}
       className={cn("server-monitor", "nazha-box", {
         "server-monitor--multi": chartType === "multi",
         "server-monitor--single": chartType === "single",
@@ -502,7 +506,7 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
         </div>
       </div>
 
-      {isLoading ? (
+      {!nearViewport || isLoading ? (
         <div className="server-monitor__placeholder">
           <div className="server-monitor__placeholder-line server-monitor__placeholder-line--w60" />
           <div className="server-monitor__placeholder-line server-monitor__placeholder-line--w40" />
