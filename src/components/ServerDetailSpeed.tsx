@@ -157,7 +157,7 @@ export default function ServerDetailSpeed({ now, server }: { now: number; server
     <div className="server-speed server-monitor nazha-box">
       <div className="server-monitor__header">
         <div className="server-monitor__title-area">
-          <span className="server-monitor__title">24小时网速</span>
+          <span className="server-monitor__title">网络速度</span>
         </div>
       </div>
 
