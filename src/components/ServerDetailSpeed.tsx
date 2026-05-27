@@ -31,10 +31,9 @@ function formatSpeed(bytesPerSecond: number, decimals = 1) {
   return `${Number((value / 1024 ** i).toFixed(decimals))} ${sizes[i]}`
 }
 
-function getAverageSpeed(points: SpeedPoint[], key: "inSpeed" | "outSpeed") {
+function getMaxSpeed(points: SpeedPoint[], key: "inSpeed" | "outSpeed") {
   if (!points.length) return 0
-  const total = points.reduce((sum, item) => sum + item[key], 0)
-  return total / points.length
+  return points.reduce((max, item) => Math.max(max, item[key]), 0)
 }
 
 function speedTooltipFormatter(value: number | null) {
@@ -81,6 +80,7 @@ function appendCurrentPoint(points: SpeedPoint[], point: SpeedPoint) {
 
 export default function ServerDetailSpeed({ now, server }: { now: number; server: NezhaServer }) {
   const nowTime = normalizeTimestampMs(now) || Date.now()
+  const chartNowTime = Math.floor(nowTime / 60000) * 60000
   const inSpeed = Math.max(Number(server.state?.net_in_speed || 0), 0)
   const outSpeed = Math.max(Number(server.state?.net_out_speed || 0), 0)
 
@@ -88,18 +88,19 @@ export default function ServerDetailSpeed({ now, server }: { now: number; server
     queryKey: ["server-speed", server.id],
     queryFn: () => fetchServerSpeedHistory(server.id),
     refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
+    staleTime: 30000,
     refetchInterval: 60000,
   })
 
   const serverPoints = useMemo(() => buildSpeedPoints(speedResp?.success ? speedResp.data : undefined), [speedResp])
 
   const chartData = useMemo(() => {
-    const cutoff = nowTime - HISTORY_WINDOW_MS
+    const cutoff = chartNowTime - HISTORY_WINDOW_MS
     const points = appendCurrentPoint(
-      serverPoints.filter((item) => item.time >= cutoff && item.time <= nowTime),
+      serverPoints.filter((item) => item.time >= cutoff && item.time <= chartNowTime),
       {
-        time: nowTime,
+        time: chartNowTime,
         inSpeed,
         outSpeed,
       },
@@ -125,13 +126,13 @@ export default function ServerDetailSpeed({ now, server }: { now: number; server
       dateList,
       seriesList,
       range: {
-        min: nowTime - HISTORY_WINDOW_MS,
-        max: nowTime,
+        min: chartNowTime - HISTORY_WINDOW_MS,
+        max: chartNowTime,
       },
-      inAverage: getAverageSpeed(points, "inSpeed"),
-      outAverage: getAverageSpeed(points, "outSpeed"),
+      inMax: getMaxSpeed(points, "inSpeed"),
+      outMax: getMaxSpeed(points, "outSpeed"),
     }
-  }, [inSpeed, nowTime, outSpeed, serverPoints])
+  }, [chartNowTime, inSpeed, outSpeed, serverPoints])
 
   const speedItems = [
     {
@@ -139,16 +140,16 @@ export default function ServerDetailSpeed({ now, server }: { now: number; server
       name: "下载",
       color: SPEED_IN_COLOR,
       current: formatSpeed(inSpeed),
-      average: formatSpeed(chartData.inAverage),
-      title: `当前下载 ${formatSpeed(inSpeed)}\n24小时平均 ${formatSpeed(chartData.inAverage)}`,
+      max: formatSpeed(chartData.inMax),
+      title: `当前下载 ${formatSpeed(inSpeed)}\n24小时最高 ${formatSpeed(chartData.inMax)}`,
     },
     {
       key: "out",
       name: "上传",
       color: SPEED_OUT_COLOR,
       current: formatSpeed(outSpeed),
-      average: formatSpeed(chartData.outAverage),
-      title: `当前上传 ${formatSpeed(outSpeed)}\n24小时平均 ${formatSpeed(chartData.outAverage)}`,
+      max: formatSpeed(chartData.outMax),
+      title: `当前上传 ${formatSpeed(outSpeed)}\n24小时最高 ${formatSpeed(chartData.outMax)}`,
     },
   ]
 
@@ -175,9 +176,9 @@ export default function ServerDetailSpeed({ now, server }: { now: number; server
                 <span className="server-monitor-category__metric-label">当前</span>
                 <span className="server-monitor-category__metric-value">{item.current}</span>
               </span>
-              <span className="server-monitor-category__metric server-monitor-category__metric--average">
-                <span className="server-monitor-category__metric-label">平均</span>
-                <span className="server-monitor-category__metric-value">{item.average}</span>
+              <span className="server-monitor-category__metric server-monitor-category__metric--max">
+                <span className="server-monitor-category__metric-label">最高</span>
+                <span className="server-monitor-category__metric-value">{item.max}</span>
               </span>
             </div>
           </div>
