@@ -105,39 +105,12 @@ jobs:
           if-no-files-found: error
 
       - name: Create release and upload asset
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ steps.version.outputs.tag }}
-          RELEASE_NAME: Release ${{ steps.version.outputs.tag }}
-          RELEASE_TARGET: ${{ github.sha }}
-          RELEASE_DRAFT: ${{ steps.version.outputs.draft }}
-          RELEASE_PRERELEASE: ${{ steps.version.outputs.prerelease }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          flags=(--title "${RELEASE_NAME}" --notes-file release_notes.md --target "${RELEASE_TARGET}" --latest)
-          if [[ "${RELEASE_DRAFT}" == "true" ]]; then
-            flags+=(--draft)
-          fi
-          if [[ "${RELEASE_PRERELEASE}" == "true" ]]; then
-            flags+=(--prerelease)
-          fi
-
-          for attempt in 1 2 3 4 5; do
-            if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
-              gh release upload "${RELEASE_TAG}" dist.zip --clobber
-              exit 0
-            fi
-
-            if gh release create "${RELEASE_TAG}" dist.zip "${flags[@]}"; then
-              exit 0
-            fi
-
-            sleep_seconds=$((attempt * 20))
-            echo "Release creation failed; retrying in ${sleep_seconds}s (${attempt}/5)."
-            sleep "${sleep_seconds}"
-          done
-
-          gh release view "${RELEASE_TAG}" >/dev/null
-          gh release upload "${RELEASE_TAG}" dist.zip --clobber
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          draft: ${{ steps.version.outputs.draft }}
+          prerelease: ${{ steps.version.outputs.prerelease }}
+          body_path: release_notes.md
+          files: dist.zip
