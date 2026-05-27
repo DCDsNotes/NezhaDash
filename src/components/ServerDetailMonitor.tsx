@@ -1,4 +1,5 @@
 import MiniLineChart, { type LineChartPoint, type LineChartSeries } from "@/components/MiniLineChart"
+import { useNearViewport } from "@/hooks/use-near-viewport"
 import { fetchMonitor } from "@/lib/nezha-api"
 import { cn } from "@/lib/utils"
 import { type NezhaMonitor } from "@/types/nezha-api"
@@ -340,6 +341,7 @@ function readLocalChartType() {
 }
 
 export default function ServerDetailMonitor({ now, serverId }: { now: number; serverId: number }) {
+  const [containerRef, shouldFetchHistory] = useNearViewport<HTMLDivElement>()
   const [minute, setMinute] = useState<number>(1440)
   const [peakShaving, setPeakShaving] = useState<boolean>(() => readLocalBool("nazhua_monitor_peak_shaving", false))
   const [refreshData, setRefreshData] = useState<boolean>(() => readLocalBool("nazhua_monitor_refresh_data", false))
@@ -349,10 +351,11 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
   const { data: monitorResp, isLoading } = useQuery({
     queryKey: ["monitor", serverId],
     queryFn: () => fetchMonitor(serverId),
+    enabled: shouldFetchHistory,
     refetchOnMount: true,
     refetchOnWindowFocus: false,
-    staleTime: 30000,
-    refetchInterval: refreshData ? 60000 : false,
+    staleTime: 15000,
+    refetchInterval: shouldFetchHistory && refreshData ? 60000 : false,
   })
 
   const monitorData = useMemo(() => (monitorResp?.success && Array.isArray(monitorResp.data) ? monitorResp.data : []), [monitorResp])
@@ -444,6 +447,7 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
 
   return (
     <div
+      ref={containerRef}
       className={cn("server-monitor", "nazha-box", {
         "server-monitor--multi": chartType === "multi",
         "server-monitor--single": chartType === "single",
@@ -502,7 +506,7 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
         </div>
       </div>
 
-      {isLoading ? (
+      {!shouldFetchHistory || isLoading ? (
         <div className="server-monitor__placeholder">
           <div className="server-monitor__placeholder-line server-monitor__placeholder-line--w60" />
           <div className="server-monitor__placeholder-line server-monitor__placeholder-line--w40" />
