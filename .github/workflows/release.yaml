@@ -123,11 +123,6 @@ jobs:
             done
           }
 
-          if ! git ls-remote --exit-code --tags origin "refs/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
-            git tag "${RELEASE_TAG}" "${GITHUB_SHA}"
-            retry git push origin "refs/tags/${RELEASE_TAG}"
-          fi
-
           if gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
             retry gh release edit "${RELEASE_TAG}" \
               --repo "${GITHUB_REPOSITORY}" \
