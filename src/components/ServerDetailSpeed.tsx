@@ -4,7 +4,7 @@ import { fetchServerSpeedHistory } from "@/lib/nezha-api"
 import { cn } from "@/lib/utils"
 import { type NezhaServer, type NezhaServerSpeedHistory } from "@/types/nezha-api"
 import { useQuery } from "@tanstack/react-query"
-import { type CSSProperties, useMemo } from "react"
+import { type CSSProperties, useMemo, useState } from "react"
 
 type SpeedPoint = {
   time: number
@@ -12,9 +12,18 @@ type SpeedPoint = {
   outSpeed: number
 }
 
-const HISTORY_WINDOW_MS = 24 * 60 * 60 * 1000
+type MinuteOption = { label: string; value: number }
+
 const SPEED_IN_COLOR = "#f5b199"
 const SPEED_OUT_COLOR = "#89c3eb"
+const speedMinutes: MinuteOption[] = [
+  { label: "30分钟", value: 30 },
+  { label: "1小时", value: 60 },
+  { label: "3小时", value: 180 },
+  { label: "6小时", value: 360 },
+  { label: "12小时", value: 720 },
+  { label: "24小时", value: 1440 },
+]
 
 function normalizeTimestampMs(t: number) {
   const n = Number(t)
@@ -81,8 +90,10 @@ function appendCurrentPoint(points: SpeedPoint[], point: SpeedPoint) {
 
 export default function ServerDetailSpeed({ now, server }: { now: number; server: NezhaServer }) {
   const [containerRef, shouldFetchHistory] = useNearViewport<HTMLDivElement>()
+  const [minute, setMinute] = useState<number>(1440)
   const nowTime = normalizeTimestampMs(now) || Date.now()
   const chartNowTime = Math.floor(nowTime / 60000) * 60000
+  const historyWindowMs = Math.max(1, minute) * 60000
   const inSpeed = Math.max(Number(server.state?.net_in_speed || 0), 0)
   const outSpeed = Math.max(Number(server.state?.net_out_speed || 0), 0)
 
@@ -99,7 +110,7 @@ export default function ServerDetailSpeed({ now, server }: { now: number; server
   const serverPoints = useMemo(() => buildSpeedPoints(speedResp?.success ? speedResp.data : undefined), [speedResp])
 
   const chartData = useMemo(() => {
-    const cutoff = chartNowTime - HISTORY_WINDOW_MS
+    const cutoff = chartNowTime - historyWindowMs
     const points = appendCurrentPoint(
       serverPoints.filter((item) => item.time >= cutoff && item.time <= chartNowTime),
       {
@@ -129,13 +140,19 @@ export default function ServerDetailSpeed({ now, server }: { now: number; server
       dateList,
       seriesList,
       range: {
-        min: chartNowTime - HISTORY_WINDOW_MS,
+        min: chartNowTime - historyWindowMs,
         max: chartNowTime,
       },
       inMax: getMaxSpeed(points, "inSpeed"),
       outMax: getMaxSpeed(points, "outSpeed"),
     }
-  }, [chartNowTime, inSpeed, outSpeed, serverPoints])
+  }, [chartNowTime, historyWindowMs, inSpeed, outSpeed, serverPoints])
+
+  const minuteActiveArrowStyle = useMemo(() => {
+    const index = speedMinutes.findIndex((m) => m.value === minute)
+    return { left: `calc(${Math.max(0, index)} * var(--minute-item-width))` }
+  }, [minute])
+  const activeMinuteLabel = speedMinutes.find((m) => m.value === minute)?.label || "24小时"
 
   const speedItems = [
     {
@@ -144,7 +161,7 @@ export default function ServerDetailSpeed({ now, server }: { now: number; server
       color: SPEED_IN_COLOR,
       current: formatSpeed(inSpeed),
       max: formatSpeed(chartData.inMax),
-      title: `当前下载 ${formatSpeed(inSpeed)}\n24小时最高 ${formatSpeed(chartData.inMax)}`,
+      title: `当前下载 ${formatSpeed(inSpeed)}\n${activeMinuteLabel}最高 ${formatSpeed(chartData.inMax)}`,
     },
     {
       key: "out",
@@ -152,7 +169,7 @@ export default function ServerDetailSpeed({ now, server }: { now: number; server
       color: SPEED_OUT_COLOR,
       current: formatSpeed(outSpeed),
       max: formatSpeed(chartData.outMax),
-      title: `当前上传 ${formatSpeed(outSpeed)}\n24小时最高 ${formatSpeed(chartData.outMax)}`,
+      title: `当前上传 ${formatSpeed(outSpeed)}\n${activeMinuteLabel}最高 ${formatSpeed(chartData.outMax)}`,
     },
   ]
 
@@ -161,6 +178,23 @@ export default function ServerDetailSpeed({ now, server }: { now: number; server
       <div className="server-monitor__header">
         <div className="server-monitor__title-area">
           <span className="server-monitor__title">网络速度</span>
+        </div>
+        <div className="server-monitor__controls">
+          <div className="server-monitor__range">
+            <span className="server-monitor__range-label">最近</span>
+            <div className="server-monitor__minutes">
+              {speedMinutes.map((m) => (
+                <div
+                  key={m.value}
+                  className={cn("server-monitor__minute", { "server-monitor__minute--active": m.value === minute })}
+                  onClick={() => setMinute(m.value)}
+                >
+                  <span>{m.label}</span>
+                </div>
+              ))}
+              <div className="server-monitor__minute-indicator" style={minuteActiveArrowStyle} />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -203,6 +237,7 @@ export default function ServerDetailSpeed({ now, server }: { now: number; server
             dateList={chartData.dateList}
             timeRange={chartData.range}
             tooltipMode="series"
+            rightPadding={8}
             yAxisLabelFormatter={speedAxisFormatter}
             tooltipValueFormatter={speedTooltipFormatter}
           />

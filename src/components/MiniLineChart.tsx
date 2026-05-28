@@ -158,6 +158,7 @@ export default function MiniLineChart({
   connectNulls = false,
   dateList,
   timeRange,
+  rightPadding,
   tooltipMode = "latency",
   yAxisLabelFormatter = defaultYAxisLabelFormatter,
   rightAxisLabelFormatter = defaultRightAxisLabelFormatter,
@@ -167,6 +168,7 @@ export default function MiniLineChart({
   connectNulls?: boolean
   dateList?: number[]
   timeRange?: ChartTimeRange
+  rightPadding?: number
   tooltipMode?: TooltipMode
   yAxisLabelFormatter?: (value: number) => string
   rightAxisLabelFormatter?: (value: number) => string
@@ -186,7 +188,7 @@ export default function MiniLineChart({
   const viewHeight = Math.max(1, containerHeight || 300)
 
   const paddingLeft = viewWidth < 520 ? 66 : 74
-  const paddingRight = viewWidth < 520 ? 42 : 48
+  const paddingRight = typeof rightPadding === "number" ? Math.max(0, rightPadding) : viewWidth < 520 ? 42 : 48
   const paddingTop = 10
   const paddingBottom = 30
   const plotWidth = Math.max(1, viewWidth - paddingLeft - paddingRight)
