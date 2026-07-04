@@ -6,7 +6,7 @@ import WorldMap, { buildLocationsFromServers } from "@/components/WorldMap"
 import { useNezhaWsData } from "@/hooks/use-nezha-ws-data"
 import { useSort } from "@/hooks/use-sort"
 import { useStatus } from "@/hooks/use-status"
-import { computeWorldMapWidth } from "@/lib/layout"
+import { useWorldMapSize } from "@/hooks/use-world-map-size"
 import { fetchServerGroup } from "@/lib/nezha-api"
 import { serverSortHandler, serverSortOptions } from "@/lib/server-sort"
 import { getServerMapLocationViewModel, getServerStatus, getServerStatusCounts } from "@/lib/server-view-model"
@@ -23,8 +23,7 @@ export default function Servers() {
   const { data: nezhaWsData, lastMessage, connected } = useNezhaWsData()
   const { status, setStatus } = useStatus()
   const [currentGroup, setCurrentGroup] = useState<string>("")
-  const [worldMapWidth, setWorldMapWidth] = useState<number>(() => (typeof window === "undefined" ? 900 : computeWorldMapWidth(window.innerWidth)))
-  const worldMapHeight = useMemo(() => Math.ceil((621 / 1280) * (Number(worldMapWidth) || 0)), [worldMapWidth])
+  const { width: worldMapWidth, height: worldMapHeight } = useWorldMapSize()
 
   const handleTagChange = (newGroup: string) => {
     setCurrentGroup(newGroup)
@@ -41,13 +40,6 @@ export default function Servers() {
         window.scrollTo({ top: Number(savedPosition), left: 0, behavior: "auto" })
       })
     }
-  }, [])
-
-  useEffect(() => {
-    const handleResize = () => setWorldMapWidth(computeWorldMapWidth(window.innerWidth))
-    handleResize()
-    window.addEventListener("resize", handleResize)
-    return () => window.removeEventListener("resize", handleResize)
   }, [])
 
   const groupOptions = useMemo(() => {
@@ -162,7 +154,7 @@ export default function Servers() {
       <div className="server-page__scroll">
         <div className="world-map-box top-world-map">
           {showWorldMap ? (
-            <WorldMap locations={serverLocations} />
+            <WorldMap locations={serverLocations} mapWidth={worldMapWidth} />
           ) : (
             <div
               className="world-map-skeleton"

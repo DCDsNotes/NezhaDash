@@ -5,29 +5,21 @@ import ServerDetailSpeed from "@/components/ServerDetailSpeed"
 import ServerDetailStatusBox from "@/components/ServerDetailStatusBox"
 import WorldMap from "@/components/WorldMap"
 import { useNezhaWsData } from "@/hooks/use-nezha-ws-data"
+import { useWorldMapSize } from "@/hooks/use-world-map-size"
 import { countryCoordinates } from "@/lib/geo-limit"
-import { computeWorldMapWidth } from "@/lib/layout"
 import { serverIdToServerKey } from "@/lib/server-key"
 import { getServerStatus } from "@/lib/server-view-model"
 import { cn } from "@/lib/utils"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 
 export default function ServerDetail() {
   const navigate = useNavigate()
   const { data: nezhaWsData, lastMessage, connected } = useNezhaWsData()
-  const [worldMapWidth, setWorldMapWidth] = useState<number>(() => (typeof window === "undefined" ? 900 : computeWorldMapWidth(window.innerWidth)))
-  const worldMapHeight = useMemo(() => Math.ceil((621 / 1280) * (Number(worldMapWidth) || 0)), [worldMapWidth])
+  const { width: worldMapWidth, height: worldMapHeight } = useWorldMapSize()
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" })
-  }, [])
-
-  useEffect(() => {
-    const handleResize = () => setWorldMapWidth(computeWorldMapWidth(window.innerWidth))
-    handleResize()
-    window.addEventListener("resize", handleResize)
-    return () => window.removeEventListener("resize", handleResize)
   }, [])
 
   const { serverKey } = useParams()
@@ -92,7 +84,7 @@ export default function ServerDetail() {
       })}
     >
       <div className="world-map-box top-world-map">
-        <WorldMap locations={locations} />
+        <WorldMap locations={locations} mapWidth={worldMapWidth} />
       </div>
       <ServerDetailName server={server} />
       <ServerDetailStatusBox now={wsNow} server={server} />

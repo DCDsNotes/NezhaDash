@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react"
 
 import { countryCoordinates } from "@/lib/geo-limit"
-import { computeWorldMapWidth } from "@/lib/layout"
 import { cn } from "@/lib/utils"
 import { count2size, findIntersectingGroups, lonLatToMapXY } from "@/lib/world-map"
+import { useWorldMapSize } from "@/hooks/use-world-map-size"
 
 import WorldMapPoint from "./WorldMapPoint"
 
@@ -18,22 +18,15 @@ type LocationInput = {
 
 export default function WorldMap({
   locations,
+  mapWidth: mapWidthProp,
   className,
 }: {
   locations: LocationInput[]
+  mapWidth?: number
   className?: string
 }) {
-  const [mapWidth, setMapWidth] = useState<number>(() =>
-    typeof window === "undefined" ? 900 : computeWorldMapWidth(window.innerWidth),
-  )
-
-  useEffect(() => {
-    const handleResize = () => setMapWidth(computeWorldMapWidth(window.innerWidth))
-    handleResize()
-    window.addEventListener("resize", handleResize)
-    return () => window.removeEventListener("resize", handleResize)
-  }, [])
-
+  const fallbackSize = useWorldMapSize(mapWidthProp == null)
+  const mapWidth = mapWidthProp ?? fallbackSize.width
   const mapHeight = useMemo(() => Math.ceil((621 / 1280) * (Number(mapWidth) || 0)), [mapWidth])
 
   const points = useMemo(() => {

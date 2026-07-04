@@ -294,7 +294,11 @@
   --list-item-border-radius: 12px;
   width: var(--list-item-width);
   color: #fff;
-  transition: 0.3s;
+  overflow: hidden;
+  background-color: rgba(0, 0, 0, 0.38);
+  backdrop-filter: none;
+  transform: translateZ(0);
+  transition: filter 0.3s;
 }
 
 .server-card__header {

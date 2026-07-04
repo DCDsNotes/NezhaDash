@@ -7,6 +7,7 @@ function normalizeCountryCode(raw: string | null | undefined) {
   if (!code) return "cn"
   const lower = code.toLowerCase()
   if (!/^[a-z]{2}$/.test(lower)) return "cn"
+  if (lower === "tw") return "cn"
   return lower
 }
 
