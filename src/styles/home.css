@@ -647,3 +647,169 @@
   font-weight: 400;
   color: inherit;
 }
+
+@media screen and (max-width: 1920px) and (min-width: 1025px) {
+  .server-page__scroll {
+    gap: 9px;
+    padding: 18px 0;
+  }
+
+  .server-page .bottom-world-map {
+    margin-top: 27px;
+  }
+
+  .server-toolbar {
+    gap: 9px 18px;
+    padding: 0 18px;
+  }
+
+  .server-toolbar__groups,
+  .server-toolbar__actions,
+  .server-options {
+    gap: 11px;
+  }
+
+  .server-options__item,
+  .server-sort__selected,
+  .server-sort-dropdown__item {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 5px;
+  }
+
+  .server-options__item--with-icon {
+    padding: 0 9px;
+  }
+
+  .server-options__icon {
+    font-size: 16px;
+  }
+
+  .server-options__label,
+  .server-sort__selected,
+  .server-sort-dropdown,
+  .server-sort-dropdown__label {
+    font-size: 13px;
+  }
+
+  .server-sort {
+    gap: 7px;
+  }
+
+  .server-sort__order-icon {
+    margin-left: 7px;
+    padding: 2px 4px;
+  }
+
+  .server-sort-dropdown {
+    border-radius: 5px;
+    padding: 9px;
+    min-width: 135px;
+    max-height: 270px;
+  }
+
+  .server-sort-dropdown__options {
+    gap: 4px;
+  }
+
+  .server-card-grid {
+    --list-padding: 18px;
+    --list-gap-size: 18px;
+  }
+
+  .server-card-skeleton {
+    --list-item-border-radius: 11px;
+    height: 243px;
+  }
+
+  .server-card {
+    --list-item-border-radius: 11px;
+  }
+
+  .server-card__header {
+    --list-item-head-height: 45px;
+    gap: 9px;
+    padding: 0 14px;
+  }
+
+  .server-card__title {
+    gap: 7px;
+  }
+
+  .server-flag {
+    width: 24px;
+    height: 27px;
+    line-height: 27px;
+    font-size: 16px;
+  }
+
+  .server-card__name {
+    height: 27px;
+    line-height: 29px;
+    font-size: 13px;
+  }
+
+  .server-card__body {
+    gap: 9px;
+    padding: 14px 9px;
+    --real-time-value-font-size: 20px;
+    --real-time-text-font-size: 11px;
+    --real-time-label-font-size: 13px;
+  }
+
+  .server-card__status-rings {
+    --ring-size: 68px;
+    --ring-thickness: 8px;
+    gap: 7px;
+    padding: 5px 0 0;
+  }
+
+  .server-status-ring {
+    gap: 5px;
+  }
+
+  .server-status-ring .ring-center {
+    inset: 8px;
+  }
+
+  .server-status-ring .ring-percent {
+    font-size: 13px;
+  }
+
+  .server-status-ring .ring-val {
+    font-size: 10px;
+  }
+
+  .server-status-ring .ring-label {
+    font-size: 11px;
+  }
+
+  .server-card__billing {
+    gap: 18px;
+    padding: 0 9px;
+    --list-item-bill-height: 36px;
+    --list-item-bill-font-size: 13px;
+    --list-item-bill-icon-font-size: 14px;
+  }
+
+  .server-card__billing-row {
+    gap: 9px;
+  }
+
+  .server-card__billing-end-date {
+    gap: 5px;
+  }
+}
+
+@media screen and (max-width: 1440px) and (min-width: 1025px) {
+  .server-card-grid {
+    --list-gap-size: 9px;
+  }
+}
+
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .server-card__body {
+    padding: 9px 0 14px;
+    --real-time-value-font-size: 18px;
+  }
+}

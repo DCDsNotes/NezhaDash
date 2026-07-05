@@ -139,3 +139,21 @@
 
 /* (keep group points same as single) */
 
+@media screen and (max-width: 1920px) and (min-width: 1025px) {
+  .world-map-group .world-map-tips {
+    padding: 5px 9px;
+    border-radius: 5px;
+    line-height: 18px;
+    font-size: 13px;
+  }
+
+  .world-map-group .world-map-tips::before {
+    border-width: 4px;
+  }
+
+  .world-map-point {
+    --map-point-scale: 0.9;
+    width: 14px;
+    height: 14px;
+  }
+}

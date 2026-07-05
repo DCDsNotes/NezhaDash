@@ -584,3 +584,156 @@
   font-variant-numeric: tabular-nums;
   color: rgba(255, 255, 255, 0.92);
 }
+
+@media screen and (max-width: 1920px) and (min-width: 1025px) {
+  .server-monitor {
+    --line-chart-size: 270px;
+    min-height: calc(var(--line-chart-size) + 153px);
+    padding: 14px 18px;
+  }
+
+  .server-monitor--single {
+    --line-chart-size: 216px;
+    min-height: calc(var(--line-chart-size) + 135px);
+  }
+
+  .server-monitor-category {
+    --cate-item-height: 36px;
+    --cate-item-font-size: 13px;
+    --cate-avg-width: 86px;
+    --cate-loss-width: 86px;
+    gap: 5px;
+    padding: 0 5px;
+  }
+
+  .server-monitor-category__metric {
+    gap: 4px;
+  }
+
+  .server-monitor-category__metric-label {
+    font-size: 11px;
+  }
+
+  .server-monitor__placeholder {
+    padding: 9px 0 0;
+    gap: 9px;
+  }
+
+  .server-monitor__placeholder-line {
+    height: 11px;
+    border-radius: 5px;
+  }
+
+  .server-monitor__placeholder-chart {
+    border-radius: 9px;
+  }
+
+  .server-monitor__empty {
+    margin-top: 9px;
+  }
+
+  .server-monitor__header {
+    gap: 9px;
+  }
+
+  .server-monitor__title {
+    height: 27px;
+    line-height: 27px;
+    font-size: 14px;
+  }
+
+  .server-monitor__controls {
+    gap: 11px;
+  }
+
+  .server-monitor__toggle {
+    gap: 4px;
+  }
+
+  .server-monitor__switch {
+    width: 27px;
+    height: 14px;
+    border-radius: 9px;
+  }
+
+  .server-monitor__switch-dot {
+    top: 2px;
+    left: 2px;
+    width: 10px;
+    height: 10px;
+  }
+
+  .server-monitor__switch--active .server-monitor__switch-dot {
+    left: 15px;
+  }
+
+  .server-monitor__toggle-label {
+    font-size: 11px;
+  }
+
+  .server-monitor__range {
+    --minute-item-width: 45px;
+    --minute-item-height: 18px;
+    gap: 4px;
+  }
+
+  .server-monitor__range-label,
+  .server-monitor__minute {
+    font-size: 11px;
+  }
+
+  .server-monitor__categories {
+    --gap-size: 7px;
+    --cate-trigger-width: 288px;
+    margin: 9px 0;
+  }
+
+  .server-monitor__charts {
+    --monitor-chart-gap: 11px;
+  }
+
+  .server-monitor__chart {
+    height: calc(var(--line-chart-size) + 25px);
+  }
+
+  .server-speed {
+    --line-chart-size: 270px;
+    min-height: calc(var(--line-chart-size) + 99px);
+  }
+
+  .server-speed .server-monitor-category {
+    --cate-avg-width: 104px;
+    --cate-loss-width: 104px;
+  }
+
+  .server-speed__chart {
+    margin-top: 7px;
+  }
+
+  .line-box .chart-tooltip {
+    min-width: 180px;
+    max-width: 324px;
+    padding: 7px 9px;
+    border-radius: 7px;
+    font-size: 11px;
+  }
+
+  .line-box .chart-tooltip-time {
+    margin-bottom: 5px;
+    font-size: 11px;
+  }
+
+  .line-box .chart-tooltip-rows {
+    gap: 4px;
+  }
+
+  .line-box .chart-tooltip-row {
+    grid-template-columns: 9px 1fr auto;
+    gap: 5px;
+  }
+
+  .line-box .chart-tooltip-row .dot {
+    width: 7px;
+    height: 7px;
+  }
+}

@@ -1,4 +1,6 @@
 :root {
+  --pc-ui-scale: 1;
+
   --layout-header-height: 60px;
 
   --list-container-width: 960px;
@@ -80,7 +82,14 @@
 
 @media screen and (max-width: 1920px) and (min-width: 1025px) {
   :root {
-    --detail-container-width: 760px;
+    --pc-ui-scale: 0.9;
+    --layout-header-height: 54px;
+    --list-container-width: 864px;
+    --detail-container-width: 684px;
+  }
+
+  html {
+    font-size: 14.4px;
   }
 }
 

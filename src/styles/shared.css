@@ -16,3 +16,9 @@
     backdrop-filter: none;
   }
 }
+
+@media screen and (max-width: 1920px) and (min-width: 1025px) {
+  .nazha-box {
+    --border-radius: 11px;
+  }
+}

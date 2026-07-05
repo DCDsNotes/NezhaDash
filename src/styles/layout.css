@@ -375,3 +375,119 @@
   display: flex;
   justify-content: center;
 }
+
+@media screen and (max-width: 1920px) and (min-width: 1025px) {
+  .nazha-container {
+    padding: 0 18px;
+  }
+
+  .layout-header .site-name {
+    line-height: 36px;
+    font-size: 18px;
+  }
+
+  .layout-header .layer-header-container {
+    gap: 0 18px;
+    padding: 9px 18px;
+  }
+
+  .layout-header .right-box {
+    gap: 11px;
+  }
+
+  .server-count-group {
+    gap: 9px;
+  }
+
+  .server-count-group .server-count {
+    gap: 3px;
+    line-height: 27px;
+    font-size: 14px;
+  }
+
+  .server-count-group .server-count .icon {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+  }
+
+  .ri-global-off-line:after {
+    width: 16px;
+  }
+
+  .server-stat-group {
+    min-width: 144px;
+  }
+
+  .server-stat-group .server-stat {
+    gap: 7px;
+    line-height: 14px;
+    font-size: 11px;
+  }
+
+  .server-transfer-panel {
+    width: 576px;
+    padding: 20px;
+  }
+
+  .server-transfer-panel__head {
+    gap: 14px;
+  }
+
+  .server-transfer-panel__title {
+    line-height: 22px;
+    font-size: 16px;
+  }
+
+  .server-transfer-panel__sub {
+    line-height: 18px;
+    font-size: 11px;
+  }
+
+  .server-transfer-panel__list {
+    margin-top: 13px;
+    max-height: min(378px, 60vh);
+  }
+
+  .server-transfer-panel__item {
+    gap: 13px;
+    padding: 9px 4px;
+  }
+
+  .server-transfer-panel__name {
+    gap: 7px;
+  }
+
+  .server-transfer-panel__dot {
+    width: 7px;
+    height: 7px;
+  }
+
+  .server-transfer-panel__name-text {
+    line-height: 20px;
+    font-size: 13px;
+  }
+
+  .server-transfer-panel__values {
+    grid-template-columns: repeat(3, 74px);
+    gap: 7px;
+  }
+
+  .server-transfer-panel__value {
+    line-height: 20px;
+    font-size: 12px;
+  }
+
+  .nezha-user-info-group {
+    gap: 0 18px;
+  }
+
+  .nezha-user-info-group .dashboard-url {
+    font-size: 14px;
+  }
+
+  .layout-footer {
+    padding: 18px 18px 36px;
+    font-size: 11px;
+  }
+}

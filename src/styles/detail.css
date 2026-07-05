@@ -365,3 +365,124 @@
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
   border-radius: 4px;
 }
+
+@media screen and (max-width: 1920px) and (min-width: 1025px) {
+  .server-detail-page {
+    gap: 18px;
+    padding: 18px;
+    min-height: calc(100vh - var(--layout-header-height) - 72px);
+  }
+
+  .server-detail-skeleton {
+    border-radius: 11px;
+  }
+
+  .server-detail-skeleton--name {
+    height: 50px;
+  }
+
+  .server-detail-skeleton--status {
+    height: 153px;
+  }
+
+  .server-detail-skeleton--info {
+    height: 288px;
+  }
+
+  .server-detail-skeleton--speed,
+  .server-detail-skeleton--monitor {
+    height: 378px;
+  }
+
+  .server-detail-header {
+    gap: 11px;
+    padding: 14px;
+  }
+
+  .server-detail-header__flag {
+    --flag-size: 54px;
+    border-radius: 11px;
+  }
+
+  .server-detail-header__content {
+    gap: 4px;
+    padding: 4px 0;
+  }
+
+  .server-detail-header__name {
+    line-height: 27px;
+    font-size: 18px;
+  }
+
+  .server-detail-header__note {
+    line-height: 16px;
+    font-size: 13px;
+  }
+
+  .server-detail-header__cpu {
+    gap: 5px;
+    line-height: 22px;
+  }
+
+  .server-detail-header__cpu-brand {
+    height: 20px;
+    line-height: 20px;
+    padding: 0 5px;
+  }
+
+  .server-detail-status {
+    gap: 18px;
+    padding: 14px;
+    --real-time-value-font-size: 25px;
+    --real-time-text-font-size: 14px;
+    --real-time-label-font-size: 14px;
+  }
+
+  .server-detail-status__rings--ring {
+    --ring-size: 81px;
+    --ring-thickness: 8px;
+    gap: 14px;
+  }
+
+  .server-status-ring.server-status--cpu .ring-val,
+  .server-status-ring.server-status--mem .ring-val,
+  .server-status-ring.server-status--swap .ring-val,
+  .server-status-ring.server-status--disk .ring-val {
+    font-size: 7px;
+  }
+
+  .server-detail-info {
+    --server-detail-info-item-size: 22px;
+    padding: 18px;
+  }
+
+  .server-detail-info__group {
+    gap: 18px;
+    font-size: 13px;
+  }
+
+  .server-detail-info__content {
+    line-height: 16px;
+  }
+
+  .server-detail-info__items {
+    gap: 0 11px;
+  }
+
+  .server-detail-info__item-icon {
+    width: 22px;
+    height: 14px;
+    font-size: 14px;
+  }
+
+  .server-detail-info__tags {
+    gap: 5px;
+  }
+
+  .server-detail-info__tag {
+    height: 16px;
+    padding: 0 5px;
+    line-height: 16px;
+    font-size: 11px;
+  }
+}

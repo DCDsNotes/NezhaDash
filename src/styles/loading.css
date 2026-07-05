@@ -102,3 +102,12 @@
   }
 }
 
+@media screen and (max-width: 1920px) and (min-width: 1025px) {
+  .hamster-loading-wrapper {
+    --size: 11px;
+  }
+
+  .hamster-loading-bar {
+    border-radius: 5px;
+  }
+}
