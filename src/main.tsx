@@ -1,52 +1,41 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import ReactDOM from "react-dom/client"
-import { Toaster } from "sonner"
-
-import App from "./App"
-import { MotionProvider } from "./components/motion/motion-provider"
-import { SortProvider } from "./context/sort-provider"
-import { StatusProvider } from "./context/status-provider"
-import { WebSocketProvider } from "./context/websocket-provider"
-import "./i18n"
 import "flag-icons/css/flag-icons.min.css"
 import "font-logos/assets/font-logos.css"
+import ReactDOM from "react-dom/client"
+import { RouterProvider } from "react-router-dom"
 import "remixicon/fonts/remixicon.css"
+import { Toaster } from "sonner"
+
+import "./i18n"
 import "./index.css"
-import "./styles/tokens.css"
-import "./styles/loading.css"
+import { AppProviders } from "./providers"
+import { router } from "./router"
+import "./styles/detail.css"
+import "./styles/home.css"
 import "./styles/layout.css"
+import "./styles/loading.css"
+import "./styles/map.css"
+import "./styles/monitor.css"
 import "./styles/search.css"
 import "./styles/shared.css"
-import "./styles/map.css"
-import "./styles/home.css"
-import "./styles/detail.css"
-import "./styles/monitor.css"
-
-const queryClient = new QueryClient()
+import "./styles/tokens.css"
+import "./styles/workspace.css"
 
 const rootEl = document.getElementById("root")!
 ReactDOM.createRoot(rootEl).render(
-  <MotionProvider>
-    <QueryClientProvider client={queryClient}>
-      <WebSocketProvider path="/ws/server">
-        <StatusProvider>
-          <SortProvider>
-            <App />
-            <Toaster
-              duration={1000}
-              toastOptions={{
-                classNames: {
-                  default: "w-fit rounded-full px-2.5 py-1.5 bg-neutral-100 border border-neutral-200 backdrop-blur-xl shadow-none",
-                },
-              }}
-              position="top-center"
-              className={"flex items-center justify-center"}
-            />
-          </SortProvider>
-        </StatusProvider>
-      </WebSocketProvider>
-    </QueryClientProvider>
-  </MotionProvider>,
+  <AppProviders>
+    <RouterProvider router={router} />
+    <Toaster
+      theme="light"
+      duration={1000}
+      toastOptions={{
+        classNames: {
+          default: "w-fit rounded-md border border-border bg-white px-2.5 py-1.5 text-foreground shadow-lg",
+        },
+      }}
+      position="top-center"
+      className="flex items-center justify-center"
+    />
+  </AppProviders>,
 )
 
 requestAnimationFrame(() => {

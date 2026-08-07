@@ -379,7 +379,10 @@ export default function MiniLineChart({
     normalizedSeries.forEach((s, idx) => {
       const v = valueMapList[idx]?.get(t)
       const isLoss = s.yAxisIndex === 1 || String(s.name).includes("丢包") || s.id.endsWith("-loss")
-      const base = String(s.name || "").replace(/\s*丢包\s*$/, "").trim() || s.id.replace(/-(delay|loss)$/, "")
+      const base =
+        String(s.name || "")
+          .replace(/\s*丢包\s*$/, "")
+          .trim() || s.id.replace(/-(delay|loss)$/, "")
       const existing = map.get(base) || { name: base, color: s.color }
       if (isLoss) existing.loss = typeof v === "number" && Number.isFinite(v) ? v : null
       else existing.delay = typeof v === "number" && Number.isFinite(v) ? v : null
@@ -510,13 +513,17 @@ export default function MiniLineChart({
         <g className="chart-grid">
           {yTicks.map((tick) => {
             const y = paddingTop + plotHeight - clamp01(tick / yMax) * plotHeight
-            return <line key={`y_${tick}`} x1={paddingLeft} x2={paddingLeft + plotWidth} y1={y} y2={y} stroke="rgba(255,255,255,0.10)" strokeWidth={1} />
+            return (
+              <line key={`y_${tick}`} x1={paddingLeft} x2={paddingLeft + plotWidth} y1={y} y2={y} stroke="rgba(82,105,128,0.14)" strokeWidth={1} />
+            )
           })}
           {timeTicks.map((tick) => {
             const { xMin, xMax } = xRange
             const span = xMax - xMin || 1
             const x = paddingLeft + clamp01((tick - xMin) / span) * plotWidth
-            return <line key={`x_${tick}`} x1={x} x2={x} y1={paddingTop} y2={paddingTop + plotHeight} stroke="rgba(255,255,255,0.06)" strokeWidth={1} />
+            return (
+              <line key={`x_${tick}`} x1={x} x2={x} y1={paddingTop} y2={paddingTop + plotHeight} stroke="rgba(82,105,128,0.09)" strokeWidth={1} />
+            )
           })}
         </g>
 
@@ -525,15 +532,7 @@ export default function MiniLineChart({
             const y = paddingTop + plotHeight - clamp01(tick / yMax) * plotHeight
             const label = yAxisLabelFormatter(tick)
             return (
-              <text
-                key={`yl_${tick}`}
-                x={paddingLeft - 6}
-                y={y + 4}
-                textAnchor="end"
-                fontSize="12"
-                fontWeight="700"
-                fill="rgba(221,221,221,0.75)"
-              >
+              <text key={`yl_${tick}`} x={paddingLeft - 6} y={y + 4} textAnchor="end" fontSize="12" fontWeight="700" fill="rgba(68,88,110,0.84)">
                 {label}
               </text>
             )
@@ -551,7 +550,7 @@ export default function MiniLineChart({
                   textAnchor="start"
                   fontSize="12"
                   fontWeight="700"
-                  fill="rgba(221,221,221,0.65)"
+                  fill="rgba(68,88,110,0.70)"
                 >
                   {label}
                 </text>
@@ -572,7 +571,7 @@ export default function MiniLineChart({
                 textAnchor={isFirst ? "start" : isLast ? "end" : "middle"}
                 fontSize="12"
                 fontWeight="700"
-                fill="rgba(221,221,221,0.70)"
+                fill="rgba(68,88,110,0.76)"
               >
                 {label}
               </text>
@@ -585,12 +584,7 @@ export default function MiniLineChart({
             {p.segments.map((seg, index) => (
               <g key={`${p.id}_${index}`}>
                 {p.isLoss && seg.fillD ? (
-                  <path
-                    d={seg.fillD}
-                    fill={p.color}
-                    opacity={(p.opacity ?? 1) * 0.5}
-                    vectorEffect="non-scaling-stroke"
-                  />
+                  <path d={seg.fillD} fill={p.color} opacity={(p.opacity ?? 1) * 0.5} vectorEffect="non-scaling-stroke" />
                 ) : null}
                 {seg.strokeD ? (
                   <path
@@ -622,23 +616,12 @@ export default function MiniLineChart({
         ))}
 
         {crosshairX !== null ? (
-          <line
-            x1={crosshairX}
-            x2={crosshairX}
-            y1={paddingTop}
-            y2={paddingTop + plotHeight}
-            stroke="rgba(255,255,255,0.65)"
-            strokeWidth={1.5}
-          />
+          <line x1={crosshairX} x2={crosshairX} y1={paddingTop} y2={paddingTop + plotHeight} stroke="rgba(71,95,117,0.55)" strokeWidth={1.5} />
         ) : null}
       </svg>
 
       {tooltipData ? (
-        <div
-          ref={tooltipRef}
-          className="chart-tooltip"
-          style={tooltipStyle || undefined}
-        >
+        <div ref={tooltipRef} className="chart-tooltip" style={tooltipStyle || undefined}>
           <div className="chart-tooltip-time">{tooltipData.label}</div>
           <div className="chart-tooltip-rows">
             {tooltipData.rows.map((r) => (

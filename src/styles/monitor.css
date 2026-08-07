@@ -392,6 +392,7 @@
 .server-monitor__minutes {
   position: relative;
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   height: var(--minute-item-height);
   background: rgba(255, 255, 255, 0.2);
@@ -406,6 +407,7 @@
   line-height: var(--minute-item-height);
   font-size: 12px;
   text-align: center;
+  white-space: nowrap;
   cursor: pointer;
   color: #aaa;
   transition: color 0.3s;

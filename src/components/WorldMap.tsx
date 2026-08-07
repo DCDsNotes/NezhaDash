@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from "react"
-
+import { useWorldMapSize } from "@/hooks/use-world-map-size"
 import { countryCoordinates } from "@/lib/geo-limit"
 import { cn } from "@/lib/utils"
 import { count2size, findIntersectingGroups, lonLatToMapXY } from "@/lib/world-map"
-import { useWorldMapSize } from "@/hooks/use-world-map-size"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 
 import WorldMapPoint from "./WorldMapPoint"
 
@@ -122,7 +121,7 @@ export default function WorldMap({
         ))}
       </div>
       {tipsShow && (
-        <div className="world-map-tips" style={tipsStyle as React.CSSProperties}>
+        <div className="world-map-tips" style={tipsStyle as React.CSSProperties} role="status">
           <span>{tipsContent}</span>
         </div>
       )}

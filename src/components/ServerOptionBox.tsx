@@ -1,3 +1,4 @@
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { cn } from "@/lib/utils"
 import { useMemo } from "react"
 
@@ -27,16 +28,13 @@ export function ServerOptionBox({
   const activeValue = value ?? ""
   const safeOptions = useMemo(() => (Array.isArray(options) ? options : []), [options])
 
-  function toggleModelValue(item: ServerOptionItem) {
-    if (activeValue === item.value) {
-      if (acceptEmpty) onChange("")
-      return
-    }
-    onChange(item.value)
-  }
-
   return (
-    <div
+    <ToggleGroup
+      type="single"
+      value={activeValue}
+      onValueChange={(nextValue) => {
+        if (nextValue || acceptEmpty) onChange(nextValue)
+      }}
       className={cn(
         "server-options",
         {
@@ -44,24 +42,25 @@ export function ServerOptionBox({
         },
         className,
       )}
+      aria-label="服务器筛选"
     >
       {safeOptions.map((item) => (
-        <div
+        <ToggleGroupItem
           key={item.key}
+          value={item.value}
           className={cn("server-options__item", {
             "server-options__item--with-icon": !!item.icon,
-            "server-options__item--active": activeValue === item.value,
           })}
+          aria-label={item.label}
           title={item.title || undefined}
-          onClick={() => toggleModelValue(item)}
         >
           {item.icon ? (
-            <i className={cn("server-options__icon", item.icon)} title={item.label} />
+            <i className={cn("server-options__icon", item.icon)} aria-hidden="true" />
           ) : (
             <span className="server-options__label">{item.label}</span>
           )}
-        </div>
+        </ToggleGroupItem>
       ))}
-    </div>
+    </ToggleGroup>
   )
 }

@@ -239,6 +239,14 @@
   overflow-y: auto;
 }
 
+.server-transfer-panel__empty {
+  min-height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.65);
+}
+
 .server-transfer-panel__list::-webkit-scrollbar {
   width: 8px;
 }

@@ -1,6 +1,5 @@
-import React from "react"
-
 import { cn } from "@/lib/utils"
+import React from "react"
 
 type PointInfo = {
   key?: string
@@ -22,17 +21,10 @@ function hashToDelay(key: string | undefined) {
   return `${ms / 1000}s`
 }
 
-export default function WorldMapPoint({
-  info,
-  onTap,
-  className,
-}: {
-  info: PointInfo
-  onTap?: (info: PointInfo) => void
-  className?: string
-}) {
+export default function WorldMapPoint({ info, onTap, className }: { info: PointInfo; onTap?: (info: PointInfo) => void; className?: string }) {
   return (
-    <div
+    <button
+      type="button"
       className={cn("world-map-point", info.type ? `world-map-point--${info.type}` : "world-map-point--default", className)}
       style={
         {
@@ -43,9 +35,10 @@ export default function WorldMapPoint({
         } as React.CSSProperties
       }
       title={info.label || ""}
+      aria-label={info.label || "服务器位置"}
       onClick={() => onTap?.(info)}
     >
-      <div className="point-block" />
-    </div>
+      <span className="point-block" />
+    </button>
   )
 }

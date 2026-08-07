@@ -1,229 +1,147 @@
+import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useNezhaWsData } from "@/hooks/use-nezha-ws-data"
 import { useWebSocketContext } from "@/hooks/use-websocket-context"
-import { fetchLoginUser, fetchSetting } from "@/lib/nezha-api"
-import { getServerDailyTransferList, getServerHeaderStats, getServerStatusCounts, type ServerDailyTransferViewModel } from "@/lib/server-view-model"
+import { loginUserQueryOptions, settingQueryOptions } from "@/lib/query-options"
+import { type ServerDailyTransferViewModel, getServerDailyTransferList, getServerHeaderStats, getServerStatusCounts } from "@/lib/server-view-model"
 import { cn } from "@/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import { AnimatePresence, m } from "framer-motion"
-import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { createPortal } from "react-dom"
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 
 import { LoadingSpinner } from "./loading/loading-spinner"
 
 function Header() {
-  const navigate = useNavigate()
-
-  const { data: settingData } = useQuery({
-    queryKey: ["setting"],
-    queryFn: () => fetchSetting(),
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
-  })
-
+  const { data: settingData } = useQuery(settingQueryOptions())
   const { data: parsedWsData } = useNezhaWsData()
   const [showTransferPanel, setShowTransferPanel] = useState(false)
-
-  const siteName = settingData?.data?.config?.site_name
-
-  const nezhaWsData = parsedWsData
+  const siteName = settingData?.data?.config?.site_name || "哪吒探针"
 
   const serverCount = useMemo(() => {
-    if (!nezhaWsData || !Array.isArray(nezhaWsData.servers)) {
-      return null
-    }
-    return getServerStatusCounts(nezhaWsData.now, nezhaWsData.servers)
-  }, [nezhaWsData?.now, nezhaWsData?.servers])
+    if (!parsedWsData?.servers) return null
+    return getServerStatusCounts(parsedWsData.now, parsedWsData.servers)
+  }, [parsedWsData])
 
   const serverStat = useMemo(() => {
-    if (!nezhaWsData || !Array.isArray(nezhaWsData.servers)) return null
-    return getServerHeaderStats(nezhaWsData.now, nezhaWsData.servers)
-  }, [nezhaWsData?.now, nezhaWsData?.servers])
+    if (!parsedWsData?.servers) return null
+    return getServerHeaderStats(parsedWsData.now, parsedWsData.servers)
+  }, [parsedWsData])
 
   const dailyTransferList = useMemo(() => {
-    if (!nezhaWsData || !Array.isArray(nezhaWsData.servers)) return []
-    return getServerDailyTransferList(nezhaWsData.now, nezhaWsData.servers)
-  }, [nezhaWsData?.now, nezhaWsData?.servers])
+    if (!parsedWsData?.servers) return []
+    return getServerDailyTransferList(parsedWsData.now, parsedWsData.servers)
+  }, [parsedWsData])
 
   useEffect(() => {
-    document.title = siteName || "哪吒监控"
+    document.title = siteName
   }, [siteName])
 
-  useEffect(() => {
-    if (!showTransferPanel) return
-
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = "hidden"
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return
-      event.stopPropagation()
-      setShowTransferPanel(false)
-    }
-
-    window.addEventListener("keydown", handleKeyDown)
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown)
-      document.body.style.overflow = previousOverflow
-    }
-  }, [showTransferPanel])
-
   return (
-    <div
-      className={cn("layout-header", {
-        "layout-header--show-server-stat": !!serverStat,
-      })}
-      style={
-        {
-          ["--layout-header-container-width" as `--${string}`]: "var(--list-container-width)",
-        } as CSSProperties
-      }
-    >
-      <div className="layer-header-container">
-        <div className="left-box">
-          <span
-            className="site-name"
-            onClick={() => {
-              sessionStorage.removeItem("selectedGroup")
-              navigate("/")
-            }}
-          >
-            {siteName || "哪吒监控"}
+    <header className="dashboard-header">
+      <div className="dashboard-header__inner">
+        <Link to="/" className="dashboard-brand" aria-label="返回哪吒探针首页">
+          <span className="dashboard-brand__mark" aria-hidden="true">
+            <i className="ri-pulse-line" />
           </span>
-        </div>
-        <div className="right-box">
-          {serverCount?.total ? (
-            <div className="server-count-group">
-              <span className="server-count server-count--online" title="在线">
-                <span className="icon ri-hard-drive-3-line" />
-                <span className="value">{serverCount.online}</span>
+          <span>
+            <strong>{siteName}</strong>
+            <small>实时节点监控</small>
+          </span>
+        </Link>
+
+        <div className="dashboard-header__tools">
+          {serverCount ? (
+            <div className="dashboard-header__counts" aria-label={`共 ${serverCount.total} 台服务器`}>
+              <span className="dashboard-count dashboard-count--online">
+                <i className="ri-checkbox-blank-circle-fill" aria-hidden="true" />
+                在线 {serverCount.online}
               </span>
-              <span className="server-count server-count--offline" title="离线">
-                <span className="icon ri-hard-drive-3-line" />
-                <span className="value">{serverCount.offline}</span>
+              <span className="dashboard-count dashboard-count--offline">
+                <i className="ri-checkbox-blank-circle-fill" aria-hidden="true" />
+                离线 {serverCount.offline}
               </span>
             </div>
           ) : null}
 
           {serverStat ? (
-            <div className="server-stat-group" onClick={() => setShowTransferPanel(true)} title="查看今日各服务器流量">
-              <div className="server-stat server-stat--transfer">
-                <span className="server-stat-label">
-                  <span className="text">今日</span>
-                </span>
-                <div className="server-stat-content">
-                  <span className="server-stat-item server-stat-item--in">
-                    <span className="ri-download-line" />
-                    <span className="text-value">{serverStat.transfer.inData.value}</span>
-                    <span className="text-unit">{serverStat.transfer.inData.unit}</span>
-                  </span>
-                  <span className="server-stat-item server-stat-item--out">
-                    <span className="ri-upload-line" />
-                    <span className="text-value">{serverStat.transfer.outData.value}</span>
-                    <span className="text-unit">{serverStat.transfer.outData.unit}</span>
-                  </span>
-                </div>
-              </div>
-              <div className="server-stat server-stat--net-speed">
-                <span className="server-stat-label">
-                  <span className="text">网速</span>
-                </span>
-                <div className="server-stat-content">
-                  <span className="server-stat-item server-stat-item--in">
-                    <span className="ri-arrow-down-line" />
-                    <span className="text-value">{serverStat.netSpeed.inData.value}</span>
-                    <span className="text-unit">{serverStat.netSpeed.inData.unit}</span>
-                  </span>
-                  <span className="server-stat-item server-stat-item--out">
-                    <span className="ri-arrow-up-line" />
-                    <span className="text-value">{serverStat.netSpeed.outData.value}</span>
-                    <span className="text-unit">{serverStat.netSpeed.outData.unit}</span>
-                  </span>
-                </div>
-              </div>
-            </div>
+            <Dialog open={showTransferPanel} onOpenChange={setShowTransferPanel}>
+              <DialogTrigger asChild>
+                <button type="button" className="dashboard-header__transfer" title="查看今日流量">
+                  <span>今日流量</span>
+                  <strong>
+                    <i className="ri-arrow-down-line" aria-hidden="true" /> {serverStat.transfer.inData.value}
+                  </strong>
+                  <strong>
+                    <i className="ri-arrow-up-line" aria-hidden="true" /> {serverStat.transfer.outData.value}
+                  </strong>
+                </button>
+              </DialogTrigger>
+              <ServerDailyTransferPanel list={dailyTransferList} />
+            </Dialog>
           ) : null}
-
-          {showTransferPanel ? <ServerDailyTransferPanel list={dailyTransferList} onClose={() => setShowTransferPanel(false)} /> : null}
 
           <DashboardLink />
         </div>
       </div>
-    </div>
+    </header>
   )
 }
 
-function ServerDailyTransferPanel({ list, onClose }: { list: ServerDailyTransferViewModel[]; onClose: () => void }) {
-  return createPortal(
-    <>
-      <div className="server-search__backdrop" onClick={onClose} />
-      <div className="server-search__panel server-transfer-panel">
-        <div className="server-transfer-panel__head">
-          <div className="server-transfer-panel__title">今日流量</div>
-        </div>
-        <div className="server-transfer-panel__sub">统计周期 0:00:00-23:59:59</div>
-        <div className="server-transfer-panel__list">
-          {list.map((item) => (
-            <div key={item.id} className="server-transfer-panel__item">
-              <div className="server-transfer-panel__name">
-                <span className={cn("server-transfer-panel__dot", { "server-transfer-panel__dot--offline": !item.online })} />
-                <span className="server-transfer-panel__name-text">{item.name}</span>
+function ServerDailyTransferPanel({ list }: { list: ServerDailyTransferViewModel[] }) {
+  return (
+    <DialogContent className="dashboard-dialog dashboard-transfer-dialog">
+      <DialogTitle className="dashboard-dialog__title">今日流量</DialogTitle>
+      <DialogDescription className="dashboard-dialog__description">统计周期 00:00 至 23:59</DialogDescription>
+      <div className="dashboard-transfer-list">
+        {list.length > 0 ? (
+          list.map((item) => (
+            <div key={item.id} className="dashboard-transfer-row">
+              <div className="dashboard-transfer-row__name">
+                <span className={cn("dashboard-status-dot", { "dashboard-status-dot--offline": !item.online })} />
+                <span>{item.name}</span>
               </div>
-              <div className="server-transfer-panel__values">
-                <span className="server-transfer-panel__value server-transfer-panel__value--in" title={item.transferInTitle}>
-                  <i className="ri-download-line" />
-                  <span>{item.transferIn}</span>
+              <div className="dashboard-transfer-row__values">
+                <span title={item.transferInTitle}>
+                  <i className="ri-download-line" aria-hidden="true" /> {item.transferIn}
                 </span>
-                <span className="server-transfer-panel__value server-transfer-panel__value--out" title={item.transferOutTitle}>
-                  <i className="ri-upload-line" />
-                  <span>{item.transferOut}</span>
+                <span title={item.transferOutTitle}>
+                  <i className="ri-upload-line" aria-hidden="true" /> {item.transferOut}
                 </span>
-                <span className="server-transfer-panel__value server-transfer-panel__value--total" title={item.transferTotalTitle}>
-                  <i className="ri-exchange-line" />
-                  <span>{item.transferTotal}</span>
+                <span title={item.transferTotalTitle}>
+                  <i className="ri-exchange-line" aria-hidden="true" /> {item.transferTotal}
                 </span>
               </div>
             </div>
-          ))}
-        </div>
+          ))
+        ) : (
+          <div className="dashboard-empty">暂无流量数据</div>
+        )}
       </div>
-    </>,
-    document.body,
+    </DialogContent>
   )
 }
 
 export function RefreshToast() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-
   const { needReconnect } = useWebSocketContext()
 
-  if (!needReconnect) {
-    return null
-  }
-
-  if (needReconnect) {
+  useEffect(() => {
+    if (!needReconnect) return
     sessionStorage.removeItem("needRefresh")
-    setTimeout(() => {
-      navigate(0)
-    }, 1000)
-  }
+    const timeoutId = window.setTimeout(() => navigate(0), 1000)
+    return () => window.clearTimeout(timeoutId)
+  }, [navigate, needReconnect])
 
   return (
     <AnimatePresence>
-      <m.div
-        initial={{ opacity: 0, filter: "blur(10px)", scale: 0.8 }}
-        animate={{ opacity: 1, filter: "blur(0px)", scale: 1 }}
-        exit={{ opacity: 0, filter: "blur(10px)", scale: 0.8 }}
-        transition={{ type: "spring", duration: 0.8 }}
-        className="fixed left-1/2 top-8 z-[999] flex -translate-x-1/2 items-center justify-between gap-4 rounded-full border border-solid bg-white px-2 py-1.5 shadow-xl shadow-black/5 dark:border-stone-700 dark:bg-stone-800 dark:shadow-none"
-      >
-        <section className="flex items-center gap-1.5">
+      {needReconnect ? (
+        <m.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="dashboard-refresh-toast">
           <LoadingSpinner />
-          <p className="text-[0.78125rem] font-medium">{t("refreshing")}...</p>
-        </section>
-      </m.div>
+          <span>{t("refreshing")}...</span>
+        </m.div>
+      ) : null}
     </AnimatePresence>
   )
 }
@@ -231,49 +149,21 @@ export function RefreshToast() {
 function DashboardLink() {
   const { setNeedReconnect } = useWebSocketContext()
   const previousLoginState = useRef<boolean | null>(null)
-  const {
-    data: userData,
-    isFetched,
-    isLoadingError,
-    isError,
-    refetch,
-  } = useQuery({
-    queryKey: ["login-user"],
-    queryFn: () => fetchLoginUser(),
-    refetchOnMount: false,
-    refetchOnWindowFocus: true,
-    refetchIntervalInBackground: true,
-    refetchInterval: 1000 * 30,
-    retry: 0,
-  })
+  const { data: userData, isFetched, isError } = useQuery(loginUserQueryOptions())
+  const isLogin = isError ? false : userData ? !!userData.data?.id && !!document.cookie : false
 
-  const isLogin = isError ? false : userData ? !!userData?.data?.id && !!document.cookie : false
-
-  if (isLoadingError) {
+  useEffect(() => {
+    if (!isFetched && !isError) return
+    if (previousLoginState.current !== null && previousLoginState.current !== isLogin) setNeedReconnect(true)
     previousLoginState.current = isLogin
-  }
-
-  useEffect(() => {
-    refetch()
-  }, [document.cookie])
-
-  useEffect(() => {
-    if (isFetched || isError) {
-      // 只有当登录状态发生变化时才设置needReconnect
-      if (previousLoginState.current !== null && previousLoginState.current !== isLogin) {
-        setNeedReconnect(true)
-      }
-      previousLoginState.current = isLogin
-    }
-  }, [isLogin])
+  }, [isError, isFetched, isLogin, setNeedReconnect])
 
   return (
-    <div className="nezha-user-info-group">
-      <a href={"/dashboard"} className="dashboard-url" title={isLogin ? "访问管理后台" : "登录管理后台"} target="_blank" rel="noopener noreferrer">
-        <span className={cn({ "ri-dashboard-3-line": isLogin, "ri-user-line": !isLogin })} />
-        <span>{isLogin ? "管理后台" : "登录"}</span>
-      </a>
-    </div>
+    <a href="/dashboard" className="dashboard-user-link" title={isLogin ? "访问管理后台" : "登录管理后台"} target="_blank" rel="noopener noreferrer">
+      <i className={isLogin ? "ri-dashboard-3-line" : "ri-user-line"} aria-hidden="true" />
+      <span>{isLogin ? "管理后台" : "登录"}</span>
+    </a>
   )
 }
+
 export default Header

@@ -11,10 +11,9 @@ import { serverIdToServerKey } from "@/lib/server-key"
 import { getServerStatus } from "@/lib/server-view-model"
 import { cn } from "@/lib/utils"
 import { useEffect, useMemo } from "react"
-import { useNavigate, useParams } from "react-router-dom"
+import { Link, Navigate, useParams } from "react-router-dom"
 
 export default function ServerDetail() {
-  const navigate = useNavigate()
   const { data: nezhaWsData, lastMessage, connected } = useNezhaWsData()
   const { width: worldMapWidth, height: worldMapHeight } = useWorldMapSize()
 
@@ -45,8 +44,7 @@ export default function ServerDetail() {
   }, [server])
 
   if (!serverKey) {
-    navigate("/404")
-    return null
+    return <Navigate to="/404" replace />
   }
 
   if (!serverId) {
@@ -70,8 +68,7 @@ export default function ServerDetail() {
         </div>
       )
     }
-    navigate("/404")
-    return null
+    return <Navigate to="/404" replace />
   }
 
   const wsNow = nezhaWsData?.now ?? Date.now()
@@ -83,6 +80,16 @@ export default function ServerDetail() {
         "server-detail-page--offline": server && !isOnline,
       })}
     >
+      <div className="server-detail-page__topbar">
+        <Link to="/" className="server-detail-page__back">
+          <i className="ri-arrow-left-line" aria-hidden="true" />
+          <span>返回服务器列表</span>
+        </Link>
+        <span className={cn("server-detail-page__state", { "server-detail-page__state--offline": !isOnline })}>
+          <i className="ri-checkbox-blank-circle-fill" aria-hidden="true" />
+          {isOnline ? "正在运行" : "暂时离线"}
+        </span>
+      </div>
       <div className="world-map-box top-world-map">
         <WorldMap locations={locations} mapWidth={worldMapWidth} />
       </div>

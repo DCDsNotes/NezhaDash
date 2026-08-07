@@ -1,43 +1,46 @@
 import { useQuery } from "@tanstack/react-query"
-import React, { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Route, BrowserRouter as Router, Routes } from "react-router-dom"
+import { Outlet } from "react-router-dom"
 
 import ErrorBoundary from "./components/ErrorBoundary"
-import Footer from "./components/Footer"
 import Header, { RefreshToast } from "./components/Header"
-import SearchBox from "./components/SearchBox"
 import { useBackground } from "./hooks/use-background"
 import { InjectContext } from "./lib/inject"
-import { fetchSetting } from "./lib/nezha-api"
+import { settingQueryOptions } from "./lib/query-options"
 import { cn } from "./lib/utils"
 import ErrorPage from "./pages/ErrorPage"
-import NotFound from "./pages/NotFound"
-import Server from "./pages/Server"
-import ServerDetail from "./pages/ServerDetail"
 
-// Route checker component
-const RouteChecker: React.FC = () => {
-  return <MainApp />
-}
-
-const MainApp: React.FC = () => {
-  const { data: settingData, error } = useQuery({
-    queryKey: ["setting"],
-    queryFn: () => fetchSetting(),
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
-  })
+export default function App() {
+  const { data: settingData, error } = useQuery(settingQueryOptions())
   const { i18n } = useTranslation()
-  const [isCustomCodeInjected, setIsCustomCodeInjected] = useState(false)
+  const [injectedCustomCode, setInjectedCustomCode] = useState<string | null>(null)
   const { backgroundImage: customBackgroundImage } = useBackground()
+  const customCode = settingData?.data?.config?.custom_code || ""
+  const configuredLanguage = settingData?.data?.config?.language
 
   useEffect(() => {
-    if (settingData?.data?.config?.custom_code) {
-      InjectContext(settingData?.data?.config?.custom_code)
-      setIsCustomCodeInjected(true)
+    if (!customCode) {
+      setInjectedCustomCode(null)
+      return
     }
-  }, [settingData?.data?.config?.custom_code])
+
+    let active = true
+    setInjectedCustomCode(null)
+    void InjectContext(customCode).then(() => {
+      if (active) setInjectedCustomCode(customCode)
+    })
+
+    return () => {
+      active = false
+    }
+  }, [customCode])
+
+  useEffect(() => {
+    if (configuredLanguage && !localStorage.getItem("language")) {
+      void i18n.changeLanguage(configuredLanguage)
+    }
+  }, [configuredLanguage, i18n])
 
   if (error) {
     return <ErrorPage code={500} message={error.message} />
@@ -47,15 +50,11 @@ const MainApp: React.FC = () => {
     return null
   }
 
-  if (settingData?.data?.config?.custom_code && !isCustomCodeInjected) {
+  if (customCode && injectedCustomCode !== customCode) {
     return null
   }
 
-  if (settingData?.data?.config?.language && !localStorage.getItem("language")) {
-    i18n.changeLanguage(settingData?.data?.config?.language)
-  }
-
-  const customMobileBackgroundImage = window.CustomMobileBackgroundImage !== "" ? window.CustomMobileBackgroundImage : undefined
+  const customMobileBackgroundImage = window.CustomMobileBackgroundImage || undefined
 
   return (
     <ErrorBoundary>
@@ -67,37 +66,16 @@ const MainApp: React.FC = () => {
           style={customBackgroundImage ? { backgroundImage: `url(${customBackgroundImage})`, backgroundSize: "cover" } : undefined}
         />
         {customMobileBackgroundImage && (
-          <div
-            className="nazha-layout-bg sm:hidden"
-            style={{ backgroundImage: `url(${customMobileBackgroundImage})`, backgroundSize: "cover" }}
-          />
+          <div className="nazha-layout-bg sm:hidden" style={{ backgroundImage: `url(${customMobileBackgroundImage})`, backgroundSize: "cover" }} />
         )}
         <div className="nazha-layout-main">
-          <main className="flex min-h-screen w-full flex-1 flex-col gap-0 p-0">
-            <RefreshToast />
-            <Header />
-            <Routes>
-              <Route path="/" element={<Server />} />
-              <Route path="/server/:serverKey" element={<ServerDetail />} />
-              <Route path="/error" element={<ErrorPage />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <Footer />
-            <SearchBox />
+          <RefreshToast />
+          <Header />
+          <main className="min-h-[calc(100dvh-4rem)] w-full">
+            <Outlet />
           </main>
         </div>
       </div>
     </ErrorBoundary>
   )
 }
-
-// Main App wrapper with router
-const App: React.FC = () => {
-  return (
-    <Router basename={import.meta.env.BASE_URL}>
-      <RouteChecker />
-    </Router>
-  )
-}
-
-export default App

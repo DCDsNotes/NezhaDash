@@ -1,115 +1,60 @@
 :root {
   --pc-ui-scale: 1;
-
-  --layout-header-height: 60px;
-
-  --list-container-width: 960px;
-  --detail-container-width: 900px;
-
-  --global-background-color: #181f30;
-  --global-text-color: #ddd;
-  --global-link-color: #2ca9e1;
-
-  --layout-main-bg-color: rgba(20, 30, 40, 0.75);
-  --layout-bg-color: #181f30;
-
-  --world-map-point-color: #fff143;
-
-  --server-online-color: #74dbef;
-  --server-offline-color: #f5b199;
-
-  --duration-color: #89c3eb;
-  --transfer-color: #f9ed69;
-  --transfer-in-color: var(--transfer-color);
-  --transfer-out-color: #90f2ff;
-  --net-speed-color: #90f2ff;
-  --net-speed-in-color: #f5b199;
-  --net-speed-out-color: #89c3eb;
-  --conn-color: #90f2ff;
-  --conn-tcp-color: #89c3eb;
-  --conn-udp-color: #2ca9e1;
-  --load-color: #90f2ff;
-  --process-color: #f5b199;
-  --cpu-text-color: #89c3eb;
-  --mem-text-color: #2ca9e1;
-  --disk-text-color: #90f2ff;
-  --swap-text-color: #f5b199;
-
-  --list-item-price-color: #eee;
-  --list-item-buy-link-color: #ffc300;
-  --list-item-buy-link-color-hover: #ff9900;
-  --public-note-tag-color: #ccc;
-  --public-note-tag-bg: linear-gradient(125deg, #676ef7, #41459c);
-
-  --option-high-color: #74dbef;
-  --option-high-color-active: rgba(116, 219, 239, 0.35);
-
-  --server-status-value-color: #a1eafb;
-  --server-status-label-color: #ddd;
-  --server-status-content-color: #eee;
-
-  --background: 222 33% 14%;
-  --foreground: 0 0% 87%;
-  --card: 222 33% 14%;
-  --card-foreground: 0 0% 87%;
-  --popover: 222 33% 14%;
-  --popover-foreground: 0 0% 87%;
-  --primary: 0 0% 87%;
-  --primary-foreground: 222 33% 14%;
-  --secondary: 222 22% 20%;
-  --secondary-foreground: 0 0% 87%;
-  --muted: 222 22% 20%;
-  --muted-foreground: 0 0% 78%;
-  --accent: 222 22% 20%;
-  --accent-foreground: 0 0% 87%;
-  --destructive: 0 62.8% 40%;
-  --destructive-foreground: 0 0% 87%;
-  --border: 222 22% 20%;
-  --input: 222 22% 20%;
-  --ring: 0 0% 87%;
-  --radius: 1rem;
-  --chart-1: 220 70% 50%;
-  --chart-2: 340 75% 55%;
-  --chart-3: 30 80% 55%;
-  --chart-4: 280 65% 60%;
-  --chart-5: 160 60% 45%;
-  --chart-6: 180 50% 50%;
-  --chart-7: 216 50% 50%;
-  --chart-8: 252 50% 50%;
-  --chart-9: 288 50% 50%;
-  --chart-10: 324 50% 50%;
-}
-
-@media screen and (max-width: 1920px) and (min-width: 1025px) {
-  :root {
-    --pc-ui-scale: 0.9;
-    --layout-header-height: 54px;
-    --list-container-width: 864px;
-    --detail-container-width: 684px;
-  }
-
-  html {
-    font-size: 14.4px;
-  }
-}
-
-@media screen and (max-width: 1024px) {
-  :root {
-    --list-container-width: 800px;
-    --detail-container-width: 800px;
-  }
-}
-
-@media screen and (max-width: 800px) {
-  :root {
-    --list-container-width: 720px;
-    --detail-container-width: 720px;
-  }
-}
-
-@media screen and (max-width: 720px) {
-  :root {
-    --list-container-width: 100vw;
-    --detail-container-width: 100vw;
-  }
+  --layout-header-height: 64px;
+  --list-container-width: 1120px;
+  --detail-container-width: 960px;
+  --global-background-color: #f6f8fa;
+  --global-text-color: #243248;
+  --global-link-color: #0b9f72;
+  --layout-main-bg-color: #f6f8fa;
+  --layout-bg-color: #f6f8fa;
+  --world-map-point-color: #0aa579;
+  --server-online-color: #0aa579;
+  --server-offline-color: #d97a59;
+  --duration-color: #2381a9;
+  --transfer-color: #bd8a08;
+  --transfer-in-color: #bd8a08;
+  --transfer-out-color: #0e9c84;
+  --net-speed-color: #0e9c84;
+  --net-speed-in-color: #d97a59;
+  --net-speed-out-color: #2381a9;
+  --conn-color: #0e9c84;
+  --conn-tcp-color: #2381a9;
+  --conn-udp-color: #0b78ab;
+  --load-color: #0e9c84;
+  --process-color: #d97a59;
+  --cpu-text-color: #2381a9;
+  --mem-text-color: #0b78ab;
+  --disk-text-color: #0e9c84;
+  --swap-text-color: #d97a59;
+  --list-item-price-color: #243248;
+  --list-item-buy-link-color: #0b9f72;
+  --list-item-buy-link-color-hover: #087b59;
+  --public-note-tag-color: #466179;
+  --public-note-tag-bg: #edf4f1;
+  --option-high-color: #0b9f72;
+  --option-high-color-active: #dff5eb;
+  --server-status-value-color: #087c60;
+  --server-status-label-color: #6d7c90;
+  --server-status-content-color: #243248;
+  --background: 210 33% 97%;
+  --foreground: 216 27% 21%;
+  --card: 0 0% 100%;
+  --card-foreground: 216 27% 21%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 216 27% 21%;
+  --primary: 161 86% 33%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 28% 95%;
+  --secondary-foreground: 216 27% 21%;
+  --muted: 210 25% 94%;
+  --muted-foreground: 213 15% 43%;
+  --accent: 161 55% 94%;
+  --accent-foreground: 161 86% 24%;
+  --destructive: 6 68% 46%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 214 25% 88%;
+  --input: 214 25% 84%;
+  --ring: 161 86% 33%;
+  --radius: 0.55rem;
 }

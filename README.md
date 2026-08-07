@@ -5,3 +5,7 @@
 > [!NOTE]
 > 此项目为 nezha-dash 的官方实现，作为哪吒监控 V1 版本的默认前端，功能上可能与 nezha-dash 有所不同。
 > https://github.com/hamster1963/nezha-dash
+
+## 开发文档
+
+- [前端架构与功能说明](./ARCHITECTURE.md)

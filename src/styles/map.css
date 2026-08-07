@@ -79,6 +79,13 @@
   z-index: 100;
 }
 
+.world-map-point:focus-visible {
+  z-index: 100;
+  outline: 2px solid var(--option-high-color);
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+
 .world-map-point .point-block {
   position: absolute;
   top: 50%;
@@ -128,6 +135,13 @@
   100% {
     transform: translate(-50%, -50%) scale(1.9);
     opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .world-map-point .point-block::before,
+  .world-map-point .point-block::after {
+    animation: none;
   }
 }
 

@@ -1,113 +1,109 @@
 import ServerFlag from "@/components/ServerFlag"
-import { ServerStatusRing } from "@/components/ServerStatusRing"
 import { serverIdToServerKey } from "@/lib/server-key"
-import { getRingTrackColor, getRingUsedColor, getServerCardViewModel } from "@/lib/server-view-model"
+import { getServerCardViewModel, getServerSearchViewModel } from "@/lib/server-view-model"
 import { cn } from "@/lib/utils"
-import { NezhaServer } from "@/types/nezha-api"
+import { type NezhaServer } from "@/types/nezha-api"
 import { useMemo } from "react"
-import { useNavigate } from "react-router-dom"
+import { Link } from "react-router-dom"
+
+function ResourceBar({ label, value, color }: { label: string; value: number; color: string }) {
+  const percent = Math.max(0, Math.min(100, value))
+  return (
+    <div className="server-resource">
+      <div className="server-resource__head">
+        <span>{label}</span>
+        <strong>{Math.round(percent * 10) / 10}%</strong>
+      </div>
+      <div className="server-resource__track" aria-hidden="true">
+        <span style={{ width: `${percent}%`, backgroundColor: color }} />
+      </div>
+    </div>
+  )
+}
 
 export default function ServerCard({ now, serverInfo }: { now: number; serverInfo: NezhaServer }) {
-  const navigate = useNavigate()
-  const { billing, info, realtime, rings } = useMemo(() => getServerCardViewModel(now, serverInfo), [now, serverInfo])
-
-  const cardClick = () => {
-    sessionStorage.setItem("fromMainPage", "true")
-    navigate(`/server/${serverIdToServerKey(serverInfo.id)}`)
-  }
+  const viewModel = useMemo(() => getServerCardViewModel(now, serverInfo), [now, serverInfo])
+  const tags = useMemo(() => getServerSearchViewModel(serverInfo).tagList, [serverInfo])
+  const detailUrl = `/server/${serverIdToServerKey(serverInfo.id)}`
 
   return (
-    <div className={cn("server-card nazha-box", { "server-card--offline": info.online === false })}>
-      <div className="server-card__header" onClick={cardClick}>
-        <div className="server-card__title">
-          <ServerFlag country_code={info.country_code} />
-          <span className="server-card__name">{info.name}</span>
+    <Link
+      to={detailUrl}
+      className={cn("server-card", { "server-card--offline": !viewModel.info.online })}
+      onClick={() => sessionStorage.setItem("fromMainPage", "true")}
+      aria-label={`查看 ${viewModel.info.name} 详情`}
+    >
+      <div className="server-card__heading">
+        <div className="server-card__identity">
+          <span className={cn("dashboard-status-dot", { "dashboard-status-dot--offline": !viewModel.info.online })} />
+          <ServerFlag country_code={viewModel.info.country_code} className="server-card__flag" />
+          <span className="server-card__name">{viewModel.info.name}</span>
+          <span className={cn("server-card__state", { "server-card__state--offline": !viewModel.info.online })}>
+            {viewModel.info.online ? "在线" : "离线"}
+          </span>
         </div>
+        <i className="ri-arrow-right-s-line server-card__arrow" aria-hidden="true" />
       </div>
 
-      <div className="server-card__body" onClick={cardClick}>
-        <div className="server-card__status-rings">
-          {rings.map((item) => (
-            <ServerStatusRing
-              key={item.type}
-              type={item.type}
-              used={item.used}
-              colors={{ used: getRingUsedColor(item.type), total: getRingTrackColor() }}
-              valPercent={item.valPercent}
-              valText={item.valText}
-              label={item.label}
+      <div className="server-card__content">
+        <div className="server-card__resources">
+          {viewModel.rings.map((ring) => (
+            <ResourceBar
+              key={ring.type}
+              label={ring.label}
+              value={Number(ring.used)}
+              color={ring.type === "cpu" ? "#2d8bb3" : ring.type === "mem" ? "#0aa579" : "#d59a16"}
             />
           ))}
         </div>
 
-        <div className="server-metrics">
-          <div className="server-metrics__item server-metrics__item--duration">
-            <div className="server-metrics__content">
-              <span className="server-metrics__value">{realtime.duration.value}</span>
-              <span className="server-metrics__unit">{realtime.duration.unit}</span>
-            </div>
-            <span className="server-metrics__label">在线</span>
+        <div className="server-card__metrics">
+          <div>
+            <span>在线时长</span>
+            <strong>
+              {viewModel.realtime.duration.value}
+              <small>{viewModel.realtime.duration.unit}</small>
+            </strong>
           </div>
-          <div className="server-metrics__item server-metrics__item--transfer">
-            <div className="server-metrics__content">
-              <span className="server-metrics__value">{realtime.transferStat.value}</span>
-              <span className="server-metrics__unit">{realtime.transferStat.unit}</span>
-            </div>
-            <span className="server-metrics__label">流量</span>
+          <div>
+            <span>流量</span>
+            <strong>
+              {viewModel.realtime.transferStat.value}
+              <small>{viewModel.realtime.transferStat.unit}</small>
+            </strong>
           </div>
-          <div className="server-metrics__item server-metrics__item--in-speed">
-            <div className="server-metrics__content">
-              <span className="server-metrics__value">{realtime.inSpeed.value}</span>
-              <span className="server-metrics__unit">{realtime.inSpeed.unit}</span>
-            </div>
-            <span className="server-metrics__label">入网</span>
+          <div>
+            <span>入网</span>
+            <strong>
+              {viewModel.realtime.inSpeed.value}
+              <small>{viewModel.realtime.inSpeed.unit}</small>
+            </strong>
           </div>
-          <div className="server-metrics__item server-metrics__item--out-speed">
-            <div className="server-metrics__content">
-              <span className="server-metrics__value">{realtime.outSpeed.value}</span>
-              <span className="server-metrics__unit">{realtime.outSpeed.unit}</span>
-            </div>
-            <span className="server-metrics__label">出网</span>
+          <div>
+            <span>出网</span>
+            <strong>
+              {viewModel.realtime.outSpeed.value}
+              <small>{viewModel.realtime.outSpeed.unit}</small>
+            </strong>
           </div>
         </div>
       </div>
 
-      <div className="server-card__billing">
-        <div className="server-card__billing-row">
-          {billing.remainingTime ? (
-            <div className="server-card__remaining">
-              <span className="server-card__remaining-icon" aria-hidden="true">
-                <span className="ri-hourglass-fill" />
-              </span>
-              <span className="server-card__remaining-text">
-                {billing.remainingTime.type !== "infinity" ? (
-                  <>
-                    <span className="server-card__remaining-label">{billing.remainingTime.label}</span>
-                    {billing.remainingDays ? (
-                      <>
-                        <span className="server-card__remaining-value">{billing.remainingDays.num}</span>
-                        <span className="server-card__remaining-label">{billing.remainingDays.unit}</span>
-                      </>
-                    ) : (
-                      <span className="server-card__remaining-value">{billing.remainingTime.value}</span>
-                    )}
-                  </>
-                ) : (
-                  <span className="server-card__remaining-value">{billing.remainingTime.value}</span>
-                )}
-              </span>
-            </div>
-          ) : (
-            <div />
-          )}
-
-          {billing.endDateText ? (
-            <div className="server-card__billing-end-date">
-              <span className="server-card__billing-end-date-text">{billing.endDateText}</span>
-            </div>
-          ) : null}
+      <div className="server-card__footer">
+        <div className="server-card__tags">
+          {tags.map((tag) => (
+            <span key={tag}>{tag}</span>
+          ))}
         </div>
+        {viewModel.billing.remainingTime ? (
+          <span className="server-card__billing">
+            <i className="ri-time-line" aria-hidden="true" />
+            {viewModel.billing.remainingDays
+              ? `${viewModel.billing.remainingDays.num}${viewModel.billing.remainingDays.unit}`
+              : viewModel.billing.remainingTime.value}
+          </span>
+        ) : null}
       </div>
-    </div>
+    </Link>
   )
 }

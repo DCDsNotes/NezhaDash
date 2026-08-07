@@ -1,6 +1,8 @@
 import MiniLineChart, { type LineChartPoint, type LineChartSeries } from "@/components/MiniLineChart"
+import { Switch } from "@/components/ui/switch"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useNearViewport } from "@/hooks/use-near-viewport"
-import { fetchMonitor } from "@/lib/nezha-api"
+import { monitorQueryOptions } from "@/lib/query-options"
 import { cn } from "@/lib/utils"
 import { type NezhaMonitor } from "@/types/nezha-api"
 import { useQuery } from "@tanstack/react-query"
@@ -348,13 +350,13 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
   const [chartType, setChartType] = useState<"single" | "multi">(() => readLocalChartType())
   const [showCates, setShowCates] = useState<Record<number, boolean>>({})
 
-  const { data: monitorResp, isLoading } = useQuery({
-    queryKey: ["monitor", serverId],
-    queryFn: () => fetchMonitor(serverId),
+  const {
+    data: monitorResp,
+    isError,
+    isLoading,
+  } = useQuery({
+    ...monitorQueryOptions(serverId),
     enabled: shouldFetchHistory,
-    refetchOnMount: true,
-    refetchOnWindowFocus: false,
-    staleTime: 15000,
     refetchInterval: shouldFetchHistory && refreshData ? 60000 : false,
   })
 
@@ -393,28 +395,20 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
     [chartNowTime, monitorData, minute, peakShaving, showCates],
   )
 
-  function togglePeakShaving() {
-    setPeakShaving((v) => {
-      const next = !v
-      writeLocalBool("nazhua_monitor_peak_shaving", next)
-      return next
-    })
+  function setPeakShavingValue(next: boolean) {
+    setPeakShaving(next)
+    writeLocalBool("nazhua_monitor_peak_shaving", next)
   }
 
-  function toggleAutoRefresh() {
-    setRefreshData((v) => {
-      const next = !v
-      writeLocalBool("nazhua_monitor_refresh_data", next)
-      return next
-    })
+  function setAutoRefreshValue(next: boolean) {
+    setRefreshData(next)
+    writeLocalBool("nazhua_monitor_refresh_data", next)
   }
 
-  function toggleChartType() {
-    setChartType((v) => {
-      const next = v === "single" ? "multi" : "single"
-      if (typeof window !== "undefined") window.localStorage.setItem("nazhua_monitor_chart_type", next)
-      return next
-    })
+  function setChartTypeValue(isMulti: boolean) {
+    const next = isMulti ? "multi" : "single"
+    setChartType(next)
+    if (typeof window !== "undefined") window.localStorage.setItem("nazhua_monitor_chart_type", next)
   }
 
   function toggleMinute(val: number) {
@@ -458,50 +452,65 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
           <span className="server-monitor__title">网络监控</span>
         </div>
         <div className="server-monitor__controls">
-          <div className="server-monitor__toggle server-monitor__toggle--chart-type" title="监控折线图是否聚合" onClick={toggleChartType}>
+          <label className="server-monitor__toggle server-monitor__toggle--chart-type" title="监控折线图是否聚合">
             <span className="server-monitor__toggle-label">聚合</span>
-            <div
+            <Switch
+              checked={chartType === "multi"}
+              onCheckedChange={setChartTypeValue}
+              aria-label="聚合监控折线图"
               className={cn("server-monitor__switch", {
                 "server-monitor__switch--active": chartType === "multi",
               })}
-            >
-              <span className="server-monitor__switch-dot" />
-            </div>
-          </div>
-          <div className="server-monitor__toggle server-monitor__toggle--refresh" title="是否自动刷新" onClick={toggleAutoRefresh}>
+              thumbClassName="server-monitor__switch-dot"
+            />
+          </label>
+          <label className="server-monitor__toggle server-monitor__toggle--refresh" title="是否自动刷新">
             <span className="server-monitor__toggle-label">刷新</span>
-            <div
+            <Switch
+              checked={refreshData}
+              onCheckedChange={setAutoRefreshValue}
+              aria-label="自动刷新监控数据"
               className={cn("server-monitor__switch", {
                 "server-monitor__switch--active": refreshData,
               })}
-            >
-              <span className="server-monitor__switch-dot" />
-            </div>
-          </div>
-          <div className="server-monitor__toggle server-monitor__toggle--peak-shaving" title="过滤太高或太低的数据" onClick={togglePeakShaving}>
+              thumbClassName="server-monitor__switch-dot"
+            />
+          </label>
+          <label className="server-monitor__toggle server-monitor__toggle--peak-shaving" title="过滤太高或太低的数据">
             <span className="server-monitor__toggle-label">削峰</span>
-            <div
+            <Switch
+              checked={peakShaving}
+              onCheckedChange={setPeakShavingValue}
+              aria-label="过滤异常延迟数据"
               className={cn("server-monitor__switch", {
                 "server-monitor__switch--active": peakShaving,
               })}
-            >
-              <span className="server-monitor__switch-dot" />
-            </div>
-          </div>
+              thumbClassName="server-monitor__switch-dot"
+            />
+          </label>
           <div className="server-monitor__range">
             <span className="server-monitor__range-label">最近</span>
-            <div className="server-monitor__minutes">
+            <ToggleGroup
+              type="single"
+              value={String(minute)}
+              onValueChange={(value) => {
+                if (value) toggleMinute(Number(value))
+              }}
+              className="server-monitor__minutes"
+              aria-label="监控时间范围"
+            >
               {minutes.map((m) => (
-                <div
+                <ToggleGroupItem
                   key={m.value}
+                  value={String(m.value)}
                   className={cn("server-monitor__minute", { "server-monitor__minute--active": m.value === minute })}
-                  onClick={() => toggleMinute(m.value)}
+                  aria-label={`最近${m.label}`}
                 >
                   <span>{m.label}</span>
-                </div>
+                </ToggleGroupItem>
               ))}
               <div className="server-monitor__minute-indicator" style={minuteActiveArrowStyle} />
-            </div>
+            </ToggleGroup>
           </div>
         </div>
       </div>
@@ -511,6 +520,10 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
           <div className="server-monitor__placeholder-line server-monitor__placeholder-line--w60" />
           <div className="server-monitor__placeholder-line server-monitor__placeholder-line--w40" />
           <div className="server-monitor__placeholder-chart" />
+        </div>
+      ) : isError ? (
+        <div className="server-monitor__empty" role="alert">
+          监控数据加载失败
         </div>
       ) : !hasMonitorData ? (
         <div className="server-monitor__empty">暂无监控数据</div>
@@ -544,7 +557,8 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
         <>
           <div className="server-monitor__categories">
             {chartData.cateList.map((cate) => (
-              <div
+              <button
+                type="button"
                 key={cate.id}
                 className={cn("server-monitor-category", {
                   "server-monitor-category--disabled": showCates[cate.id] === false,
@@ -552,6 +566,7 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
                 style={cateStyle(cate.color)}
                 title={cate.title}
                 onClick={() => handleMultiCateClick(cate.id)}
+                aria-pressed={showCates[cate.id] !== false}
               >
                 <span className="server-monitor-category__legend" />
                 <span className="server-monitor-category__name" title={cate.name}>
@@ -567,7 +582,7 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
                     <span className="server-monitor-category__metric-value">{formatPercent(cate.loss)}</span>
                   </span>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
           <MiniLineChart seriesList={chartData.seriesList} dateList={chartData.dateList} />

@@ -1,6 +1,7 @@
 import MiniLineChart, { type LineChartSeries } from "@/components/MiniLineChart"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useNearViewport } from "@/hooks/use-near-viewport"
-import { fetchServerSpeedHistory } from "@/lib/nezha-api"
+import { serverSpeedQueryOptions } from "@/lib/query-options"
 import { cn } from "@/lib/utils"
 import { type NezhaServer, type NezhaServerSpeedHistory } from "@/types/nezha-api"
 import { useQuery } from "@tanstack/react-query"
@@ -97,13 +98,13 @@ export default function ServerDetailSpeed({ now, server }: { now: number; server
   const inSpeed = Math.max(Number(server.state?.net_in_speed || 0), 0)
   const outSpeed = Math.max(Number(server.state?.net_out_speed || 0), 0)
 
-  const { data: speedResp, isLoading } = useQuery({
-    queryKey: ["server-speed", server.id],
-    queryFn: () => fetchServerSpeedHistory(server.id),
+  const {
+    data: speedResp,
+    isError,
+    isLoading,
+  } = useQuery({
+    ...serverSpeedQueryOptions(server.id),
     enabled: shouldFetchHistory,
-    refetchOnMount: true,
-    refetchOnWindowFocus: false,
-    staleTime: 15000,
     refetchInterval: 60000,
   })
 
@@ -182,30 +183,34 @@ export default function ServerDetailSpeed({ now, server }: { now: number; server
         <div className="server-monitor__controls">
           <div className="server-monitor__range">
             <span className="server-monitor__range-label">最近</span>
-            <div className="server-monitor__minutes">
+            <ToggleGroup
+              type="single"
+              value={String(minute)}
+              onValueChange={(value) => {
+                if (value) setMinute(Number(value))
+              }}
+              className="server-monitor__minutes"
+              aria-label="网络速度时间范围"
+            >
               {speedMinutes.map((m) => (
-                <div
+                <ToggleGroupItem
                   key={m.value}
+                  value={String(m.value)}
                   className={cn("server-monitor__minute", { "server-monitor__minute--active": m.value === minute })}
-                  onClick={() => setMinute(m.value)}
+                  aria-label={`最近${m.label}`}
                 >
                   <span>{m.label}</span>
-                </div>
+                </ToggleGroupItem>
               ))}
               <div className="server-monitor__minute-indicator" style={minuteActiveArrowStyle} />
-            </div>
+            </ToggleGroup>
           </div>
         </div>
       </div>
 
       <div className="server-monitor__categories server-speed__categories">
         {speedItems.map((item) => (
-          <div
-            key={item.key}
-            className="server-monitor-category server-speed-category"
-            style={speedCategoryStyle(item.color)}
-            title={item.title}
-          >
+          <div key={item.key} className="server-monitor-category server-speed-category" style={speedCategoryStyle(item.color)} title={item.title}>
             <span className="server-monitor-category__legend" />
             <span className="server-monitor-category__name">{item.name}</span>
             <div className="server-monitor-category__metrics">
@@ -225,6 +230,10 @@ export default function ServerDetailSpeed({ now, server }: { now: number; server
       {!shouldFetchHistory || (isLoading && chartData.points.length <= 1) ? (
         <div className="server-monitor__placeholder">
           <div className="server-monitor__placeholder-chart" />
+        </div>
+      ) : isError ? (
+        <div className="server-monitor__empty" role="alert">
+          速度数据加载失败
         </div>
       ) : (
         <div

@@ -1,169 +1,28 @@
+import { Button } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
-import React, { useEffect, useMemo, useRef, useState } from "react"
-import { createPortal } from "react-dom"
+import { useMemo } from "react"
 
-import { ServerSortDropdownMenu, SortOption } from "./ServerSortDropdownMenu"
+export type SortOption = {
+  value: string
+  label: string
+  title?: string
+}
 
 export function ServerSortBox({
   value,
   onChange,
   options,
-  acceptEmpty = true,
   mobileShow = true,
   className,
 }: {
   value: { prop: string; order: "asc" | "desc" }
   onChange: (val: { prop: string; order: "asc" | "desc" }) => void
   options: SortOption[]
-  acceptEmpty?: boolean
   mobileShow?: boolean
   className?: string
 }) {
-  const triggerRef = useRef<HTMLDivElement | null>(null)
-  const dropdownRef = useRef<HTMLDivElement | null>(null)
-
-  const [isMobile, setIsMobile] = useState<boolean>(() => (typeof window !== "undefined" ? window.innerWidth < 768 : false))
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({
-    position: "fixed",
-    top: "0px",
-    left: "0px",
-    visibility: "hidden",
-    zIndex: 500,
-  })
-
-  const activeValue = value
-
-  const selectedLabel = useMemo(() => {
-    const selectedOption = options.find((opt) => opt.value === activeValue.prop)
-    return selectedOption ? selectedOption.label : "排序"
-  }, [activeValue.prop, options])
-
-  function updateDropdownPosition() {
-    const triggerEl = triggerRef.current
-    const dropdownEl = dropdownRef.current
-    if (!triggerEl || !dropdownEl) return
-
-    if (isMobile) {
-      setDropdownStyle({
-        position: "fixed",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        visibility: "visible",
-        zIndex: 500,
-      })
-      return
-    }
-
-    const triggerRect = triggerEl.getBoundingClientRect()
-    let top = triggerRect.bottom + 8
-    let left = triggerRect.left
-
-    setDropdownStyle({
-      position: "fixed",
-      top: `${top}px`,
-      left: `${left}px`,
-      visibility: "hidden",
-      zIndex: 500,
-    })
-
-    requestAnimationFrame(() => {
-      const dropdownRect = dropdownEl.getBoundingClientRect()
-      if (left + dropdownRect.width > window.innerWidth) {
-        left = window.innerWidth - dropdownRect.width - 10
-      }
-      if (top + dropdownRect.height > window.innerHeight) {
-        top = triggerRect.top - dropdownRect.height - 8
-      }
-      if (left < 10) left = 10
-
-      setDropdownStyle({
-        position: "fixed",
-        top: `${top}px`,
-        left: `${left}px`,
-        visibility: "visible",
-        zIndex: 500,
-      })
-    })
-  }
-
-  function toggleDropdown(e: React.MouseEvent) {
-    e.stopPropagation()
-    setIsDropdownOpen((v) => {
-      const next = !v
-      if (next) {
-        const triggerEl = triggerRef.current
-        if (isMobile) {
-          setDropdownStyle({
-            position: "fixed",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            visibility: "visible",
-            zIndex: 500,
-          })
-        } else if (triggerEl) {
-          const rect = triggerEl.getBoundingClientRect()
-          setDropdownStyle({
-            position: "fixed",
-            top: `${rect.bottom + 8}px`,
-            left: `${rect.left}px`,
-            visibility: "hidden",
-            zIndex: 500,
-          })
-        }
-      }
-      return next
-    })
-  }
-
-  function toggleOrder(e: React.MouseEvent) {
-    e.stopPropagation()
-    if (!activeValue.prop) return
-    onChange({
-      prop: activeValue.prop,
-      order: activeValue.order === "desc" ? "asc" : "desc",
-    })
-  }
-
-  function handleSelectItem(item: SortOption) {
-    if (activeValue.prop === item.value) {
-      if (acceptEmpty) onChange({ prop: "", order: "desc" })
-    } else {
-      onChange({ prop: item.value, order: activeValue.order || "desc" })
-    }
-    setIsDropdownOpen(false)
-  }
-
-  useEffect(() => {
-    function handleResize() {
-      setIsMobile(window.innerWidth < 768)
-      if (isDropdownOpen) updateDropdownPosition()
-    }
-
-    function handleDocumentClick(event: MouseEvent) {
-      if (!isDropdownOpen) return
-      const triggerEl = triggerRef.current
-      const dropdownEl = dropdownRef.current
-      const target = event.target as Node | null
-      if (!triggerEl || !dropdownEl || !target) return
-      if (!triggerEl.contains(target) && !dropdownEl.contains(target)) {
-        setIsDropdownOpen(false)
-      }
-    }
-
-    window.addEventListener("resize", handleResize)
-    document.addEventListener("click", handleDocumentClick)
-    return () => {
-      window.removeEventListener("resize", handleResize)
-      document.removeEventListener("click", handleDocumentClick)
-    }
-  }, [isDropdownOpen, isMobile])
-
-  useEffect(() => {
-    if (isDropdownOpen) updateDropdownPosition()
-  }, [isDropdownOpen, isMobile])
+  const selectedLabel = useMemo(() => options.find((option) => option.value === value.prop)?.label || "排序", [options, value.prop])
 
   return (
     <div
@@ -175,28 +34,44 @@ export function ServerSortBox({
         className,
       )}
     >
-      <div ref={triggerRef} className="server-sort__trigger" onClick={toggleDropdown}>
-        <div className="server-sort__selected">
-          <span className="server-sort__selected-value">{selectedLabel}</span>
-          <span className="server-sort__order-icon" onClick={toggleOrder}>
-            {activeValue.order === "desc" ? <span className="ri-arrow-down-line" /> : <span className="ri-arrow-up-line" />}
-          </span>
-        </div>
-      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="server-sort__selected" aria-label={`排序字段：${selectedLabel}`}>
+            <span className="server-sort__selected-value">{selectedLabel}</span>
+            <i className="ri-arrow-down-s-line ml-1 text-base" aria-hidden="true" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="server-sort-dropdown">
+          <DropdownMenuRadioGroup
+            value={value.prop}
+            onValueChange={(prop) => {
+              if (prop) onChange({ ...value, prop })
+            }}
+          >
+            {options.map((item) => (
+              <DropdownMenuRadioItem
+                key={item.value}
+                value={item.value}
+                className="server-sort-dropdown__item [&>span:first-child]:hidden"
+                title={item.title}
+              >
+                <span className="server-sort-dropdown__label">{item.label}</span>
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-      {typeof document !== "undefined" &&
-        createPortal(
-          <ServerSortDropdownMenu
-            ref={dropdownRef}
-            visible={isDropdownOpen}
-            options={options}
-            activeValue={activeValue.prop}
-            dropdownStyle={dropdownStyle}
-            isMobile={isMobile}
-            onSelect={handleSelectItem}
-          />,
-          document.body,
-        )}
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className="server-sort__order-icon m-0"
+        onClick={() => onChange({ ...value, order: value.order === "desc" ? "asc" : "desc" })}
+        aria-label={value.order === "desc" ? "当前降序，切换为升序" : "当前升序，切换为降序"}
+        title={value.order === "desc" ? "降序" : "升序"}
+      >
+        <i className={value.order === "desc" ? "ri-arrow-down-line" : "ri-arrow-up-line"} aria-hidden="true" />
+      </Button>
     </div>
   )
 }
