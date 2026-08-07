@@ -227,12 +227,21 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await expect(page.locator(".probe-site-header")).toBeVisible()
   await expect(page.locator(".status-network")).toContainText("18M/s")
   await expect(page.locator(".status-network")).toContainText("7M/s")
+  await expect(page.locator(".status-current .status-panel__header")).toContainText(/\d+\/\d+/)
+  await expect(page.locator(".probe-site-footer")).toHaveCount(0)
+  await page.locator(".status-facts__action").click()
+  await expect(page.locator(".status-renewal-dialog")).toBeVisible()
+  await page.keyboard.press("Escape")
+  await expect(page.locator(".status-renewal-dialog")).toHaveCount(0)
   await expect(page.locator(".probe-sidebar, .probe-browser, .probe-mobile-nav")).toHaveCount(0)
   await assertCenteredStatusColumn(page)
   await assertNoHorizontalOverflow(page)
 
   await page.getByRole("button", { name: /离线节点 1/ }).click()
   await expect(page.locator(".probe-node-item")).toHaveCount(1)
+  await expect(page.locator(".status-current .status-panel__header")).toContainText("1/2")
+  await expect(page.locator(".status-network")).toContainText("18M/s")
+  await expect(page.locator(".status-network")).toContainText("7M/s")
   await page.getByRole("button", { name: /全部状态 2/ }).click()
 
   await page.getByRole("searchbox", { name: "搜索节点" }).fill("上海")
@@ -247,6 +256,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
 
   await page.getByLabel("查看节点地图").click()
   await expect(page.getByRole("dialog", { name: "节点地图" })).toBeVisible()
+  await screenshot(page, testInfo, "map-desktop.png")
   await page.getByRole("button", { name: "关闭" }).click()
 
   await page.getByLabel(/排序字段/).click()
@@ -273,6 +283,16 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await expect(page.locator(".probe-detail-priority")).toContainText("2027-01-01")
   await expect(page.locator(".probe-detail-priority")).toContainText(/\d+\s*天/)
   await expect(page.getByRole("switch")).toHaveCount(3)
+  await expect(page.getByRole("switch").nth(0)).toBeChecked()
+  await expect(page.getByRole("switch").nth(1)).toBeChecked()
+  await expect(page.getByRole("switch").nth(2)).not.toBeChecked()
+  const ringThickness = await page
+    .locator(".ring-circle")
+    .first()
+    .evaluate((element) => {
+      return window.getComputedStyle(element).getPropertyValue("--ring-thickness").trim()
+    })
+  expect(ringThickness).toBe("5px")
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "server-detail-desktop.png")
 

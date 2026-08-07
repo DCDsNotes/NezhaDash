@@ -130,7 +130,7 @@ function TransferDialog({
 
 function MapDialog({ workspace, open, onOpenChange }: { workspace: ServerWorkspaceValue; open: boolean; onOpenChange: (open: boolean) => void }) {
   const { width } = useWorldMapSize()
-  const mapWidth = Math.min(width, 760)
+  const mapWidth = typeof window !== "undefined" && window.innerWidth > 900 ? Math.min(Math.max(width, 760), 900) : width
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -146,14 +146,6 @@ function MapDialog({ workspace, open, onOpenChange }: { workspace: ServerWorkspa
         </div>
       </DialogContent>
     </Dialog>
-  )
-}
-
-function SiteFooter() {
-  return (
-    <footer className="probe-site-footer">
-      <span>Powered by 哪吒监控</span>
-    </footer>
   )
 }
 
@@ -174,7 +166,6 @@ export default function ProbeWorkspace() {
       <main className="probe-main">
         <Outlet context={workspace} />
       </main>
-      <SiteFooter />
       <TransferDialog workspace={workspace} open={showTransfer} onOpenChange={setShowTransfer} />
       <MapDialog workspace={workspace} open={showMap} onOpenChange={setShowMap} />
     </div>

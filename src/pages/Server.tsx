@@ -1,11 +1,13 @@
 import ServerNavigatorItem from "@/components/ServerNavigatorItem"
 import { ServerSortBox } from "@/components/ServerSortBox"
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { type ServerWorkspaceValue } from "@/hooks/use-server-workspace"
-import { getServerCardViewModel, getServerHeaderStats, getServerStatus } from "@/lib/server-view-model"
+import { serverIdToServerKey } from "@/lib/server-key"
+import { getServerCardViewModel, getServerStatus } from "@/lib/server-view-model"
 import { cn } from "@/lib/utils"
-import { useMemo } from "react"
-import { useOutletContext } from "react-router-dom"
+import { useMemo, useState } from "react"
+import { Link, useOutletContext } from "react-router-dom"
 
 type ResourceSummary = {
   type: string
@@ -19,6 +21,7 @@ type BillingOverview = {
   expired: number
   perpetual: number
   nearest: { name: string; days: number; endDate: string } | null
+  renewals: { id: number; name: string; endDate: string; days: number | null; expired: boolean }[]
 }
 
 function getResourceSummaries(workspace: ServerWorkspaceValue): ResourceSummary[] {
@@ -39,15 +42,16 @@ function getResourceSummaries(workspace: ServerWorkspaceValue): ResourceSummary[
 }
 
 function getBillingOverview(workspace: ServerWorkspaceValue): BillingOverview {
-  const overview: BillingOverview = { tracked: 0, expiringSoon: 0, expired: 0, perpetual: 0, nearest: null }
+  const overview: BillingOverview = { tracked: 0, expiringSoon: 0, expired: 0, perpetual: 0, nearest: null, renewals: [] }
 
-  workspace.filteredServers.forEach((server) => {
+  workspace.servers.forEach((server) => {
     const billing = getServerCardViewModel(workspace.now, server).billing
     if (!billing.remainingTime) return
     overview.tracked += 1
 
     if (billing.remainingTime.type === "expired") {
       overview.expired += 1
+      overview.renewals.push({ id: server.id, name: server.name, endDate: billing.endDateText, days: null, expired: true })
       return
     }
     if (billing.remainingTime.type === "infinity") {
@@ -57,10 +61,20 @@ function getBillingOverview(workspace: ServerWorkspaceValue): BillingOverview {
 
     const days = Number(billing.remainingDays?.num)
     if (!Number.isFinite(days)) return
-    if (days <= 30) overview.expiringSoon += 1
+    if (days <= 30) {
+      overview.expiringSoon += 1
+      overview.renewals.push({ id: server.id, name: server.name, endDate: billing.endDateText, days, expired: false })
+    }
     if (!overview.nearest || days < overview.nearest.days) {
       overview.nearest = { name: server.name, days, endDate: billing.endDateText }
     }
+  })
+
+  overview.renewals.sort((a, b) => {
+    if (a.expired !== b.expired) return a.expired ? 1 : -1
+    if (a.days === null) return 1
+    if (b.days === null) return -1
+    return a.days - b.days
   })
 
   return overview
@@ -144,10 +158,11 @@ function StatusControls({ workspace }: { workspace: ServerWorkspaceValue }) {
 
 export default function Servers() {
   const workspace = useOutletContext<ServerWorkspaceValue>()
+  const [renewalOpen, setRenewalOpen] = useState(false)
   const availability = workspace.totalCounts.total > 0 ? (workspace.totalCounts.online / workspace.totalCounts.total) * 100 : 0
   const resourceSummaries = useMemo(() => getResourceSummaries(workspace), [workspace])
   const billingOverview = useMemo(() => getBillingOverview(workspace), [workspace])
-  const networkStats = useMemo(() => getServerHeaderStats(workspace.now, workspace.filteredServers), [workspace.filteredServers, workspace.now])
+  const networkStats = workspace.headerStats
   const overallState = workspace.totalCounts.total === 0 ? "empty" : workspace.totalCounts.offline > 0 ? "attention" : "operational"
   const overallLabel =
     overallState === "empty" ? "暂无节点数据" : overallState === "attention" ? `${workspace.totalCounts.offline} 台节点需要关注` : "所有节点运行正常"
@@ -187,7 +202,7 @@ export default function Servers() {
         <div className="status-panel__header">
           <div>
             <h2 id="network-status-title">实时网络</h2>
-            <p>{workspace.filteredCounts.total} 台服务器的当前吞吐</p>
+            <p>{workspace.totalCounts.total} 台服务器的当前吞吐</p>
           </div>
           <span className="status-panel__live">
             <span className="probe-status-dot" /> 实时
@@ -229,7 +244,7 @@ export default function Servers() {
             <p>实时速度、资源占用与续费周期</p>
           </div>
           <span>
-            {workspace.filteredCounts.online}/{workspace.filteredCounts.total} 在线
+            {workspace.totalCounts.online}/{workspace.totalCounts.total} 在线
           </span>
         </div>
 
@@ -263,10 +278,15 @@ export default function Servers() {
           <strong>{billingOverview.tracked}</strong>
           <span>已配置到期</span>
         </div>
-        <div>
+        <button
+          type="button"
+          className="status-facts__action"
+          onClick={() => setRenewalOpen(true)}
+          aria-label={`查看续费提醒，${billingOverview.renewals.length} 台服务器`}
+        >
           <strong>{billingOverview.expiringSoon + billingOverview.expired}</strong>
           <span>续费提醒</span>
-        </div>
+        </button>
       </section>
 
       <section className="status-panel status-billing" aria-labelledby="billing-title">
@@ -323,6 +343,42 @@ export default function Servers() {
           ))}
         </div>
       </section>
+
+      <Dialog open={renewalOpen} onOpenChange={setRenewalOpen}>
+        <DialogContent className="dashboard-dialog status-renewal-dialog">
+          <DialogTitle className="dashboard-dialog__title">续费提醒</DialogTitle>
+          <DialogDescription className="dashboard-dialog__description">以下服务器将在 30 天内到期或已经过期</DialogDescription>
+          <div className="status-renewal-list">
+            {billingOverview.renewals.length > 0 ? (
+              billingOverview.renewals.map((item) => (
+                <Link
+                  key={item.id}
+                  to={`/server/${serverIdToServerKey(item.id)}`}
+                  className="status-renewal-list__item"
+                  onClick={() => {
+                    sessionStorage.setItem("fromMainPage", "true")
+                    setRenewalOpen(false)
+                  }}
+                >
+                  <span className="status-renewal-list__name">
+                    <i className={cn("ri-error-warning-line", { "status-renewal-list__icon--expired": item.expired })} aria-hidden="true" />
+                    <strong>{item.name}</strong>
+                  </span>
+                  <span className="status-renewal-list__meta">
+                    <small>{item.endDate || "未设置"}</small>
+                    <strong className={cn({ "status-renewal-list__days--expired": item.expired })}>
+                      {item.expired ? "已过期" : `剩余 ${item.days} 天`}
+                    </strong>
+                  </span>
+                  <i className="ri-arrow-right-s-line status-renewal-list__arrow" aria-hidden="true" />
+                </Link>
+              ))
+            ) : (
+              <div className="status-renewal-list__empty">当前没有需要续费的服务器</div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
