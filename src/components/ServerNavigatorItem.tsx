@@ -10,6 +10,9 @@ export default function ServerNavigatorItem({ now, server, active }: { now: numb
   const viewModel = useMemo(() => getServerCardViewModel(now, server), [now, server])
   const tags = useMemo(() => getServerSearchViewModel(server).tagList.slice(0, 2), [server])
   const serverKey = serverIdToServerKey(server.id)
+  const billing = viewModel.billing.remainingTime
+  const expiryText = billing ? viewModel.billing.endDateText || "长期有效" : "未设置"
+  const remainingText = billing?.type === "days" ? `剩余 ${billing.value}` : billing?.value || "未配置"
 
   return (
     <Link
@@ -28,50 +31,63 @@ export default function ServerNavigatorItem({ now, server, active }: { now: numb
           <strong>{viewModel.info.name}</strong>
         </div>
         <span className={cn("probe-node-item__state", { "probe-node-item__state--offline": !viewModel.info.online })}>
-          {viewModel.info.online ? "在线" : "离线"}
+          {viewModel.info.online ? "正常" : "离线"}
         </span>
       </div>
 
-      <div className="probe-node-item__resources">
-        {viewModel.rings.slice(0, 3).map((ring) => (
-          <div key={ring.type}>
-            <span>{ring.label}</span>
-            <strong>{Math.round(Number(ring.used) * 10) / 10}%</strong>
-          </div>
-        ))}
+      <div className="probe-node-item__speeds" aria-label="实时网络速度">
+        <div className="probe-speed-metric probe-speed-metric--down">
+          <span>
+            <i className="ri-arrow-down-line" aria-hidden="true" /> 下行
+          </span>
+          <strong>
+            {viewModel.realtime.inSpeed.value}
+            <small>{viewModel.realtime.inSpeed.unit}/s</small>
+          </strong>
+        </div>
+        <div className="probe-speed-metric probe-speed-metric--up">
+          <span>
+            <i className="ri-arrow-up-line" aria-hidden="true" /> 上行
+          </span>
+          <strong>
+            {viewModel.realtime.outSpeed.value}
+            <small>{viewModel.realtime.outSpeed.unit}/s</small>
+          </strong>
+        </div>
       </div>
 
-      <div className="probe-node-item__meta">
-        <span title="在线时长">
-          <i className="ri-time-line" aria-hidden="true" />
-          {viewModel.realtime.duration.value}
+      <div className="probe-node-item__renewal">
+        <span>
+          <small>到期时间</small>
+          <strong>{expiryText}</strong>
+        </span>
+        <span
+          className={cn("probe-node-item__remaining", {
+            "probe-node-item__remaining--expired": billing?.type === "expired",
+            "probe-node-item__remaining--infinity": billing?.type === "infinity",
+          })}
+        >
+          {remainingText}
+        </span>
+      </div>
+
+      <div className="probe-node-item__health">
+        {viewModel.rings.slice(0, 3).map((ring) => (
+          <span key={ring.type}>
+            {ring.label} <strong>{Math.round(Number(ring.used) * 10) / 10}%</strong>
+          </span>
+        ))}
+        <span className="probe-node-item__uptime">
+          运行 {viewModel.realtime.duration.value}
           {viewModel.realtime.duration.unit}
         </span>
-        <span title="实时入网">
-          <i className="ri-arrow-down-line" aria-hidden="true" />
-          {viewModel.realtime.inSpeed.value}
-          {viewModel.realtime.inSpeed.unit}
-        </span>
-        <span title="实时出网">
-          <i className="ri-arrow-up-line" aria-hidden="true" />
-          {viewModel.realtime.outSpeed.value}
-          {viewModel.realtime.outSpeed.unit}
-        </span>
       </div>
 
-      {tags.length > 0 || viewModel.billing.remainingTime ? (
-        <div className="probe-node-item__footer">
-          <div className="probe-node-item__tags">
-            {tags.map((tag) => (
-              <span key={tag}>{tag}</span>
-            ))}
-          </div>
-          {viewModel.billing.remainingDays ? (
-            <span className="probe-node-item__billing">
-              剩余 {viewModel.billing.remainingDays.num}
-              {viewModel.billing.remainingDays.unit}
-            </span>
-          ) : null}
+      {tags.length > 0 ? (
+        <div className="probe-node-item__tags">
+          {tags.map((tag) => (
+            <span key={tag}>{tag}</span>
+          ))}
         </div>
       ) : null}
     </Link>

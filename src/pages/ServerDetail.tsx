@@ -8,10 +8,49 @@ import { useNezhaWsData } from "@/hooks/use-nezha-ws-data"
 import { useWorldMapSize } from "@/hooks/use-world-map-size"
 import { countryCoordinates } from "@/lib/geo-limit"
 import { serverIdToServerKey } from "@/lib/server-key"
-import { getServerStatus } from "@/lib/server-view-model"
+import { getServerDetailStatusViewModel, getServerStatus } from "@/lib/server-view-model"
 import { cn } from "@/lib/utils"
+import { type NezhaServer } from "@/types/nezha-api"
 import { useEffect, useMemo } from "react"
 import { Link, Navigate, useParams } from "react-router-dom"
+
+function ServerDetailPriority({ now, server }: { now: number; server: NezhaServer }) {
+  const { billing, realtime } = useMemo(() => getServerDetailStatusViewModel(now, server), [now, server])
+  const expiry = billing.remainingTime ? billing.endDateText || "长期有效" : "未设置"
+
+  return (
+    <section className="probe-detail-priority" aria-label="实时网络与到期信息">
+      <div className="probe-detail-priority__speed probe-detail-priority__speed--down">
+        <span>
+          <i className="ri-arrow-down-line" aria-hidden="true" /> 当前下行
+        </span>
+        <strong>
+          {realtime.inSpeed.value}
+          <small>{realtime.inSpeed.unit}/s</small>
+        </strong>
+      </div>
+      <div className="probe-detail-priority__speed probe-detail-priority__speed--up">
+        <span>
+          <i className="ri-arrow-up-line" aria-hidden="true" /> 当前上行
+        </span>
+        <strong>
+          {realtime.outSpeed.value}
+          <small>{realtime.outSpeed.unit}/s</small>
+        </strong>
+      </div>
+      <div className="probe-detail-priority__billing">
+        <span>到期时间</span>
+        <strong>{expiry}</strong>
+      </div>
+      <div
+        className={cn("probe-detail-priority__remaining", { "probe-detail-priority__remaining--expired": billing.remainingTime?.type === "expired" })}
+      >
+        <span>剩余天数</span>
+        <strong>{billing.remainingTime?.value || "未配置"}</strong>
+      </div>
+    </section>
+  )
+}
 
 export default function ServerDetail() {
   const { data: nezhaWsData, lastMessage, connected } = useNezhaWsData()
@@ -95,6 +134,7 @@ export default function ServerDetail() {
         <WorldMap locations={locations} mapWidth={worldMapWidth} />
       </div>
       <ServerDetailName server={server} />
+      <ServerDetailPriority now={wsNow} server={server} />
       <ServerDetailStatusBox now={wsNow} server={server} />
       <ServerDetailInfoBox now={wsNow} server={server} />
       <ServerDetailSpeed now={wsNow} server={server} />

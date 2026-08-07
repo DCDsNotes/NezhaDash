@@ -338,10 +338,10 @@ function MobileHeader({ workspace, onOpenTransfer }: { workspace: ServerWorkspac
 function MobileNavigation({ dashboardLink, onOpenMap }: { dashboardLink: DashboardLinkState; onOpenMap: () => void }) {
   return (
     <nav className="probe-mobile-nav" aria-label="移动端导航">
-      <Link to="/">
+      <NavLink to="/" end className={({ isActive }) => cn({ "probe-mobile-nav__active": isActive })}>
         <i className="ri-server-line" aria-hidden="true" />
         <span>节点</span>
-      </Link>
+      </NavLink>
       <button type="button" className="probe-mobile-nav__map" onClick={onOpenMap} aria-label="打开节点地图">
         <span>
           <i className="ri-map-2-line" aria-hidden="true" />
