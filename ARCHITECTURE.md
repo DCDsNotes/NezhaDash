@@ -25,14 +25,15 @@ main.tsx
       │  └─ App
       │     ├─ RefreshToast
       │     └─ ProbeWorkspace
-      │        ├─ WorkspaceSidebar
-      │        ├─ ServerBrowser
+      │        ├─ SiteHeader
       │        ├─ Outlet
-      │        └─ MobileNavigation
+      │        ├─ SiteFooter
+      │        ├─ TransferDialog
+      │        └─ MapDialog
       └─ Toaster
 ```
 
-`src/providers.tsx` 只负责跨路由 Provider。`src/router.tsx` 只负责路由表。`src/App.tsx` 负责站点设置、自定义代码注入、背景和错误边界，`ProbeWorkspace` 负责实际应用壳层。桌面端采用“全局导航、节点浏览、内容详情”三段式工作台；平板隐藏全局导航；移动端切换为顶部栏、单内容区和底部导航。视觉语言参考 SimpleStatus 的窄幅状态流、低装饰卡片和清晰状态层级，但业务语义与数据契约仍属于哪吒探针。
+`src/providers.tsx` 只负责跨路由 Provider。`src/router.tsx` 只负责路由表。`src/App.tsx` 负责站点设置、自定义代码注入、背景和错误边界，`ProbeWorkspace` 负责页首、单列内容容器、页尾以及地图和流量弹层。首页与详情页均使用约 720px 的居中内容列；节点筛选、分组和排序位于首页“当前状态”区。视觉语言参考 SimpleStatus 的窄幅状态流、低装饰卡片和清晰状态层级，但业务语义与数据契约仍属于哪吒探针。
 
 ## 路由与页面
 

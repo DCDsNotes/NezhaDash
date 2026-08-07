@@ -195,6 +195,15 @@ async function assertNoHorizontalOverflow(page: Page) {
   expect(hasOverflow).toBe(false)
 }
 
+async function assertCenteredStatusColumn(page: Page) {
+  const layout = await page.locator(".status-page").evaluate((element) => {
+    const rect = element.getBoundingClientRect()
+    return { width: rect.width, left: rect.left, viewport: window.innerWidth }
+  })
+  expect(layout.width).toBeLessThanOrEqual(721)
+  expect(Math.abs(layout.left - (layout.viewport - layout.width) / 2)).toBeLessThanOrEqual(1)
+}
+
 async function screenshot(page: Page, testInfo: TestInfo, name: string) {
   await page.screenshot({ path: testInfo.outputPath(name), fullPage: true, animations: "disabled" })
 }
@@ -212,8 +221,11 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await expect(primaryNode).toContainText("7M/s")
   await expect(primaryNode).toContainText("2027-01-01")
   await expect(primaryNode).toContainText(/剩余\s*\d+\s*天/)
-  await expect(page.locator(".status-network-panel")).toContainText("18M/s")
-  await expect(page.locator(".status-network-panel")).toContainText("7M/s")
+  await expect(page.locator(".probe-site-header")).toBeVisible()
+  await expect(page.locator(".status-facts")).toContainText("18M/s")
+  await expect(page.locator(".status-facts")).toContainText("7M/s")
+  await expect(page.locator(".probe-sidebar, .probe-browser, .probe-mobile-nav")).toHaveCount(0)
+  await assertCenteredStatusColumn(page)
   await assertNoHorizontalOverflow(page)
 
   await page.getByRole("button", { name: /离线节点 1/ }).click()
@@ -264,7 +276,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await page.setViewportSize({ width: 768, height: 1024 })
   await page.goto("/")
   await expect(page.locator(".probe-node-item")).toHaveCount(2)
-  await expect(page.getByRole("link", { name: "节点", exact: true })).toHaveAttribute("aria-current", "page")
+  await assertCenteredStatusColumn(page)
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "dashboard-tablet.png")
 
@@ -276,10 +288,11 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto("/")
   await expect(page.locator(".probe-node-item")).toHaveCount(2)
+  await assertCenteredStatusColumn(page)
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "dashboard-mobile.png")
 
-  await page.getByRole("button", { name: "打开节点地图" }).click()
+  await page.getByRole("button", { name: "查看节点地图" }).click()
   await expect(page.getByRole("dialog", { name: "节点地图" })).toBeVisible()
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "map-mobile.png")

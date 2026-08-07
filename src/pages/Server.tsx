@@ -1,11 +1,11 @@
-import ServerFlag from "@/components/ServerFlag"
+import ServerNavigatorItem from "@/components/ServerNavigatorItem"
+import { ServerSortBox } from "@/components/ServerSortBox"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { type ServerWorkspaceValue } from "@/hooks/use-server-workspace"
-import { serverIdToServerKey } from "@/lib/server-key"
 import { getServerCardViewModel, getServerHeaderStats, getServerStatus } from "@/lib/server-view-model"
 import { cn } from "@/lib/utils"
-import { type NezhaServer } from "@/types/nezha-api"
 import { useMemo } from "react"
-import { Link, useOutletContext } from "react-router-dom"
+import { useOutletContext } from "react-router-dom"
 
 type ResourceSummary = {
   type: string
@@ -66,39 +66,79 @@ function getBillingOverview(workspace: ServerWorkspaceValue): BillingOverview {
   return overview
 }
 
-function StatusNodeRow({ now, server }: { now: number; server: NezhaServer }) {
-  const viewModel = useMemo(() => getServerCardViewModel(now, server), [now, server])
-  const billing = viewModel.billing.remainingTime
-  const remainingText = billing?.type === "days" ? `剩余 ${billing.value}` : billing?.value || "未配置"
+function StatusControls({ workspace }: { workspace: ServerWorkspaceValue }) {
+  const statusOptions = [
+    { value: "all" as const, label: "全部状态", count: workspace.totalCounts.total },
+    { value: "online" as const, label: "在线节点", count: workspace.totalCounts.online },
+    { value: "offline" as const, label: "离线节点", count: workspace.totalCounts.offline },
+  ]
 
   return (
-    <Link to={`/server/${serverIdToServerKey(server.id)}`} className="status-node-row" aria-label={`查看 ${server.name} 状态详情`}>
-      <div className="status-node-row__identity">
-        <span className={cn("probe-status-dot", { "probe-status-dot--offline": !viewModel.info.online })} />
-        <ServerFlag country_code={viewModel.info.country_code} className="status-node-row__flag" />
-        <span>
-          <strong>{server.name}</strong>
-          <small>{viewModel.info.online ? "运行正常" : "暂时离线"}</small>
-        </span>
+    <div className="status-controls">
+      <div className="status-controls__states" aria-label="节点状态筛选">
+        {statusOptions.map((item) => (
+          <button
+            type="button"
+            key={item.value}
+            className={cn({ "status-controls__state--active": workspace.status === item.value })}
+            aria-pressed={workspace.status === item.value}
+            onClick={() => workspace.setStatus(item.value)}
+          >
+            <span>{item.label}</span>
+            <strong>{item.count}</strong>
+          </button>
+        ))}
       </div>
-      <div className="status-node-row__network" aria-label="实时速度">
-        <span>
-          <i className="ri-arrow-down-line" aria-hidden="true" />
-          <strong>{viewModel.realtime.inSpeed.value}</strong>
-          {viewModel.realtime.inSpeed.unit}/s
-        </span>
-        <span>
-          <i className="ri-arrow-up-line" aria-hidden="true" />
-          <strong>{viewModel.realtime.outSpeed.value}</strong>
-          {viewModel.realtime.outSpeed.unit}/s
-        </span>
+
+      <div className="status-controls__toolbar">
+        <label className="status-controls__search">
+          <span className="sr-only">搜索节点</span>
+          <i className="ri-search-line" aria-hidden="true" />
+          <input
+            type="search"
+            value={workspace.searchWord}
+            placeholder="搜索节点"
+            onChange={(event) => workspace.setSearchWord(event.target.value)}
+          />
+        </label>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="status-controls__button"
+              aria-label={`节点分组：${workspace.groups.find((group) => group.value === workspace.currentGroup)?.label || "全部节点"}`}
+              title="节点分组"
+            >
+              <i className="ri-filter-3-line" aria-hidden="true" />
+              <span>{workspace.groups.find((group) => group.value === workspace.currentGroup)?.label || "全部节点"}</span>
+              <i className="ri-arrow-down-s-line" aria-hidden="true" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="server-sort-dropdown">
+            <DropdownMenuRadioGroup value={workspace.currentGroup} onValueChange={workspace.setCurrentGroup}>
+              {workspace.groups.map((group) => (
+                <DropdownMenuRadioItem key={group.key} value={group.value} className="server-sort-dropdown__item [&>span:first-child]:hidden">
+                  <span className="server-sort-dropdown__label">{group.label}</span>
+                  <small className="probe-group-menu__count">{group.count}</small>
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <ServerSortBox
+          value={{ prop: workspace.sortProp, order: workspace.sortOrder }}
+          onChange={(value) => {
+            workspace.setSortProp(value.prop)
+            workspace.setSortOrder(value.order)
+          }}
+          options={workspace.sortOptions}
+        />
       </div>
-      <div className="status-node-row__billing">
-        <span>{billing ? viewModel.billing.endDateText || "长期有效" : "未设置到期"}</span>
-        <strong className={cn({ "status-node-row__expired": billing?.type === "expired" })}>{remainingText}</strong>
-      </div>
-      <i className="ri-arrow-right-s-line status-node-row__arrow" aria-hidden="true" />
-    </Link>
+
+      {workspace.isGroupError ? <p className="status-controls__error">节点分组暂时不可用</p> : null}
+    </div>
   )
 }
 
@@ -108,12 +148,16 @@ export default function Servers() {
   const resourceSummaries = useMemo(() => getResourceSummaries(workspace), [workspace])
   const billingOverview = useMemo(() => getBillingOverview(workspace), [workspace])
   const networkStats = useMemo(() => getServerHeaderStats(workspace.now, workspace.filteredServers), [workspace.filteredServers, workspace.now])
-  const visibleNodes = workspace.filteredServers.slice(0, 6)
-  const extraNodeCount = Math.max(workspace.filteredServers.length - visibleNodes.length, 0)
   const overallState = workspace.totalCounts.total === 0 ? "empty" : workspace.totalCounts.offline > 0 ? "attention" : "operational"
   const overallLabel =
     overallState === "empty" ? "暂无节点数据" : overallState === "attention" ? `${workspace.totalCounts.offline} 台节点需要关注` : "所有节点运行正常"
-  const updatedTime = new Date(workspace.now).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+  const updatedTime = new Date(workspace.now).toLocaleString("zh-CN", {
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  })
 
   return (
     <div className="status-page">
@@ -126,7 +170,7 @@ export default function Servers() {
           <span className={cn("probe-status-dot", { "probe-status-dot--offline": overallState === "attention" })} />
           {overallLabel}
         </div>
-        <p>最后更新 {updatedTime}，实时连接自动同步</p>
+        <p>最后更新：{updatedTime}（实时连接自动同步）</p>
       </section>
 
       {workspace.totalCounts.offline > 0 ? (
@@ -134,81 +178,57 @@ export default function Servers() {
           <i className="ri-error-warning-line" aria-hidden="true" />
           <div>
             <strong>部分节点连接异常</strong>
-            <p>检测到 {workspace.totalCounts.offline} 台节点暂时离线，在线节点仍持续上报实时数据。</p>
+            <p>检测到 {workspace.totalCounts.offline} 台节点暂时离线，在线节点仍在持续上报数据。</p>
           </div>
         </section>
       ) : null}
 
-      <section className="status-panel status-network-panel" aria-labelledby="live-network-title">
-        <div className="status-panel__header">
+      <section className="status-current" aria-labelledby="current-status-title">
+        <div className="status-section-heading">
           <div>
-            <h2 id="live-network-title">实时网络</h2>
-            <span>{workspace.filteredServers.length} 台筛选节点的当前吞吐</span>
-          </div>
-          <span className="status-panel__live">实时</span>
-        </div>
-        <div className="status-network-grid">
-          <div className="status-network-metric status-network-metric--down">
-            <span>
-              <i className="ri-arrow-down-line" aria-hidden="true" /> 当前下行
-            </span>
-            <strong>
-              {networkStats.netSpeed.inData.value}
-              <small>{networkStats.netSpeed.inData.unit}/s</small>
-            </strong>
-            <small>
-              今日流量 {networkStats.transfer.inData.value}
-              {networkStats.transfer.inData.unit}
-            </small>
-          </div>
-          <div className="status-network-metric status-network-metric--up">
-            <span>
-              <i className="ri-arrow-up-line" aria-hidden="true" /> 当前上行
-            </span>
-            <strong>
-              {networkStats.netSpeed.outData.value}
-              <small>{networkStats.netSpeed.outData.unit}/s</small>
-            </strong>
-            <small>
-              今日流量 {networkStats.transfer.outData.value}
-              {networkStats.transfer.outData.unit}
-            </small>
-          </div>
-        </div>
-      </section>
-
-      <section className="status-panel status-current" aria-labelledby="current-status-title">
-        <div className="status-panel__header">
-          <div>
-            <h2 id="current-status-title">节点状态</h2>
-            <span>速度、连接状态与续费周期</span>
+            <h2 id="current-status-title">当前状态</h2>
+            <p>查看每台服务器的实时网络和续费周期</p>
           </div>
           <span>
             {workspace.filteredCounts.online}/{workspace.filteredCounts.total} 在线
           </span>
         </div>
+
+        <StatusControls workspace={workspace} />
+
         <div className="status-current__list">
-          {visibleNodes.length > 0 ? (
-            visibleNodes.map((server) => <StatusNodeRow key={server.id} now={workspace.now} server={server} />)
+          {workspace.isLoading ? (
+            Array.from({ length: 3 }).map((_, index) => <div className="probe-node-skeleton" key={index} />)
+          ) : workspace.filteredServers.length > 0 ? (
+            workspace.filteredServers.map((server) => <ServerNavigatorItem key={server.id} now={workspace.now} server={server} active={false} />)
           ) : (
-            <div className="status-current__empty">当前筛选条件下没有节点</div>
+            <div className="status-current__empty">
+              <i className="ri-server-line" aria-hidden="true" />
+              <strong>没有匹配的节点</strong>
+              <span>请调整状态、分组或搜索条件</span>
+            </div>
           )}
         </div>
-        {extraNodeCount > 0 ? <p className="status-current__more">另有 {extraNodeCount} 台节点可在左侧列表中查看</p> : null}
       </section>
 
       <section className="status-facts" aria-label="运行概览">
         <div>
+          <strong>
+            {networkStats.netSpeed.inData.value}
+            {networkStats.netSpeed.inData.unit}/s
+          </strong>
+          <span>当前下行</span>
+        </div>
+        <div>
+          <strong>
+            {networkStats.netSpeed.outData.value}
+            {networkStats.netSpeed.outData.unit}/s
+          </strong>
+          <span>当前上行</span>
+        </div>
+        <div>
           <strong>{availability.toFixed(1)}%</strong>
           <span>当前在线率</span>
-        </div>
-        <div>
-          <strong>{workspace.totalCounts.online}</strong>
-          <span>在线节点</span>
-        </div>
-        <div>
-          <strong>{billingOverview.tracked}</strong>
-          <span>已配置到期</span>
         </div>
         <div>
           <strong>{billingOverview.expiringSoon + billingOverview.expired}</strong>
@@ -216,65 +236,48 @@ export default function Servers() {
         </div>
       </section>
 
-      <section className="status-panel status-billing" aria-labelledby="billing-title">
-        <div className="status-panel__header">
-          <div>
-            <h2 id="billing-title">到期与续费</h2>
-            <span>基于节点公开备注中的账单周期</span>
+      <section className="status-renewal" aria-labelledby="billing-title">
+        <i className="ri-calendar-event-line" aria-hidden="true" />
+        <div className="status-renewal__content">
+          <h2 id="billing-title">到期与续费</h2>
+          {billingOverview.tracked > 0 ? (
+            billingOverview.nearest ? (
+              <p>
+                最近到期节点为 <strong>{billingOverview.nearest.name}</strong>，到期时间 {billingOverview.nearest.endDate}，剩余{" "}
+                {billingOverview.nearest.days} 天。
+              </p>
+            ) : (
+              <p>{billingOverview.expired > 0 ? `${billingOverview.expired} 台节点已经到期，请及时处理。` : "当前已配置的节点均为长期有效。"}</p>
+            )
+          ) : (
+            <p>尚未在节点公开备注中配置到期时间。</p>
+          )}
+          <div className="status-renewal__meta">
+            <span>30 天内到期 {billingOverview.expiringSoon}</span>
+            <span>已过期 {billingOverview.expired}</span>
+            <span>长期有效 {billingOverview.perpetual}</span>
           </div>
         </div>
-        {billingOverview.tracked > 0 ? (
-          <div className="status-billing__body">
-            <div className="status-billing__nearest">
-              <span>最近到期</span>
-              {billingOverview.nearest ? (
-                <>
-                  <strong>{billingOverview.nearest.days} 天</strong>
-                  <small>
-                    {billingOverview.nearest.name}，到期 {billingOverview.nearest.endDate}
-                  </small>
-                </>
-              ) : (
-                <>
-                  <strong>{billingOverview.expired > 0 ? "已过期" : "长期有效"}</strong>
-                  <small>{billingOverview.expired > 0 ? `${billingOverview.expired} 台节点需要处理` : "当前没有近期到期节点"}</small>
-                </>
-              )}
-            </div>
-            <div className="status-billing__counts">
-              <span>
-                <strong>{billingOverview.expiringSoon}</strong> 30 天内到期
-              </span>
-              <span>
-                <strong>{billingOverview.expired}</strong> 已过期
-              </span>
-              <span>
-                <strong>{billingOverview.perpetual}</strong> 长期有效
-              </span>
-            </div>
-          </div>
-        ) : (
-          <div className="status-billing__empty">
-            <i className="ri-calendar-line" aria-hidden="true" />
-            <span>尚未在节点公开备注中配置到期时间</span>
-          </div>
-        )}
       </section>
 
-      <section className="status-panel status-resource" aria-labelledby="resource-title">
-        <div className="status-panel__header">
+      <section className="status-resources" aria-labelledby="resource-title">
+        <div className="status-section-heading">
           <div>
-            <h2 id="resource-title">资源使用</h2>
-            <span>在线节点平均值</span>
+            <h2 id="resource-title">资源概览</h2>
+            <p>当前在线节点的平均资源占用</p>
           </div>
         </div>
-        <div className="status-resource__items">
+        <div className="status-resources__grid">
           {resourceSummaries.map((resource) => (
             <div key={resource.type}>
-              <span>{resource.label}</span>
               <strong>{resource.value}%</strong>
+              <span>{resource.label}</span>
             </div>
           ))}
+          <div>
+            <strong>{billingOverview.tracked}</strong>
+            <span>已配置到期</span>
+          </div>
         </div>
       </section>
     </div>
