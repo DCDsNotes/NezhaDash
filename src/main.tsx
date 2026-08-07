@@ -7,6 +7,7 @@ import { Toaster } from "sonner"
 
 import "./i18n"
 import "./index.css"
+import { getApplicationBaseUrl } from "./lib/app-base"
 import { AppProviders } from "./providers"
 import { router } from "./router"
 import "./styles/detail.css"
@@ -15,11 +16,11 @@ import "./styles/layout.css"
 import "./styles/loading.css"
 import "./styles/map.css"
 import "./styles/monitor.css"
+import "./styles/probe.css"
 import "./styles/search.css"
 import "./styles/shared.css"
 import "./styles/tokens.css"
 import "./styles/workspace.css"
-import "./styles/probe.css"
 
 const rootEl = document.getElementById("root")!
 ReactDOM.createRoot(rootEl).render(
@@ -51,8 +52,9 @@ requestAnimationFrame(() => {
 
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {
+    const serviceWorkerUrl = new URL("sw.js", getApplicationBaseUrl())
     navigator.serviceWorker
-      .register("/sw.js", { updateViaCache: "none" })
+      .register(serviceWorkerUrl, { updateViaCache: "none" })
       .then((registration) => registration.update())
       .catch(() => {
         // ignore

@@ -4,9 +4,12 @@
  * - Network-first for navigation documents
  */
 
-const CACHE_VERSION = "v2"
-const STATIC_CACHE = `static-${CACHE_VERSION}`
-const ASSET_CACHE = `asset-${CACHE_VERSION}`
+const APP_BASE = new URL("./", self.location.href).pathname
+const APP_INDEX = `${APP_BASE}index.html`
+const CACHE_VERSION = "v3"
+const CACHE_SCOPE = APP_BASE.replace(/[^a-z0-9]/gi, "_")
+const STATIC_CACHE = `static-${CACHE_SCOPE}-${CACHE_VERSION}`
+const ASSET_CACHE = `asset-${CACHE_SCOPE}-${CACHE_VERSION}`
 
 function isSameOrigin(url) {
   return url.origin === self.location.origin
@@ -51,7 +54,7 @@ async function networkFirst(request) {
 
   const cached = await cache.match(request, { ignoreSearch: false })
   if (cached) return cached
-  const index = await cache.match("/index.html")
+  const index = await cache.match(APP_INDEX)
   if (index) return index
   return offlineResponse()
 }
@@ -85,7 +88,7 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(STATIC_CACHE)
-      await cache.addAll(["/", "/index.html"]).catch(() => {})
+      await cache.addAll([APP_BASE, APP_INDEX]).catch(() => {})
     })(),
   )
 })

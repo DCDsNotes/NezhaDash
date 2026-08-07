@@ -7,6 +7,7 @@ process.env.BROWSERSLIST_IGNORE_OLD_DATA = "1"
 
 // https://vite.dev/config/
 export default defineConfig(({ command }) => {
+  const productionBase = process.env.VITE_BASE_PATH?.trim() || "./"
   const certDir = path.resolve(__dirname, "./.cert")
   const keyPath = path.join(certDir, "key.pem")
   const certPath = path.join(certDir, "cert.pem")
@@ -19,7 +20,7 @@ export default defineConfig(({ command }) => {
       : undefined
 
   return {
-    base: "/",
+    base: command === "build" ? productionBase : "/",
     plugins: [react()],
     resolve: {
       alias: {

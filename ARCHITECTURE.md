@@ -101,6 +101,7 @@ main.tsx
 
 ## 扩展约束
 
+- 生产构建默认使用相对静态资源路径，可将 `dist` 放在任意静态目录；需要固定子路径和支持详情页直接刷新时，使用 `VITE_BASE_PATH=/子路径/` 构建。
 - 保持 `/api/v1` 与 WebSocket 消息结构兼容哪吒监控 V1。
 - 新 HTTP 查询应先加入 `nezha-api.ts`，再在 `query-options.ts` 声明 Query Key。
 - 新弹层、菜单、开关和分段选择应优先复用 `components/ui`，不要在业务组件中重新实现焦点或 Portal。

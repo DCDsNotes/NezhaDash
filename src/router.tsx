@@ -1,4 +1,5 @@
 import App from "@/App"
+import { getApplicationBasename } from "@/lib/app-base"
 import ErrorPage from "@/pages/ErrorPage"
 import NotFound from "@/pages/NotFound"
 import Server from "@/pages/Server"
@@ -19,5 +20,5 @@ export const router = createBrowserRouter(
       ],
     },
   ],
-  { basename: import.meta.env.BASE_URL },
+  { basename: getApplicationBasename() },
 )
