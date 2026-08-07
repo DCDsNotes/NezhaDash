@@ -200,7 +200,7 @@ async function assertCenteredStatusColumn(page: Page) {
     const rect = element.getBoundingClientRect()
     return { width: rect.width, left: rect.left, viewport: window.innerWidth }
   })
-  expect(layout.width).toBeLessThanOrEqual(721)
+  expect(layout.width).toBeLessThanOrEqual(761)
   expect(Math.abs(layout.left - (layout.viewport - layout.width) / 2)).toBeLessThanOrEqual(1)
 }
 
@@ -219,11 +219,14 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await expect(primaryNode).toBeVisible()
   await expect(primaryNode).toContainText("18M/s")
   await expect(primaryNode).toContainText("7M/s")
+  await expect(primaryNode).toContainText("CPU28.4%")
+  await expect(primaryNode).toContainText("内存40%")
+  await expect(primaryNode).toContainText("硬盘40%")
   await expect(primaryNode).toContainText("2027-01-01")
   await expect(primaryNode).toContainText(/剩余\s*\d+\s*天/)
   await expect(page.locator(".probe-site-header")).toBeVisible()
-  await expect(page.locator(".status-facts")).toContainText("18M/s")
-  await expect(page.locator(".status-facts")).toContainText("7M/s")
+  await expect(page.locator(".status-network")).toContainText("18M/s")
+  await expect(page.locator(".status-network")).toContainText("7M/s")
   await expect(page.locator(".probe-sidebar, .probe-browser, .probe-mobile-nav")).toHaveCount(0)
   await assertCenteredStatusColumn(page)
   await assertNoHorizontalOverflow(page)

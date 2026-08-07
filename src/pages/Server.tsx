@@ -26,7 +26,7 @@ function getResourceSummaries(workspace: ServerWorkspaceValue): ResourceSummary[
   const resources = [
     { type: "cpu", label: "CPU" },
     { type: "mem", label: "内存" },
-    { type: "disk", label: "磁盘" },
+    { type: "disk", label: "硬盘" },
   ]
 
   return resources.map((resource) => {
@@ -183,11 +183,50 @@ export default function Servers() {
         </section>
       ) : null}
 
-      <section className="status-current" aria-labelledby="current-status-title">
-        <div className="status-section-heading">
+      <section className="status-panel status-network" aria-labelledby="network-status-title">
+        <div className="status-panel__header">
           <div>
-            <h2 id="current-status-title">当前状态</h2>
-            <p>查看每台服务器的实时网络和续费周期</p>
+            <h2 id="network-status-title">实时网络</h2>
+            <p>{workspace.filteredCounts.total} 台服务器的当前吞吐</p>
+          </div>
+          <span className="status-panel__live">
+            <span className="probe-status-dot" /> 实时
+          </span>
+        </div>
+
+        <div className="status-network__grid">
+          <div className="status-network__metric status-network__metric--down">
+            <span>
+              <i className="ri-arrow-down-line" aria-hidden="true" /> 当前下行
+            </span>
+            <strong>
+              {networkStats.netSpeed.inData.value}
+              <small>{networkStats.netSpeed.inData.unit}/s</small>
+            </strong>
+            <p>
+              今日流量 {networkStats.transfer.inData.value} {networkStats.transfer.inData.unit}
+            </p>
+          </div>
+          <div className="status-network__metric status-network__metric--up">
+            <span>
+              <i className="ri-arrow-up-line" aria-hidden="true" /> 当前上行
+            </span>
+            <strong>
+              {networkStats.netSpeed.outData.value}
+              <small>{networkStats.netSpeed.outData.unit}/s</small>
+            </strong>
+            <p>
+              今日流量 {networkStats.transfer.outData.value} {networkStats.transfer.outData.unit}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="status-panel status-current" aria-labelledby="current-status-title">
+        <div className="status-panel__header">
+          <div>
+            <h2 id="current-status-title">节点状态</h2>
+            <p>实时速度、资源占用与续费周期</p>
           </div>
           <span>
             {workspace.filteredCounts.online}/{workspace.filteredCounts.total} 在线
@@ -213,22 +252,16 @@ export default function Servers() {
 
       <section className="status-facts" aria-label="运行概览">
         <div>
-          <strong>
-            {networkStats.netSpeed.inData.value}
-            {networkStats.netSpeed.inData.unit}/s
-          </strong>
-          <span>当前下行</span>
-        </div>
-        <div>
-          <strong>
-            {networkStats.netSpeed.outData.value}
-            {networkStats.netSpeed.outData.unit}/s
-          </strong>
-          <span>当前上行</span>
-        </div>
-        <div>
           <strong>{availability.toFixed(1)}%</strong>
           <span>当前在线率</span>
+        </div>
+        <div>
+          <strong>{workspace.totalCounts.online}</strong>
+          <span>在线节点</span>
+        </div>
+        <div>
+          <strong>{billingOverview.tracked}</strong>
+          <span>已配置到期</span>
         </div>
         <div>
           <strong>{billingOverview.expiringSoon + billingOverview.expired}</strong>
@@ -236,48 +269,58 @@ export default function Servers() {
         </div>
       </section>
 
-      <section className="status-renewal" aria-labelledby="billing-title">
-        <i className="ri-calendar-event-line" aria-hidden="true" />
-        <div className="status-renewal__content">
-          <h2 id="billing-title">到期与续费</h2>
-          {billingOverview.tracked > 0 ? (
-            billingOverview.nearest ? (
-              <p>
-                最近到期节点为 <strong>{billingOverview.nearest.name}</strong>，到期时间 {billingOverview.nearest.endDate}，剩余{" "}
-                {billingOverview.nearest.days} 天。
-              </p>
+      <section className="status-panel status-billing" aria-labelledby="billing-title">
+        <div className="status-panel__header">
+          <div>
+            <h2 id="billing-title">到期与续费</h2>
+            <p>基于节点公开备注中的账单周期</p>
+          </div>
+        </div>
+        <div className="status-billing__body">
+          <div className="status-billing__nearest">
+            <span>最近到期</span>
+            {billingOverview.nearest ? (
+              <>
+                <strong>{billingOverview.nearest.days} 天</strong>
+                <p>
+                  {billingOverview.nearest.name}，到期 {billingOverview.nearest.endDate}
+                </p>
+              </>
             ) : (
-              <p>{billingOverview.expired > 0 ? `${billingOverview.expired} 台节点已经到期，请及时处理。` : "当前已配置的节点均为长期有效。"}</p>
-            )
-          ) : (
-            <p>尚未在节点公开备注中配置到期时间。</p>
-          )}
-          <div className="status-renewal__meta">
-            <span>30 天内到期 {billingOverview.expiringSoon}</span>
-            <span>已过期 {billingOverview.expired}</span>
-            <span>长期有效 {billingOverview.perpetual}</span>
+              <>
+                <strong>{billingOverview.tracked > 0 ? "长期" : "暂无"}</strong>
+                <p>{billingOverview.tracked > 0 ? "当前没有临近到期节点" : "尚未配置节点到期时间"}</p>
+              </>
+            )}
+          </div>
+          <div className="status-billing__counts">
+            <span>
+              <strong>{billingOverview.expiringSoon}</strong>30 天内到期
+            </span>
+            <span>
+              <strong>{billingOverview.expired}</strong>已过期
+            </span>
+            <span>
+              <strong>{billingOverview.perpetual}</strong>长期有效
+            </span>
           </div>
         </div>
       </section>
 
-      <section className="status-resources" aria-labelledby="resource-title">
-        <div className="status-section-heading">
+      <section className="status-panel status-resources" aria-labelledby="resource-title">
+        <div className="status-panel__header">
           <div>
-            <h2 id="resource-title">资源概览</h2>
+            <h2 id="resource-title">资源使用</h2>
             <p>当前在线节点的平均资源占用</p>
           </div>
         </div>
         <div className="status-resources__grid">
           {resourceSummaries.map((resource) => (
             <div key={resource.type}>
-              <strong>{resource.value}%</strong>
               <span>{resource.label}</span>
+              <strong>{resource.value}%</strong>
             </div>
           ))}
-          <div>
-            <strong>{billingOverview.tracked}</strong>
-            <span>已配置到期</span>
-          </div>
         </div>
       </section>
     </div>
