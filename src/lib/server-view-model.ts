@@ -1,16 +1,15 @@
-import dayjs from "dayjs"
-
 import { GetOsName } from "@/lib/logo-class"
 import {
+  type PublicNoteData,
   formatBillingEndDate,
   getNextCycleTime,
   normalizeServer,
   parsePublicNote,
   resolvePublicNote,
-  type PublicNoteData,
 } from "@/lib/server-normalizer"
 import { calcBinary, formatBinaryUsageGT, getCpuCoresFromCpuText } from "@/lib/server-spec"
 import { NezhaServer } from "@/types/nezha-api"
+import dayjs from "dayjs"
 
 export type RingType = "cpu" | "mem" | "swap" | "disk"
 
@@ -224,10 +223,7 @@ function parseCpuInfo(text: string) {
   }
 }
 
-export function formatBinaryValue(
-  bytes: number,
-  decimals: { t: number; g: number; m: number; k: number } = { t: 2, g: 2, m: 1, k: 1 },
-): NumberUnit {
+export function formatBinaryValue(bytes: number, decimals: { t: number; g: number; m: number; k: number } = { t: 2, g: 2, m: 1, k: 1 }): NumberUnit {
   const stats = calcBinary(bytes)
   if (stats.p && stats.p > 1) return { value: Number(stats.p.toFixed(1)), unit: "P" }
   if (stats.t > 1) return { value: Number(stats.t.toFixed(decimals.t)), unit: "T" }
@@ -236,10 +232,7 @@ export function formatBinaryValue(
   return { value: Number(stats.k.toFixed(decimals.k)), unit: "K" }
 }
 
-export function formatTrafficValue(
-  bytes: number,
-  decimals: { t: number; g: number; m: number; k: number } = { t: 2, g: 2, m: 1, k: 1 },
-): NumberUnit {
+export function formatTrafficValue(bytes: number, decimals: { t: number; g: number; m: number; k: number } = { t: 2, g: 2, m: 1, k: 1 }): NumberUnit {
   const value = Math.max(Number(bytes) || 0, 0)
   const k = value / 1000
   const m = k / 1000
@@ -326,14 +319,14 @@ export function splitDaysText(value: string) {
 }
 
 export function getRingTrackColor() {
-  return "rgba(255, 255, 255, 0.25)"
+  return "#e7edf1"
 }
 
 export function getRingUsedColor(type: RingType) {
-  if (type === "cpu") return "#0088FF"
-  if (type === "mem") return "#0AA344"
-  if (type === "swap") return "#FF8C00"
-  return "#70F3FF"
+  if (type === "cpu") return "#2f89b0"
+  if (type === "mem") return "#0aa579"
+  if (type === "swap") return "#d99016"
+  return "#43b8c5"
 }
 
 export function getCpuCoreLabel(server: NezhaServer) {
@@ -468,13 +461,7 @@ export function getServerSearchViewModel(server: NezhaServer) {
   const parsedData = parsePublicNote(server.public_note || "")
   return {
     tagList: getPublicNoteTags(parsedData, { limit: 3 }),
-    matchText: [
-      server.name,
-      parsedData?.planDataMod?.networkRoute,
-      parsedData?.planDataMod?.extra,
-      server.host?.platform,
-      server.country_code,
-    ]
+    matchText: [server.name, parsedData?.planDataMod?.networkRoute, parsedData?.planDataMod?.extra, server.host?.platform, server.country_code]
       .map((item) => String(item || "").toLowerCase())
       .join(" "),
   }

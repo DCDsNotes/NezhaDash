@@ -23,18 +23,22 @@ main.tsx
    └─ SortProvider
       ├─ RouterProvider
       │  └─ App
-      │     ├─ Header
-      │     └─ Outlet
+      │     ├─ RefreshToast
+      │     └─ ProbeWorkspace
+      │        ├─ WorkspaceSidebar
+      │        ├─ ServerBrowser
+      │        ├─ Outlet
+      │        └─ MobileNavigation
       └─ Toaster
 ```
 
-`src/providers.tsx` 只负责跨路由 Provider。`src/router.tsx` 只负责路由表。`src/App.tsx` 是页面壳层，负责站点设置、自定义代码注入、背景和公共布局。页面采用参考 EdgeEver 的浅色工作区语言，但保留哪吒单列居中信息架构。
+`src/providers.tsx` 只负责跨路由 Provider。`src/router.tsx` 只负责路由表。`src/App.tsx` 负责站点设置、自定义代码注入、背景和错误边界，`ProbeWorkspace` 负责实际应用壳层。桌面端采用“全局导航、节点浏览、内容详情”三段式工作台；平板隐藏全局导航；移动端切换为顶部栏、单内容区和底部导航。视觉语言参考 EdgeEver 的浅色、紧凑和低装饰界面，但业务语义与数据契约仍属于哪吒探针。
 
 ## 路由与页面
 
 | 路径                 | 页面                     | 功能                                                     |
 | -------------------- | ------------------------ | -------------------------------------------------------- |
-| `/`                  | `pages/Server.tsx`       | 节点统计、可展开世界地图、分组筛选、在线状态筛选、排序、服务器卡片列表 |
+| `/`                  | `pages/Server.tsx`       | 全局统计、世界地图和在线节点资源概览                     |
 | `/server/:serverKey` | `pages/ServerDetail.tsx` | 单服务器状态、系统信息、实时速度、速度历史、网络监控历史 |
 | `/error`             | `pages/ErrorPage.tsx`    | 通用错误展示                                             |
 | `*`                  | `pages/NotFound.tsx`     | 404 与返回首页                                           |
@@ -47,19 +51,19 @@ main.tsx
 
 `src/lib/nezha-api.ts` 是唯一 HTTP 访问层，统一处理 URL、HTTP 状态、JSON 解析和后端 `error` 字段。`src/lib/query-options.ts` 集中维护 Query Key 与默认刷新策略。
 
-| Query Key          | 接口                       | 消费位置            |
-| ------------------ | -------------------------- | ------------------- |
-| `setting`          | `/api/v1/setting`          | App、Header         |
-| `login-user`       | `/api/v1/profile`          | Header 管理后台入口 |
-| `server-group`     | `/api/v1/server-group`     | 服务器总览          |
-| `server-speed/:id` | `/api/v1/server-speed/:id` | 详情页速度图        |
-| `monitor/:id`      | `/api/v1/service/:id`      | 详情页监控图        |
+| Query Key          | 接口                       | 消费位置             |
+| ------------------ | -------------------------- | -------------------- |
+| `setting`          | `/api/v1/setting`          | App、ProbeWorkspace  |
+| `login-user`       | `/api/v1/profile`          | 工作台管理后台入口   |
+| `server-group`     | `/api/v1/server-group`     | 工作台节点浏览与筛选 |
+| `server-speed/:id` | `/api/v1/server-speed/:id` | 详情页速度图         |
+| `monitor/:id`      | `/api/v1/service/:id`      | 详情页监控图         |
 
 ### WebSocket 实时状态
 
 `WebSocketProvider` 连接 `/api/v1/ws/server`，负责断线指数退避、30 秒消息陈旧检测和手动重连。`useNezhaWsData` 只负责安全解析最新一条消息。
 
-实时消息包含服务端时间和完整服务器数组。总览、Header、搜索和详情页都从同一个 Context 读取，避免为高频消息建立多个连接。
+实时消息包含服务端时间和完整服务器数组。`useServerWorkspace` 将节点分组、状态、搜索、排序、统计、流量和位置聚合为同一份路由上下文；工作台、总览和搜索复用这份数据，详情页继续从同一个 WebSocket Context 读取，避免为高频消息建立多个连接。
 
 ### 视图模型
 
@@ -78,7 +82,7 @@ main.tsx
 
 `src/components/ui` 是本地拥有的 shadcn 风格组件代码。Dialog、DropdownMenu、Switch 和 ToggleGroup 由 Radix UI 提供焦点管理、键盘交互、ARIA 与 Portal 行为，Button 使用 Radix Slot 支持 `asChild`。
 
-业务组件中的数据逻辑与图表契约保持稳定，页面层使用 `src/styles/workspace.css` 统一浅色令牌、边界、间距和单列布局。Tailwind 用于基础组件状态、可访问焦点、尺寸和页面级布局；领域图表继续由独立 CSS 和 SVG 组件绘制。
+业务组件中的数据逻辑与图表契约保持稳定。`src/styles/probe.css` 定义新工作台的网格、色彩、间距和响应式覆盖，`workspace.css` 保留详情组件和弹层的通用浅色适配。Tailwind 用于基础组件状态、可访问焦点和尺寸；领域图表继续由独立 CSS 和 SVG 组件绘制。
 
 ## 核心功能
 

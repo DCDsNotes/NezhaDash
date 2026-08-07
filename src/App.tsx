@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Outlet } from "react-router-dom"
 
 import ErrorBoundary from "./components/ErrorBoundary"
-import Header, { RefreshToast } from "./components/Header"
+import { RefreshToast } from "./components/Header"
+import ProbeWorkspace from "./components/ProbeWorkspace"
 import { useBackground } from "./hooks/use-background"
 import { InjectContext } from "./lib/inject"
 import { settingQueryOptions } from "./lib/query-options"
@@ -70,10 +70,7 @@ export default function App() {
         )}
         <div className="nazha-layout-main">
           <RefreshToast />
-          <Header />
-          <main className="min-h-[calc(100dvh-4rem)] w-full">
-            <Outlet />
-          </main>
+          <ProbeWorkspace />
         </div>
       </div>
     </ErrorBoundary>

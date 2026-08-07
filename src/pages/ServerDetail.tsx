@@ -85,6 +85,7 @@ export default function ServerDetail() {
           <i className="ri-arrow-left-line" aria-hidden="true" />
           <span>返回服务器列表</span>
         </Link>
+        <span className="probe-detail-heading">节点详情</span>
         <span className={cn("server-detail-page__state", { "server-detail-page__state--offline": !isOnline })}>
           <i className="ri-checkbox-blank-circle-fill" aria-hidden="true" />
           {isOnline ? "正在运行" : "暂时离线"}

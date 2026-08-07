@@ -15,8 +15,8 @@ type SpeedPoint = {
 
 type MinuteOption = { label: string; value: number }
 
-const SPEED_IN_COLOR = "#f5b199"
-const SPEED_OUT_COLOR = "#89c3eb"
+const SPEED_IN_COLOR = "#d97a59"
+const SPEED_OUT_COLOR = "#3183a7"
 const speedMinutes: MinuteOption[] = [
   { label: "30分钟", value: 30 },
   { label: "1小时", value: 60 },

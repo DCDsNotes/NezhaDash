@@ -205,9 +205,27 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await page.goto("/")
 
   await expect(page).toHaveTitle("哪吒运行中心")
-  await expect(page.locator(".server-card")).toHaveCount(2)
+  await expect(page.locator(".probe-node-item")).toHaveCount(2)
   await expect(page.getByText("上海边缘节点", { exact: true })).toBeVisible()
   await assertNoHorizontalOverflow(page)
+
+  await page.getByRole("button", { name: /离线节点 1/ }).click()
+  await expect(page.locator(".probe-node-item")).toHaveCount(1)
+  await page.getByRole("button", { name: /全部状态 2/ }).click()
+
+  await page.getByRole("searchbox", { name: "搜索节点" }).fill("上海")
+  await expect(page.locator(".probe-node-item")).toHaveCount(1)
+  await page.getByRole("searchbox", { name: "搜索节点" }).fill("")
+
+  await page.getByRole("button", { name: "节点分组：全部节点" }).click()
+  await page.getByRole("menuitemradio", { name: "核心节点 1" }).click()
+  await expect(page.locator(".probe-node-item")).toHaveCount(1)
+  await page.getByRole("button", { name: "节点分组：核心节点" }).click()
+  await page.getByRole("menuitemradio", { name: "全部节点 2" }).click()
+
+  await page.getByLabel("查看节点地图").click()
+  await expect(page.getByRole("dialog", { name: "节点地图" })).toBeVisible()
+  await page.getByRole("button", { name: "关闭" }).click()
 
   await page.getByLabel(/排序字段/).click()
   await expect(page.getByRole("menuitemradio", { name: "主机名称" })).toBeVisible()
@@ -232,11 +250,28 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "server-detail-desktop.png")
 
+  await page.setViewportSize({ width: 768, height: 1024 })
+  await page.goto("/")
+  await expect(page.locator(".probe-node-item")).toHaveCount(2)
+  await assertNoHorizontalOverflow(page)
+  await screenshot(page, testInfo, "dashboard-tablet.png")
+
+  await page.goto("/server/25ce76bd")
+  await expect(page.getByText("网络速度", { exact: true })).toBeVisible()
+  await assertNoHorizontalOverflow(page)
+  await screenshot(page, testInfo, "server-detail-tablet.png")
+
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto("/")
-  await expect(page.locator(".server-card")).toHaveCount(2)
+  await expect(page.locator(".probe-node-item")).toHaveCount(2)
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "dashboard-mobile.png")
+
+  await page.getByRole("button", { name: "打开节点地图" }).click()
+  await expect(page.getByRole("dialog", { name: "节点地图" })).toBeVisible()
+  await assertNoHorizontalOverflow(page)
+  await screenshot(page, testInfo, "map-mobile.png")
+  await page.getByRole("button", { name: "关闭" }).click()
 
   await page.goto("/server/25ce76bd")
   await expect(page.getByText("网络速度", { exact: true })).toBeVisible()

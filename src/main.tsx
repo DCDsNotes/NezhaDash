@@ -19,6 +19,7 @@ import "./styles/search.css"
 import "./styles/shared.css"
 import "./styles/tokens.css"
 import "./styles/workspace.css"
+import "./styles/probe.css"
 
 const rootEl = document.getElementById("root")!
 ReactDOM.createRoot(rootEl).render(

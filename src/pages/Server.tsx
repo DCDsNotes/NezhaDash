@@ -1,195 +1,138 @@
-import SearchBox from "@/components/SearchBox"
-import ServerCard from "@/components/ServerCard"
-import { ServerListItemSkeleton } from "@/components/ServerListItemSkeleton"
-import { ServerOptionBox, type ServerOptionItem } from "@/components/ServerOptionBox"
-import { ServerSortBox } from "@/components/ServerSortBox"
-import WorldMap, { buildLocationsFromServers } from "@/components/WorldMap"
-import { type Status } from "@/context/status-context"
-import { useNezhaWsData } from "@/hooks/use-nezha-ws-data"
-import { useSort } from "@/hooks/use-sort"
-import { useStatus } from "@/hooks/use-status"
-import { useWorldMapSize } from "@/hooks/use-world-map-size"
-import { serverGroupsQueryOptions } from "@/lib/query-options"
-import { serverSortHandler, serverSortOptions } from "@/lib/server-sort"
-import { getServerStatus, getServerStatusCounts } from "@/lib/server-view-model"
-import { type ServerGroup } from "@/types/nezha-api"
-import { useQuery } from "@tanstack/react-query"
-import { useEffect, useMemo, useState } from "react"
+import WorldMap from "@/components/WorldMap"
+import { type ServerWorkspaceValue } from "@/hooks/use-server-workspace"
+import { getServerCardViewModel, getServerStatus } from "@/lib/server-view-model"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { useOutletContext } from "react-router-dom"
 
-export default function Servers() {
-  const { sortProp, sortOrder, setSortOrder, setSortProp } = useSort()
-  const { data: groupData, isError: isGroupError } = useQuery(serverGroupsQueryOptions())
-  const { data: nezhaWsData, lastMessage, connected } = useNezhaWsData()
-  const { status, setStatus } = useStatus()
-  const [currentGroup, setCurrentGroup] = useState("")
-  const { width: worldMapWidth, height: worldMapHeight } = useWorldMapSize()
+type ResourceSummary = {
+  type: string
+  label: string
+  value: number
+}
+
+function usePanelWidth() {
+  const ref = useRef<HTMLDivElement | null>(null)
+  const [width, setWidth] = useState(720)
 
   useEffect(() => {
-    const savedGroup = sessionStorage.getItem("selectedGroup") || ""
-    setCurrentGroup(savedGroup === "All" ? "" : savedGroup)
+    const element = ref.current
+    if (!element) return
+    const observer = new ResizeObserver(([entry]) => {
+      const next = Math.floor(entry.contentRect.width)
+      if (next > 0) setWidth(next)
+    })
+    observer.observe(element)
+    return () => observer.disconnect()
   }, [])
 
-  const groupOptions = useMemo<ServerOptionItem[]>(() => {
-    const groups = groupData?.data
-    const servers = nezhaWsData?.servers
-    if (!Array.isArray(groups) || !Array.isArray(servers)) return []
-    const existing = new Set(servers.map((server) => server.id))
-    const result: ServerOptionItem[] = [{ key: "all", label: "全部分组", value: "", title: `${servers.length} 台` }]
-    groups.forEach((item: ServerGroup) => {
-      const count = Array.isArray(item.servers) ? item.servers.filter((id) => existing.has(id)).length : 0
-      if (count > 0)
-        result.push({ key: String(item.group.id || item.group.name), label: item.group.name, value: item.group.name, title: `${count} 台` })
-    })
-    return result
-  }, [groupData?.data, nezhaWsData?.servers])
+  return { ref, width }
+}
 
-  const onlineOptions = useMemo<ServerOptionItem[]>(() => {
-    if (!nezhaWsData?.servers) return []
-    const counts = getServerStatusCounts(nezhaWsData.now, nezhaWsData.servers)
-    return [
-      { key: "all", label: "全部状态", value: "all", title: `${counts.total} 台` },
-      { key: "online", label: "在线", value: "online", title: `${counts.online} 台` },
-      { key: "offline", label: "离线", value: "offline", title: `${counts.offline} 台` },
-    ]
-  }, [nezhaWsData])
+function getResourceSummaries(workspace: ServerWorkspaceValue): ResourceSummary[] {
+  const onlineServers = workspace.filteredServers.filter((server) => getServerStatus(workspace.now, server) === "online")
+  const resources = [
+    { type: "cpu", label: "CPU" },
+    { type: "mem", label: "内存" },
+    { type: "disk", label: "磁盘" },
+  ]
 
-  const sortOptions = useMemo(() => serverSortOptions().map((item) => ({ value: item.value, label: item.label })), [])
+  return resources.map((resource) => {
+    const values = onlineServers
+      .map((server) => getServerCardViewModel(workspace.now, server).rings.find((ring) => ring.type === resource.type)?.used)
+      .filter((value): value is number => typeof value === "number" && Number.isFinite(value))
+    const average = values.length > 0 ? values.reduce((total, value) => total + value, 0) / values.length : 0
+    return { ...resource, value: Number(average.toFixed(1)) }
+  })
+}
 
-  const filteredServers = useMemo(() => {
-    if (!nezhaWsData?.servers) return []
-    const next = nezhaWsData.servers.filter((server) => {
-      if (!currentGroup) return true
-      return !!groupData?.data?.some(
-        (group: ServerGroup) => group.group.name === currentGroup && Array.isArray(group.servers) && group.servers.includes(server.id),
-      )
-    })
-    const byStatus = status === "all" ? next : next.filter((server) => getServerStatus(nezhaWsData.now, server) === status)
-    return [...byStatus].sort((a, b) => serverSortHandler(a, b, sortProp, sortOrder))
-  }, [currentGroup, groupData?.data, nezhaWsData, sortOrder, sortProp, status])
-
-  const counts = nezhaWsData ? getServerStatusCounts(nezhaWsData.now, filteredServers) : null
-  const serverLocations = useMemo(
-    () =>
-      buildLocationsFromServers(
-        filteredServers.map((server) => ({ ...server, online: getServerStatus(nezhaWsData?.now || 0, server) === "online" })),
-      ),
-    [filteredServers, nezhaWsData?.now],
-  )
-
-  function handleGroupChange(value: string) {
-    setCurrentGroup(value)
-    sessionStorage.setItem("selectedGroup", value)
-  }
-
-  if (!connected && !lastMessage) return <ServerPageSkeleton worldMapWidth={worldMapWidth} worldMapHeight={worldMapHeight} />
-  if (!nezhaWsData) return <ServerPageSkeleton worldMapWidth={worldMapWidth} worldMapHeight={worldMapHeight} />
+export default function Servers() {
+  const workspace = useOutletContext<ServerWorkspaceValue>()
+  const { ref: mapPanelRef, width: mapPanelWidth } = usePanelWidth()
+  const availability = workspace.totalCounts.total > 0 ? (workspace.totalCounts.online / workspace.totalCounts.total) * 100 : 0
+  const resourceSummaries = useMemo(() => getResourceSummaries(workspace), [workspace])
+  const mapWidth = Math.max(320, Math.min(820, mapPanelWidth - 48))
 
   return (
-    <div className="server-page">
-      <div className="dashboard-container">
-        <section className="dashboard-page-heading">
+    <div className="probe-overview">
+      <header className="probe-main-header">
+        <div>
+          <h1>节点概览</h1>
+          <p>查看当前节点状态、资源占用和区域分布</p>
+        </div>
+        <div className="probe-main-header__network" aria-label="当前网络速度">
+          <span>
+            <i className="ri-arrow-down-line" aria-hidden="true" />
+            {workspace.headerStats.netSpeed.inData.value}
+            {workspace.headerStats.netSpeed.inData.unit}/s
+          </span>
+          <span>
+            <i className="ri-arrow-up-line" aria-hidden="true" />
+            {workspace.headerStats.netSpeed.outData.value}
+            {workspace.headerStats.netSpeed.outData.unit}/s
+          </span>
+        </div>
+      </header>
+
+      <div className="probe-overview__body">
+        <section className="probe-summary-strip" aria-label="节点汇总">
           <div>
-            <p className="dashboard-eyebrow">监控面板</p>
-            <h1>服务器总览</h1>
-            <p>集中查看节点状态、资源占用与网络活动。</p>
+            <span>全部节点</span>
+            <strong>{workspace.totalCounts.total}</strong>
           </div>
-          <div className="dashboard-overview-stats" aria-label="筛选结果统计">
-            <div>
-              <strong>{counts?.total ?? 0}</strong>
-              <span>节点</span>
-            </div>
-            <div className="dashboard-overview-stats__online">
-              <strong>{counts?.online ?? 0}</strong>
-              <span>在线</span>
-            </div>
-            <div className="dashboard-overview-stats__offline">
-              <strong>{counts?.offline ?? 0}</strong>
-              <span>离线</span>
-            </div>
+          <div>
+            <span>在线</span>
+            <strong className="probe-text-online">{workspace.totalCounts.online}</strong>
+          </div>
+          <div>
+            <span>离线</span>
+            <strong className="probe-text-offline">{workspace.totalCounts.offline}</strong>
+          </div>
+          <div>
+            <span>在线率</span>
+            <strong>{availability.toFixed(1)}%</strong>
           </div>
         </section>
 
-        {serverLocations.length > 0 ? (
-          <details className="dashboard-map-panel" aria-label="节点位置分布">
-            <summary className="dashboard-section-heading">
-              <div>
-                <h2>节点位置</h2>
-                <span>在线节点分布</span>
-              </div>
-              <i className="ri-arrow-down-s-line" aria-hidden="true" />
-            </summary>
-            <WorldMap locations={serverLocations} mapWidth={worldMapWidth} className="dashboard-map-panel__map" />
-          </details>
-        ) : null}
-
-        <section className="dashboard-list-section">
-          <div className="dashboard-toolbar">
-            <div className="dashboard-toolbar__filters">
-              <ServerOptionBox value={currentGroup} onChange={handleGroupChange} options={groupOptions} />
-              {onlineOptions.length > 0 ? (
-                <ServerOptionBox
-                  value={status === "all" ? "all" : status}
-                  onChange={(value) => setStatus((value || "all") as Status)}
-                  options={onlineOptions}
-                />
-              ) : null}
-              {isGroupError ? (
-                <span className="dashboard-toolbar__error" role="status">
-                  分组暂时不可用
-                </span>
-              ) : null}
-            </div>
-            <div className="dashboard-toolbar__actions">
-              <SearchBox />
-              <ServerSortBox
-                value={{ prop: sortProp, order: sortOrder }}
-                onChange={(value) => {
-                  setSortProp(value.prop)
-                  setSortOrder(value.order)
-                }}
-                options={sortOptions}
-              />
-            </div>
-          </div>
-          <div className="dashboard-list-heading">
+        <section className="probe-overview-panel probe-overview-map" ref={mapPanelRef}>
+          <div className="probe-overview-panel__header">
             <div>
-              <h2>全部服务器</h2>
-              <span>按当前筛选显示 {filteredServers.length} 台</span>
+              <h2>节点分布</h2>
+              <span>当前筛选中的在线节点</span>
             </div>
-            <span className="dashboard-list-heading__hint">点击服务器查看详细监控</span>
+            <span className="probe-overview-panel__count">{workspace.locations.length} 个区域</span>
           </div>
-          <div className="server-card-grid">
-            {filteredServers.length > 0 ? (
-              filteredServers.map((serverInfo) => <ServerCard now={nezhaWsData.now} key={serverInfo.id} serverInfo={serverInfo} />)
+          <div className="probe-overview-map__canvas">
+            {workspace.locations.length > 0 ? (
+              <WorldMap locations={workspace.locations} mapWidth={mapWidth} />
             ) : (
-              <div className="dashboard-empty dashboard-empty--panel">
-                <i className="ri-server-line" aria-hidden="true" />
-                <strong>当前筛选条件下没有服务器</strong>
-                <span>尝试切换分组或在线状态。</span>
+              <div className="probe-overview-empty">
+                <i className="ri-map-pin-line" aria-hidden="true" />
+                <span>当前没有可显示的位置</span>
               </div>
             )}
           </div>
         </section>
-      </div>
-    </div>
-  )
-}
 
-function ServerPageSkeleton({ worldMapWidth, worldMapHeight }: { worldMapWidth: number; worldMapHeight: number }) {
-  return (
-    <div className="server-page">
-      <div className="dashboard-container">
-        <div className="dashboard-page-heading dashboard-skeleton-heading" />
-        <div
-          className="dashboard-map-panel dashboard-map-panel--skeleton"
-          style={{ width: `${worldMapWidth}px`, minHeight: `${Math.min(worldMapHeight, 220)}px` }}
-        />
-        <div className="dashboard-toolbar dashboard-toolbar--skeleton" />
-        <div className="server-card-grid">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <ServerListItemSkeleton key={index} />
-          ))}
-        </div>
+        <section className="probe-overview-panel probe-resource-overview">
+          <div className="probe-overview-panel__header">
+            <div>
+              <h2>资源概览</h2>
+              <span>在线节点的平均使用率</span>
+            </div>
+            <span className="probe-overview-panel__count">{workspace.filteredCounts.online} 台在线</span>
+          </div>
+          <div className="probe-resource-overview__rows">
+            {resourceSummaries.map((resource) => (
+              <div key={resource.type} className="probe-resource-row">
+                <span>{resource.label}</span>
+                <div className="probe-resource-row__bar" aria-hidden="true">
+                  <span style={{ width: `${resource.value}%` }} />
+                </div>
+                <strong>{resource.value}%</strong>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   )
