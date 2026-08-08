@@ -266,9 +266,12 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await expect(page.locator(".probe-node-item")).toHaveCount(1)
   await page.getByRole("searchbox", { name: "搜索节点" }).fill("")
 
-  await page.getByRole("button", { name: "节点分组：全部节点" }).click()
+  const groupTrigger = page.getByRole("button", { name: "节点分组：全部节点" })
+  await expect(groupTrigger).toHaveCSS("font-weight", "400")
+  await groupTrigger.click()
   const groupMenu = page.locator(".server-sort-dropdown:visible")
   await expect(groupMenu).toHaveCSS("background-color", "rgb(255, 255, 255)")
+  await expect(groupMenu.locator(".server-sort-dropdown__label").first()).toHaveCSS("font-weight", "600")
   await expect(page.getByRole("menuitemradio", { name: "全部节点 2" })).toHaveCSS("color", "rgb(8, 127, 79)")
   await screenshot(page, testInfo, "group-menu-desktop.png")
   await page.getByRole("menuitemradio", { name: "核心节点 1" }).click()
@@ -289,10 +292,14 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
 
   const sortTrigger = page.getByLabel(/排序字段/)
   const initialSortWidth = (await sortTrigger.boundingBox())?.width
+  await expect(sortTrigger).toHaveCSS("width", "112px")
+  await expect(sortTrigger).toHaveCSS("font-weight", "400")
   await expect(sortTrigger.locator(".server-sort__selected-value")).toHaveCSS("text-align", "left")
+  await expect(sortTrigger.locator(".server-sort__selected-value")).toHaveCSS("font-weight", "400")
   await sortTrigger.click()
   const sortMenu = page.locator(".server-sort-dropdown:visible")
   await expect(sortMenu).toHaveCSS("background-color", "rgb(255, 255, 255)")
+  await expect(sortMenu.locator(".server-sort-dropdown__label").first()).toHaveCSS("font-weight", "600")
   const [sortMenuBox, statusPanelBox] = await Promise.all([sortMenu.boundingBox(), page.locator(".status-current").boundingBox()])
   expect(sortMenuBox).not.toBeNull()
   expect(statusPanelBox).not.toBeNull()
@@ -301,6 +308,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await screenshot(page, testInfo, "sort-menu-desktop.png")
   await page.getByRole("menuitemradio", { name: "1分钟负载" }).click()
   const selectedSortWidth = (await sortTrigger.boundingBox())?.width
+  await expect(sortTrigger).toHaveCSS("width", "112px")
   expect(initialSortWidth).toBeDefined()
   expect(selectedSortWidth).toBeDefined()
   expect(Math.abs(selectedSortWidth! - initialSortWidth!)).toBeLessThanOrEqual(1)

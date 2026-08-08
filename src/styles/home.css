@@ -23,36 +23,21 @@
 }
 
 .server-sort__selected-value,
-.server-sort__order-icon,
-.server-sort-dropdown__label {
+.server-sort__order-icon {
   color: #fff;
-  font-weight: 700;
-}
-
-.server-sort__label-slot,
-.server-sort__selected-sizer {
-  display: grid;
-}
-
-.server-sort__label-slot {
-  justify-items: start;
-  text-align: left;
-}
-
-.server-sort__label-slot > *,
-.server-sort__selected-sizer > * {
-  grid-area: 1 / 1;
-  white-space: nowrap;
-}
-
-.server-sort__selected-sizer {
-  visibility: hidden;
-  pointer-events: none;
 }
 
 .server-sort__selected-value {
-  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   text-align: left;
+}
+
+.server-sort-dropdown__label {
+  color: #fff;
+  font-weight: 600;
 }
 
 .server-sort__order-icon {

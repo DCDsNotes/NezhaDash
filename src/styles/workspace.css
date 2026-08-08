@@ -47,11 +47,22 @@
   color: #078d65;
 }
 
-.server-options__label,
-.server-sort__selected-value {
+.server-options__label {
   color: inherit;
   font-size: 12px;
   font-weight: 600;
+}
+
+.server-sort__selected-value {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .server-sort {
@@ -62,8 +73,12 @@
 
 .server-sort__selected {
   display: inline-flex;
+  width: 112px;
+  min-width: 112px;
+  flex: 0 0 112px;
   align-items: center;
   padding: 0 10px;
+  font-weight: 400;
 }
 
 .server-sort__order-icon,
@@ -85,6 +100,7 @@
   min-height: 32px;
   color: #52667c;
   font-size: 12px;
+  font-weight: 600;
 }
 
 .server-sort-dropdown__item:focus,
@@ -95,6 +111,7 @@
 
 .server-sort-dropdown__label {
   font-size: 12px;
+  font-weight: inherit;
 }
 
 .dashboard-search-trigger i {

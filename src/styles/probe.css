@@ -414,6 +414,7 @@ body {
   color: var(--probe-text-secondary);
   box-shadow: none;
   font-size: 10px;
+  font-weight: 400;
 }
 
 .status-controls__button:hover,
@@ -1047,11 +1048,11 @@ body {
   }
 
   .status-controls .server-sort {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
   }
 
   .status-controls .server-sort__selected {
-    flex: 1 1 auto;
+    flex: 0 0 112px;
   }
 
   .probe-node-item {
@@ -1125,7 +1126,6 @@ body {
   .status-controls__button span,
   .status-controls__button .ri-arrow-down-s-line,
   .status-controls .server-sort__selected-value,
-  .status-controls .server-sort__label-slot,
   .status-controls .server-sort__selected > .ri-arrow-down-s-line {
     display: none;
   }
