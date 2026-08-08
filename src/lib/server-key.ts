@@ -46,7 +46,7 @@ function md5Blocks(bytes: Uint8Array) {
   const len = bytes.length
   const bitLen = len * 8
 
-  const padLen = ((56 - ((len + 1) % 64)) + 64) % 64
+  const padLen = (56 - ((len + 1) % 64) + 64) % 64
   const totalLen = len + 1 + padLen + 8
   const buffer = new Uint8Array(totalLen)
   buffer.set(bytes)
@@ -64,7 +64,7 @@ function md5Blocks(bytes: Uint8Array) {
   for (let i = 0; i < buffer.length; i += 64) {
     for (let j = 0; j < 16; j += 1) {
       const k = i + j * 4
-      x[j] = (buffer[k]) | (buffer[k + 1] << 8) | (buffer[k + 2] << 16) | (buffer[k + 3] << 24)
+      x[j] = buffer[k] | (buffer[k + 1] << 8) | (buffer[k + 2] << 16) | (buffer[k + 3] << 24)
     }
 
     let aa = a

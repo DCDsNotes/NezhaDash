@@ -1,6 +1,9 @@
+import { NezhaServer } from "@/types/nezha-api"
 import dayjs from "dayjs"
 
-import { NezhaServer } from "@/types/nezha-api"
+const lastActiveTimeCache = new WeakMap<NezhaServer, { source: string; value: number }>()
+const publicNoteCache = new Map<string, PublicNoteData | null>()
+const PUBLIC_NOTE_CACHE_LIMIT = 256
 
 export interface BillingData {
   startDate: string
@@ -36,7 +39,9 @@ function calcPercent(used: unknown, total: unknown) {
 }
 
 function normalizeCountryCode(raw: unknown) {
-  const code = String(raw || "").trim().toLowerCase()
+  const code = String(raw || "")
+    .trim()
+    .toLowerCase()
   if (!code) return "cn"
   if (!/^[a-z]{2}$/.test(code)) return "cn"
   return code
@@ -44,6 +49,20 @@ function normalizeCountryCode(raw: unknown) {
 
 export function parseISOTimestamp(isoString: string): number {
   return new Date(isoString).getTime()
+}
+
+export function getServerLastActiveTime(serverInfo: NezhaServer) {
+  const source = String(serverInfo.last_active || "")
+  const cached = lastActiveTimeCache.get(serverInfo)
+  if (cached?.source === source) return cached.value
+
+  const value = source.startsWith("000") ? 0 : parseISOTimestamp(source)
+  lastActiveTimeCache.set(serverInfo, { source, value })
+  return value
+}
+
+export function isServerOnline(now: number, serverInfo: NezhaServer) {
+  return now - getServerLastActiveTime(serverInfo) <= 30_000
 }
 
 export function resolvePublicNote(serverId: number, publicNote: string): string {
@@ -54,16 +73,15 @@ export function resolvePublicNote(serverId: number, publicNote: string): string 
 
   if (!publicNote && storedNote) return storedNote
 
-  if (publicNote) {
+  if (publicNote && storedNote !== publicNote) {
     sessionStorage.setItem(storageKey, publicNote)
-    return publicNote
   }
 
-  return ""
+  return publicNote || ""
 }
 
 export function normalizeServer(now: number, serverInfo: NezhaServer) {
-  const lastActiveTime = serverInfo.last_active.startsWith("000") ? 0 : parseISOTimestamp(serverInfo.last_active)
+  const lastActiveTime = getServerLastActiveTime(serverInfo)
 
   return {
     ...serverInfo,
@@ -73,7 +91,7 @@ export function normalizeServer(now: number, serverInfo: NezhaServer) {
     up: serverInfo.state.net_out_speed / 1024 / 1024 || 0,
     down: serverInfo.state.net_in_speed / 1024 / 1024 || 0,
     last_active_time_string: lastActiveTime ? dayjs(lastActiveTime).format("YYYY-MM-DD HH:mm:ss") : "",
-    online: now - lastActiveTime <= 30000,
+    online: isServerOnline(now, serverInfo),
     uptime: serverInfo.state.uptime || 0,
     version: serverInfo.host.version || null,
     tcp: serverInfo.state.tcp_conn_count || 0,
@@ -135,40 +153,48 @@ export function formatBillingEndDate(endDate: unknown): string {
 }
 
 export function parsePublicNote(publicNote: string): PublicNoteData | null {
+  if (!publicNote) return null
+  if (publicNoteCache.has(publicNote)) return publicNoteCache.get(publicNote) ?? null
+
+  let parsed: PublicNoteData | null = null
   try {
-    if (!publicNote) return null
-
     const data = JSON.parse(publicNote)
-    if (!data.billingDataMod && !data.planDataMod) return null
-
-    return {
-      ...(data.billingDataMod
-        ? {
-            billingDataMod: {
-              startDate: data.billingDataMod.startDate || "",
-              endDate: data.billingDataMod.endDate,
-              autoRenewal: data.billingDataMod.autoRenewal || "",
-              cycle: data.billingDataMod.cycle || "",
-              amount: data.billingDataMod.amount || "",
-            },
-          }
-        : {}),
-      ...(data.planDataMod
-        ? {
-            planDataMod: {
-              bandwidth: data.planDataMod.bandwidth || "",
-              trafficVol: data.planDataMod.trafficVol || "",
-              trafficType: data.planDataMod.trafficType || "",
-              IPv4: data.planDataMod.IPv4 || "",
-              IPv6: data.planDataMod.IPv6 || "",
-              networkRoute: data.planDataMod.networkRoute || "",
-              extra: data.planDataMod.extra || "",
-            },
-          }
-        : {}),
+    if (data.billingDataMod || data.planDataMod) {
+      parsed = {
+        ...(data.billingDataMod
+          ? {
+              billingDataMod: {
+                startDate: data.billingDataMod.startDate || "",
+                endDate: data.billingDataMod.endDate,
+                autoRenewal: data.billingDataMod.autoRenewal || "",
+                cycle: data.billingDataMod.cycle || "",
+                amount: data.billingDataMod.amount || "",
+              },
+            }
+          : {}),
+        ...(data.planDataMod
+          ? {
+              planDataMod: {
+                bandwidth: data.planDataMod.bandwidth || "",
+                trafficVol: data.planDataMod.trafficVol || "",
+                trafficType: data.planDataMod.trafficType || "",
+                IPv4: data.planDataMod.IPv4 || "",
+                IPv6: data.planDataMod.IPv6 || "",
+                networkRoute: data.planDataMod.networkRoute || "",
+                extra: data.planDataMod.extra || "",
+              },
+            }
+          : {}),
+      }
     }
   } catch (error) {
     console.error("Error parsing public note:", error)
-    return null
   }
+
+  if (publicNoteCache.size >= PUBLIC_NOTE_CACHE_LIMIT) {
+    const oldestKey = publicNoteCache.keys().next().value
+    if (oldestKey) publicNoteCache.delete(oldestKey)
+  }
+  publicNoteCache.set(publicNote, parsed)
+  return parsed
 }

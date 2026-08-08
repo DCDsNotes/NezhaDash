@@ -10,6 +10,8 @@ import { countryCoordinates } from "@/lib/geo-limit"
 import { serverIdToServerKey } from "@/lib/server-key"
 import { getServerDetailStatusViewModel, getServerStatus } from "@/lib/server-view-model"
 import { cn } from "@/lib/utils"
+import "@/styles/detail.css"
+import "@/styles/monitor.css"
 import { type NezhaServer } from "@/types/nezha-api"
 import { useEffect, useMemo } from "react"
 import { Link, Navigate, useParams } from "react-router-dom"
@@ -53,7 +55,7 @@ function ServerDetailPriority({ now, server }: { now: number; server: NezhaServe
 }
 
 export default function ServerDetail() {
-  const { data: nezhaWsData, lastMessage, connected } = useNezhaWsData()
+  const { data: nezhaWsData, connected } = useNezhaWsData()
   const { width: worldMapWidth, height: worldMapHeight } = useWorldMapSize()
 
   useEffect(() => {
@@ -87,7 +89,7 @@ export default function ServerDetail() {
   }
 
   if (!serverId) {
-    if (!connected || !lastMessage || !nezhaWsData) {
+    if (!connected || !nezhaWsData) {
       return (
         <div className="server-detail-page">
           <div className="world-map-box top-world-map">

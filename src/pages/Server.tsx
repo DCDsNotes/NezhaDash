@@ -32,12 +32,20 @@ function getResourceSummaries(workspace: ServerWorkspaceValue): ResourceSummary[
     { type: "mem", label: "内存" },
     { type: "disk", label: "硬盘" },
   ]
+  const totals = new Map(resources.map((resource) => [resource.type, { sum: 0, count: 0 }]))
+
+  onlineServers.forEach((server) => {
+    getServerCardViewModel(workspace.now, server).rings.forEach((ring) => {
+      const total = totals.get(ring.type)
+      if (!total || !Number.isFinite(ring.used)) return
+      total.sum += ring.used
+      total.count += 1
+    })
+  })
 
   return resources.map((resource) => {
-    const values = onlineServers
-      .map((server) => getServerCardViewModel(workspace.now, server).rings.find((ring) => ring.type === resource.type)?.used)
-      .filter((value): value is number => typeof value === "number" && Number.isFinite(value))
-    const average = values.length > 0 ? values.reduce((total, value) => total + value, 0) / values.length : 0
+    const total = totals.get(resource.type)
+    const average = total?.count ? total.sum / total.count : 0
     return { ...resource, value: Number(average.toFixed(1)) }
   })
 }

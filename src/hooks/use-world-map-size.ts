@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from "react"
-
 import { computeWorldMapWidth } from "@/lib/layout"
+import { useEffect, useMemo, useState } from "react"
 
 function getWorldMapWidth() {
   return typeof window === "undefined" ? 900 : computeWorldMapWidth(window.innerWidth)

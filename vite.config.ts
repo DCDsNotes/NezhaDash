@@ -12,6 +12,22 @@ function normalizeProductionBase(value: string | undefined) {
   return `/${base.replace(/^\/+|\/+$/g, "")}/`
 }
 
+function preferWoff2FontLogos() {
+  const source =
+    'src:url("font-logos.woff?v=1.2.0") format("woff"),url("font-logos.woff2?v=1.2.0") format("woff2"),url("font-logos.ttf?v=1.2.0") format("truetype")'
+
+  return {
+    name: "prefer-woff2-font-logos",
+    enforce: "pre" as const,
+    transform(code: string, id: string) {
+      const normalizedId = id.split("?", 1)[0].replace(/\\/g, "/")
+      if (!normalizedId.endsWith("/font-logos/assets/font-logos.css")) return null
+
+      return code.replace("font-display: auto", "font-display: swap").replace(source, 'src:url("font-logos.woff2?v=1.2.0") format("woff2")')
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig(({ command }) => {
   const productionBase = normalizeProductionBase(process.env.VITE_BASE_PATH)
@@ -28,7 +44,7 @@ export default defineConfig(({ command }) => {
 
   return {
     base: command === "build" ? productionBase : "/",
-    plugins: [react()],
+    plugins: [preferWoff2FontLogos(), react()],
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
@@ -53,6 +69,7 @@ export default defineConfig(({ command }) => {
       },
     },
     build: {
+      assetsInlineLimit: 0,
       rollupOptions: {
         output: {
           entryFileNames: `assets/[name].[hash].js`,
@@ -64,7 +81,6 @@ export default defineConfig(({ command }) => {
             if (/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return "react"
             if (/[\\/]node_modules[\\/]@tanstack[\\/]/.test(id)) return "tanstack"
             if (/[\\/]node_modules[\\/]@radix-ui[\\/]/.test(id)) return "radix"
-            if (/[\\/]node_modules[\\/](framer-motion|motion-dom|motion-utils)[\\/]/.test(id)) return "motion"
             if (/[\\/]node_modules[\\/](i18next|react-i18next)[\\/]/.test(id)) return "i18n"
           },
         },

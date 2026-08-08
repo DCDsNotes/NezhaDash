@@ -3,6 +3,7 @@ import {
   type PublicNoteData,
   formatBillingEndDate,
   getNextCycleTime,
+  isServerOnline,
   normalizeServer,
   parsePublicNote,
   resolvePublicNote,
@@ -57,6 +58,11 @@ type TransferCounter = {
   in: number
   out: number
 }
+
+type TimedCacheEntry<T> = { now: number; value: T }
+
+const serverCardViewModelCache = new WeakMap<NezhaServer, TimedCacheEntry<ReturnType<typeof createServerCardViewModel>>>()
+const serverDetailStatusViewModelCache = new WeakMap<NezhaServer, TimedCacheEntry<ReturnType<typeof createServerDetailStatusViewModel>>>()
 
 function roundPercent(value: number) {
   return Number(value.toFixed(1))
@@ -354,7 +360,7 @@ export function getServerBillingViewModel(publicNote: string, now = Date.now()) 
   }
 }
 
-export function getServerCardViewModel(now: number, server: NezhaServer) {
+function createServerCardViewModel(now: number, server: NezhaServer) {
   const info = normalizeServer(now, server)
   const billing = getServerBillingViewModel(info.public_note, now)
   const billingTransfer = getServerTransferStatsCounter(server, "billing")
@@ -366,7 +372,16 @@ export function getServerCardViewModel(now: number, server: NezhaServer) {
   }
 }
 
-export function getServerDetailStatusViewModel(now: number, server: NezhaServer) {
+export function getServerCardViewModel(now: number, server: NezhaServer) {
+  const cached = serverCardViewModelCache.get(server)
+  if (cached?.now === now) return cached.value
+
+  const value = createServerCardViewModel(now, server)
+  serverCardViewModelCache.set(server, { now, value })
+  return value
+}
+
+function createServerDetailStatusViewModel(now: number, server: NezhaServer) {
   const info = normalizeServer(now, server)
   const billing = getServerBillingViewModel(info.public_note, now)
   const billingTransfer = getServerTransferStatsCounter(server, "billing")
@@ -378,8 +393,17 @@ export function getServerDetailStatusViewModel(now: number, server: NezhaServer)
   }
 }
 
+export function getServerDetailStatusViewModel(now: number, server: NezhaServer) {
+  const cached = serverDetailStatusViewModelCache.get(server)
+  if (cached?.now === now) return cached.value
+
+  const value = createServerDetailStatusViewModel(now, server)
+  serverDetailStatusViewModelCache.set(server, { now, value })
+  return value
+}
+
 export function getServerStatus(now: number, server: NezhaServer) {
-  return normalizeServer(now, server).online ? "online" : "offline"
+  return isServerOnline(now, server) ? "online" : "offline"
 }
 
 export function getServerStatusCounts(now: number, servers: NezhaServer[]) {

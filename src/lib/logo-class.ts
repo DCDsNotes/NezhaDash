@@ -74,4 +74,3 @@ export function getPlatformLogoIconClassName(platform: string) {
   }
   return "ri-server-line"
 }
-

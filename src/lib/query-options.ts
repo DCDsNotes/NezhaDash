@@ -14,6 +14,7 @@ export function settingQueryOptions() {
   return queryOptions({
     queryKey: queryKeys.setting,
     queryFn: fetchSetting,
+    staleTime: 60_000,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
   })
@@ -26,7 +27,7 @@ export function loginUserQueryOptions() {
     refetchOnMount: false,
     refetchOnWindowFocus: true,
     refetchInterval: 30_000,
-    refetchIntervalInBackground: true,
+    refetchIntervalInBackground: false,
     retry: 0,
   })
 }

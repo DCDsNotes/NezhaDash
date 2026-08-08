@@ -1,4 +1,3 @@
-import { MotionProvider } from "@/components/motion/motion-provider"
 import { SortProvider } from "@/context/sort-provider"
 import { StatusProvider } from "@/context/status-provider"
 import { WebSocketProvider } from "@/context/websocket-provider"
@@ -8,14 +7,12 @@ import type { ReactNode } from "react"
 
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
-    <MotionProvider>
-      <QueryClientProvider client={queryClient}>
-        <WebSocketProvider path="/ws/server">
-          <StatusProvider>
-            <SortProvider>{children}</SortProvider>
-          </StatusProvider>
-        </WebSocketProvider>
-      </QueryClientProvider>
-    </MotionProvider>
+    <QueryClientProvider client={queryClient}>
+      <WebSocketProvider path="/ws/server">
+        <StatusProvider>
+          <SortProvider>{children}</SortProvider>
+        </StatusProvider>
+      </WebSocketProvider>
+    </QueryClientProvider>
   )
 }

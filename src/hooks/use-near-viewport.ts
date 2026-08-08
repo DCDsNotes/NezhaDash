@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from "react"
+import { type RefObject, useEffect, useRef, useState } from "react"
 
 export function useNearViewport<T extends HTMLElement>(rootMargin = "200px 0px"): [RefObject<T | null>, boolean] {
   const ref = useRef<T | null>(null)

@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from "react"
-
 import { nezhaWebSocketUrl } from "@/lib/nezha-endpoints"
+import { parseNezhaWsMessage } from "@/lib/nezha-websocket"
+import { type NezhaWebsocketResponse } from "@/types/nezha-api"
+import React, { useEffect, useRef, useState } from "react"
 
 import { WebSocketContext, WebSocketContextType } from "./websocket-context"
 
@@ -15,7 +16,7 @@ const RECONNECT_BASE_DELAY = 3_000
 const RECONNECT_MAX_DELAY = 30_000
 
 export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ path, children }) => {
-  const [lastMessage, setLastMessage] = useState<{ data: string } | null>(null)
+  const [data, setData] = useState<NezhaWebsocketResponse | null>(null)
   const [connected, setConnected] = useState(false)
   const [needReconnect, setNeedReconnect] = useState(false)
   const ws = useRef<WebSocket | null>(null)
@@ -110,7 +111,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ path, chil
 
       ws.current.onmessage = (event) => {
         lastMessageAt.current = Date.now()
-        setLastMessage({ data: event.data })
+        setData(parseNezhaWsMessage(String(event.data || "")))
       }
 
       ws.current.onerror = (error) => {
@@ -156,7 +157,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ path, chil
   }, [path])
 
   const contextValue: WebSocketContextType = {
-    lastMessage,
+    data,
     connected,
     reconnect,
     needReconnect,

@@ -1,0 +1,99 @@
+[class^="ri-"],
+[class*=" ri-"] {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+  background-color: currentColor;
+  vertical-align: -0.125em;
+  -webkit-mask: var(--ri-icon) center / contain no-repeat;
+  mask: var(--ri-icon) center / contain no-repeat;
+}
+
+.ri-arrow-down-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/Arrows/arrow-down-line.svg?inline");
+}
+.ri-arrow-down-s-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/Arrows/arrow-down-s-line.svg?inline");
+}
+.ri-arrow-left-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/Arrows/arrow-left-line.svg?inline");
+}
+.ri-arrow-right-s-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/Arrows/arrow-right-s-line.svg?inline");
+}
+.ri-arrow-up-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/Arrows/arrow-up-line.svg?inline");
+}
+.ri-checkbox-blank-circle-fill {
+  --ri-icon: url("../../node_modules/remixicon/icons/System/checkbox-blank-circle-fill.svg?inline");
+}
+.ri-check-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/System/check-line.svg?inline");
+}
+.ri-close-fill {
+  --ri-icon: url("../../node_modules/remixicon/icons/System/close-fill.svg?inline");
+}
+.ri-close-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/System/close-line.svg?inline");
+}
+.ri-cpu-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/Device/cpu-line.svg?inline");
+}
+.ri-dashboard-3-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/Device/dashboard-3-line.svg?inline");
+}
+.ri-download-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/System/download-line.svg?inline");
+}
+.ri-error-warning-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/System/error-warning-line.svg?inline");
+}
+.ri-exchange-2-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/Finance/exchange-2-line.svg?inline");
+}
+.ri-exchange-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/Finance/exchange-line.svg?inline");
+}
+.ri-filter-3-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/System/filter-3-line.svg?inline");
+}
+.ri-gamepad-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/Device/gamepad-line.svg?inline");
+}
+.ri-hard-drive-3-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/Device/hard-drive-3-line.svg?inline");
+}
+.ri-instance-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/Device/instance-line.svg?inline");
+}
+.ri-list-settings-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/System/list-settings-line.svg?inline");
+}
+.ri-loader-4-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/System/loader-4-line.svg?inline");
+}
+.ri-map-2-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/Map/map-2-line.svg?inline");
+}
+.ri-microsoft-fill {
+  --ri-icon: url("../../node_modules/remixicon/icons/Logos/microsoft-fill.svg?inline");
+}
+.ri-pulse-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/Health & Medical/pulse-line.svg?inline");
+}
+.ri-search-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/System/search-line.svg?inline");
+}
+.ri-server-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/Device/server-line.svg?inline");
+}
+.ri-temp-hot-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/Weather/temp-hot-line.svg?inline");
+}
+.ri-upload-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/System/upload-line.svg?inline");
+}
+.ri-user-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/User & Faces/user-line.svg?inline");
+}

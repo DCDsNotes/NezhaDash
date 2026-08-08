@@ -109,4 +109,3 @@ export function serverSortHandler(a: NezhaServer, b: NezhaServer, sortBy: string
   }
   return order === "desc" ? -result : result
 }
-

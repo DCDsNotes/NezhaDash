@@ -1,17 +1,10 @@
-import { buildLocationsFromServers } from "@/components/WorldMap"
 import { type Status } from "@/context/status-context"
 import { useNezhaWsData } from "@/hooks/use-nezha-ws-data"
 import { useSort } from "@/hooks/use-sort"
 import { useStatus } from "@/hooks/use-status"
 import { serverGroupsQueryOptions } from "@/lib/query-options"
 import { serverSortHandler, serverSortOptions } from "@/lib/server-sort"
-import {
-  getServerDailyTransferList,
-  getServerHeaderStats,
-  getServerStatus,
-  getServerStatusCounts,
-  matchServerSearchWord,
-} from "@/lib/server-view-model"
+import { getServerHeaderStats, getServerStatus, getServerStatusCounts, matchServerSearchWord } from "@/lib/server-view-model"
 import { type NezhaServer, type ServerGroup } from "@/types/nezha-api"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useMemo, useState } from "react"
@@ -45,8 +38,6 @@ export type ServerWorkspaceValue = {
   totalCounts: ReturnType<typeof getServerStatusCounts>
   filteredCounts: ReturnType<typeof getServerStatusCounts>
   headerStats: ReturnType<typeof getServerHeaderStats>
-  dailyTransferList: ReturnType<typeof getServerDailyTransferList>
-  locations: ReturnType<typeof buildLocationsFromServers>
 }
 
 export function useServerWorkspace(): ServerWorkspaceValue {
@@ -99,11 +90,6 @@ export function useServerWorkspace(): ServerWorkspaceValue {
   const totalCounts = useMemo(() => getServerStatusCounts(now, servers), [now, servers])
   const filteredCounts = useMemo(() => getServerStatusCounts(now, filteredServers), [filteredServers, now])
   const headerStats = useMemo(() => getServerHeaderStats(now, servers), [now, servers])
-  const dailyTransferList = useMemo(() => getServerDailyTransferList(now, servers), [now, servers])
-  const locations = useMemo(
-    () => buildLocationsFromServers(filteredServers.map((server) => ({ ...server, online: getServerStatus(now, server) === "online" }))),
-    [filteredServers, now],
-  )
   const sortOptions = useMemo(() => serverSortOptions().map((item) => ({ value: item.value, label: item.label })), [])
 
   function setCurrentGroup(value: string) {
@@ -133,7 +119,5 @@ export function useServerWorkspace(): ServerWorkspaceValue {
     totalCounts,
     filteredCounts,
     headerStats,
-    dailyTransferList,
-    locations,
   }
 }

@@ -1,14 +1,16 @@
 import SearchBox from "@/components/SearchBox"
-import WorldMap from "@/components/WorldMap"
+import WorldMap, { buildLocationsFromServers } from "@/components/WorldMap"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { type ServerWorkspaceValue, useServerWorkspace } from "@/hooks/use-server-workspace"
 import { useWebSocketContext } from "@/hooks/use-websocket-context"
 import { useWorldMapSize } from "@/hooks/use-world-map-size"
 import { loginUserQueryOptions, settingQueryOptions } from "@/lib/query-options"
+import { getServerDailyTransferList, getServerStatus } from "@/lib/server-view-model"
 import { resolveSiteName } from "@/lib/site-name"
 import { cn } from "@/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
+import { useMemo } from "react"
 import { Link, Outlet } from "react-router-dom"
 
 type DashboardLinkState = {
@@ -94,14 +96,19 @@ function TransferDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const dailyTransferList = useMemo(
+    () => (open ? getServerDailyTransferList(workspace.now, workspace.servers) : []),
+    [open, workspace.now, workspace.servers],
+  )
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="dashboard-dialog probe-transfer-dialog">
         <DialogTitle className="dashboard-dialog__title">今日流量</DialogTitle>
         <DialogDescription className="dashboard-dialog__description">统计周期 00:00 至 23:59</DialogDescription>
         <div className="dashboard-transfer-list">
-          {workspace.dailyTransferList.length > 0 ? (
-            workspace.dailyTransferList.map((item) => (
+          {dailyTransferList.length > 0 ? (
+            dailyTransferList.map((item) => (
               <div key={item.id} className="dashboard-transfer-row">
                 <div className="dashboard-transfer-row__name">
                   <span className={cn("probe-status-dot", { "probe-status-dot--offline": !item.online })} />
@@ -130,8 +137,17 @@ function TransferDialog({
 }
 
 function MapDialog({ workspace, open, onOpenChange }: { workspace: ServerWorkspaceValue; open: boolean; onOpenChange: (open: boolean) => void }) {
-  const { width } = useWorldMapSize()
+  const { width } = useWorldMapSize(open)
   const mapWidth = typeof window !== "undefined" && window.innerWidth > 900 ? Math.min(Math.max(width, 760), 900) : width
+  const locations = useMemo(
+    () =>
+      open
+        ? buildLocationsFromServers(
+            workspace.filteredServers.map((server) => ({ ...server, online: getServerStatus(workspace.now, server) === "online" })),
+          )
+        : [],
+    [open, workspace.filteredServers, workspace.now],
+  )
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -139,11 +155,7 @@ function MapDialog({ workspace, open, onOpenChange }: { workspace: ServerWorkspa
         <DialogTitle className="dashboard-dialog__title">节点地图</DialogTitle>
         <DialogDescription className="dashboard-dialog__description">当前筛选中的在线节点分布</DialogDescription>
         <div className="probe-map-dialog__canvas">
-          {workspace.locations.length > 0 ? (
-            <WorldMap locations={workspace.locations} mapWidth={mapWidth} />
-          ) : (
-            <div className="dashboard-empty">暂无在线节点位置</div>
-          )}
+          {locations.length > 0 ? <WorldMap locations={locations} mapWidth={mapWidth} /> : <div className="dashboard-empty">暂无在线节点位置</div>}
         </div>
       </DialogContent>
     </Dialog>

@@ -6,10 +6,11 @@
 
 const APP_BASE = new URL("./", self.location.href).pathname
 const APP_INDEX = `${APP_BASE}index.html`
-const CACHE_VERSION = "v4"
+const CACHE_VERSION = "v5"
 const CACHE_SCOPE = APP_BASE.replace(/[^a-z0-9]/gi, "_")
 const STATIC_CACHE = `static-${CACHE_SCOPE}-${CACHE_VERSION}`
 const ASSET_CACHE = `asset-${CACHE_SCOPE}-${CACHE_VERSION}`
+const CACHE_PREFIXES = [`static-${CACHE_SCOPE}-`, `asset-${CACHE_SCOPE}-`]
 
 function isSameOrigin(url) {
   return url.origin === self.location.origin
@@ -105,7 +106,8 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
       const keys = await caches.keys()
-      await Promise.all(keys.filter((k) => !k.endsWith(CACHE_VERSION)).map((k) => caches.delete(k)))
+      const staleKeys = keys.filter((key) => CACHE_PREFIXES.some((prefix) => key.startsWith(prefix)) && !key.endsWith(CACHE_VERSION))
+      await Promise.all(staleKeys.map((key) => caches.delete(key)))
       await self.clients.claim()
     })(),
   )

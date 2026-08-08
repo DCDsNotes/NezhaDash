@@ -1,7 +1,8 @@
+import { type NezhaWebsocketResponse } from "@/types/nezha-api"
 import { createContext } from "react"
 
 export interface WebSocketContextType {
-  lastMessage: { data: string } | null
+  data: NezhaWebsocketResponse | null
   connected: boolean
   reconnect: () => void
   needReconnect: boolean
@@ -9,7 +10,7 @@ export interface WebSocketContextType {
 }
 
 export const WebSocketContext = createContext<WebSocketContextType>({
-  lastMessage: null,
+  data: null,
   connected: false,
   reconnect: () => {},
   needReconnect: false,

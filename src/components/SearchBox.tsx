@@ -39,8 +39,8 @@ export default function SearchBox() {
     [connected, parsedWsData?.servers],
   )
   const searchResult = useMemo(
-    () => serverList.filter((server) => matchServerSearchWord(server, deferredSearchWord)),
-    [deferredSearchWord, serverList],
+    () => (show ? serverList.filter((server) => matchServerSearchWord(server, deferredSearchWord)) : []),
+    [deferredSearchWord, serverList, show],
   )
 
   function handleOpenChange(open: boolean) {

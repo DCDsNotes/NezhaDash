@@ -3,8 +3,8 @@ import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import ErrorBoundary from "./components/ErrorBoundary"
-import { RefreshToast } from "./components/Header"
 import ProbeWorkspace from "./components/ProbeWorkspace"
+import RefreshToast from "./components/RefreshToast"
 import { useBackground } from "./hooks/use-background"
 import { InjectContext } from "./lib/inject"
 import { settingQueryOptions } from "./lib/query-options"
@@ -15,9 +15,9 @@ export default function App() {
   const { data: settingData, error } = useQuery(settingQueryOptions())
   const { i18n } = useTranslation()
   const [injectedCustomCode, setInjectedCustomCode] = useState<string | null>(null)
-  const { backgroundImage: customBackgroundImage } = useBackground()
   const customCode = settingData?.data?.config?.custom_code || ""
   const configuredLanguage = settingData?.data?.config?.language
+  const { backgroundImage: customBackgroundImage } = useBackground(injectedCustomCode)
 
   useEffect(() => {
     if (!customCode) {

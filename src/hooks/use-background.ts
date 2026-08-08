@@ -13,43 +13,25 @@ declare global {
 
 const BACKGROUND_CHANGE_EVENT = "backgroundChange"
 
-export function useBackground() {
+function readBackgroundImage() {
+  if (window.CustomBackgroundImage) return window.CustomBackgroundImage
+
+  const savedImage = sessionStorage.getItem("savedBackgroundImage") || ""
+  if (savedImage) window.CustomBackgroundImage = savedImage
+  return savedImage || undefined
+}
+
+export function useBackground(refreshKey?: unknown) {
   const [backgroundImage, setBackgroundImage] = useState<string | undefined>(undefined)
 
   useEffect(() => {
-    // 监听背景变化
-    const handleBackgroundChange = () => {
-      setBackgroundImage(window.CustomBackgroundImage || undefined)
-    }
+    const syncBackground = () => setBackgroundImage(readBackgroundImage())
 
-    // 初始化检查
-    const checkInitialBackground = () => {
-      if (window.CustomBackgroundImage) {
-        setBackgroundImage(window.CustomBackgroundImage)
-      } else {
-        const savedImage = sessionStorage.getItem("savedBackgroundImage")
-        if (savedImage) {
-          window.CustomBackgroundImage = savedImage
-          setBackgroundImage(savedImage)
-        }
-      }
-    }
+    syncBackground()
+    window.addEventListener(BACKGROUND_CHANGE_EVENT, syncBackground)
 
-    // 设置一个轮询来检查初始背景
-    const intervalId = setInterval(() => {
-      if (window.CustomBackgroundImage || sessionStorage.getItem("savedBackgroundImage")) {
-        checkInitialBackground()
-        clearInterval(intervalId)
-      }
-    }, 100)
-
-    window.addEventListener(BACKGROUND_CHANGE_EVENT, handleBackgroundChange)
-
-    return () => {
-      window.removeEventListener(BACKGROUND_CHANGE_EVENT, handleBackgroundChange)
-      clearInterval(intervalId)
-    }
-  }, [])
+    return () => window.removeEventListener(BACKGROUND_CHANGE_EVENT, syncBackground)
+  }, [refreshKey])
 
   const updateBackground = (newBackground: string | undefined) => {
     window.CustomBackgroundImage = newBackground || ""

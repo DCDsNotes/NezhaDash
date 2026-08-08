@@ -1,4 +1,4 @@
-import { useMemo, type CSSProperties } from "react"
+import { type CSSProperties, useMemo } from "react"
 
 type Colors =
   | string

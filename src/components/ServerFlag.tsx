@@ -1,6 +1,17 @@
 import { cn } from "@/lib/utils"
-import getUnicodeFlagIcon from "country-flag-icons/unicode"
-import { useEffect, useState } from "react"
+
+const flagAssets = import.meta.glob("../../node_modules/flag-icons/flags/4x3/*.svg", {
+  eager: true,
+  import: "default",
+  query: "?url",
+}) as Record<string, string>
+
+const flagUrls = Object.fromEntries(Object.entries(flagAssets).map(([path, url]) => [path.slice(path.lastIndexOf("/") + 1, -4), url])) as Record<
+  string,
+  string
+>
+
+let emojiFlagSupport: boolean | undefined
 
 function normalizeCountryCode(raw: string | null | undefined) {
   const code = String(raw || "").trim()
@@ -11,41 +22,39 @@ function normalizeCountryCode(raw: string | null | undefined) {
   return lower
 }
 
+function supportsEmojiFlags() {
+  if (emojiFlagSupport != null) return emojiFlagSupport
+
+  const canvas = document.createElement("canvas")
+  const context = canvas.getContext("2d")
+  if (!context) return (emojiFlagSupport = false)
+
+  context.fillStyle = "#000"
+  context.textBaseline = "top"
+  context.font = "32px Arial"
+  context.fillText("\u{1f1fa}\u{1f1f8}", 0, 0)
+  emojiFlagSupport = context.getImageData(16, 16, 1, 1).data[3] !== 0
+  return emojiFlagSupport
+}
+
+function getUnicodeFlagIcon(countryCode: string) {
+  return [...countryCode.toUpperCase()].map((character) => String.fromCodePoint(127397 + character.charCodeAt(0))).join("")
+}
+
 export default function ServerFlag({ country_code, className }: { country_code: string; className?: string }) {
-  const [supportsEmojiFlags, setSupportsEmojiFlags] = useState(false)
-
   // @ts-expect-error ForceUseSvgFlag is a global variable
-  const forceUseSvgFlag = window.ForceUseSvgFlag as boolean
-
-  useEffect(() => {
-    if (forceUseSvgFlag) {
-      // 如果环境变量要求直接使用 SVG，则无需检查 Emoji 支持
-      setSupportsEmojiFlags(false)
-      return
-    }
-
-    const checkEmojiSupport = () => {
-      const canvas = document.createElement("canvas")
-      const ctx = canvas.getContext("2d")
-      const emojiFlag = "🇺🇸" // 使用美国国旗作为测试
-      if (!ctx) return
-      ctx.fillStyle = "#000"
-      ctx.textBaseline = "top"
-      ctx.font = "32px Arial"
-      ctx.fillText(emojiFlag, 0, 0)
-
-      const support = ctx.getImageData(16, 16, 1, 1).data[3] !== 0
-      setSupportsEmojiFlags(support)
-    }
-
-    checkEmojiSupport()
-  }, [])
+  const forceUseSvgFlag = Boolean(window.ForceUseSvgFlag)
 
   const normalized = normalizeCountryCode(country_code)
+  const flagUrl = flagUrls[normalized] || flagUrls.cn
 
   return (
     <span className={cn("server-flag", className)}>
-      {forceUseSvgFlag || !supportsEmojiFlags ? <span className={`fi fi-${normalized}`} /> : getUnicodeFlagIcon(normalized.toUpperCase())}
+      {forceUseSvgFlag || !supportsEmojiFlags() ? (
+        <span className="fi" style={{ backgroundImage: `url("${flagUrl}")` }} />
+      ) : (
+        getUnicodeFlagIcon(normalized)
+      )}
     </span>
   )
 }

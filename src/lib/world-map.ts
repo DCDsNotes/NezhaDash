@@ -52,4 +52,3 @@ export function lonLatToMapXY(lng: number, lat: number) {
   const y = ((90 - lat) / 180) * 621
   return { x, y }
 }
-
