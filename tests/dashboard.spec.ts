@@ -210,8 +210,13 @@ async function screenshot(page: Page, testInfo: TestInfo, name: string) {
 
 test("dashboard interactions remain usable on desktop and mobile", async ({ page }, testInfo) => {
   let worldMapRequestCount = 0
+  let serverSpeedRequestCount = 0
+  let monitorRequestCount = 0
   page.on("request", (request) => {
-    if (request.resourceType() === "image" && new URL(request.url()).pathname.endsWith("/world-map.svg")) worldMapRequestCount += 1
+    const pathname = new URL(request.url()).pathname
+    if (request.resourceType() === "image" && pathname.endsWith("/world-map.svg")) worldMapRequestCount += 1
+    if (pathname.endsWith("/server-speed/1")) serverSpeedRequestCount += 1
+    if (pathname.endsWith("/service/1")) monitorRequestCount += 1
   })
 
   await mockBackend(page)
@@ -360,8 +365,37 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await expect(activeMinuteOptions).toHaveCount(2)
   await expect(activeMinuteOptions.first()).toHaveCSS("text-shadow", "none")
   await expect(activeMinuteOptions.last()).toHaveCSS("text-shadow", "none")
+  const speedChart = page.locator(".server-speed .line-box")
+  await speedChart.hover()
+  const speedTooltip = speedChart.locator(".chart-tooltip")
+  await expect(speedTooltip).toBeVisible()
+  await expect(speedTooltip).toHaveCSS("background-color", "rgba(239, 243, 247, 0.98)")
+  await expect(speedTooltip).toHaveCSS("color", "rgb(36, 50, 72)")
+  const monitorChart = page.locator(".server-monitor:not(.server-speed) .line-box").first()
+  await monitorChart.hover()
+  const monitorTooltip = monitorChart.locator(".chart-tooltip")
+  await expect(monitorTooltip).toBeVisible()
+  await expect(monitorTooltip).toHaveCSS("background-color", "rgba(239, 243, 247, 0.98)")
+  await expect(monitorTooltip).toHaveCSS("color", "rgb(36, 50, 72)")
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "server-detail-desktop.png")
+
+  await expect.poll(() => serverSpeedRequestCount).toBe(1)
+  await expect.poll(() => monitorRequestCount).toBe(1)
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" })
+    document.dispatchEvent(new Event("visibilitychange"))
+  })
+  await expect(page.locator(".server-detail-header")).toBeVisible()
+  await expect(page.locator(".server-detail-skeleton")).toHaveCount(0)
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" })
+    document.dispatchEvent(new Event("visibilitychange"))
+  })
+  await expect(page.locator(".server-detail-header")).toBeVisible()
+  await expect(page.locator(".server-detail-skeleton")).toHaveCount(0)
+  await expect.poll(() => serverSpeedRequestCount).toBe(1)
+  await expect.poll(() => monitorRequestCount).toBe(1)
 
   await page.reload()
   await expect(page).toHaveURL(/\/server\/25ce76bd$/)

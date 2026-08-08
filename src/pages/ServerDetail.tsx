@@ -56,7 +56,7 @@ function ServerDetailPriority({ now, server }: { now: number; server: NezhaServe
 }
 
 export default function ServerDetail() {
-  const { data: nezhaWsData, connected } = useNezhaWsData()
+  const { data: nezhaWsData } = useNezhaWsData()
   const { width: worldMapWidth, height: worldMapHeight } = useWorldMapSize()
 
   useEffect(() => {
@@ -64,8 +64,7 @@ export default function ServerDetail() {
   }, [])
 
   const { serverKey } = useParams()
-  const activeWsData = connected ? nezhaWsData : null
-  const server = serverKey ? activeWsData?.servers?.find((s) => serverIdToServerKey(s.id) === serverKey) : undefined
+  const server = serverKey ? nezhaWsData?.servers?.find((s) => serverIdToServerKey(s.id) === serverKey) : undefined
   const serverId = server?.id
 
   const locations = useMemo(() => {
@@ -90,7 +89,7 @@ export default function ServerDetail() {
   }
 
   if (!serverId) {
-    if (!connected || !nezhaWsData) {
+    if (!nezhaWsData) {
       return (
         <div className="server-detail-page">
           <div className="world-map-box top-world-map">

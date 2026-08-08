@@ -3,7 +3,6 @@ import { type Dispatch, type SetStateAction, createContext } from "react"
 
 export type WebSocketDataContextValue = {
   data: NezhaWebsocketResponse | null
-  connected: boolean
 }
 
 export type WebSocketControlsContextValue = {

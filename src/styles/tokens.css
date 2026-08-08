@@ -37,6 +37,11 @@
   --server-status-value-color: #087c60;
   --server-status-label-color: #6d7c90;
   --server-status-content-color: #243248;
+  --chart-tooltip-background: rgb(239 243 247 / 98%);
+  --chart-tooltip-border: #d3dce6;
+  --chart-tooltip-text: #243248;
+  --chart-tooltip-muted: #52647a;
+  --chart-tooltip-shadow: rgb(36 50 72 / 16%);
   --background: 210 33% 97%;
   --foreground: 216 27% 21%;
   --card: 0 0% 100%;

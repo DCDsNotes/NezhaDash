@@ -11,7 +11,6 @@ const RECONNECT_MAX_DELAY = 30_000
 
 export function WebSocketProvider({ path, children }: { path: string; children: ReactNode }) {
   const [data, setData] = useState<NezhaWebsocketResponse | null>(null)
-  const [connected, setConnected] = useState(false)
   const [needReconnect, setNeedReconnect] = useState(false)
 
   useEffect(() => {
@@ -48,7 +47,6 @@ export function WebSocketProvider({ path, children }: { path: string; children: 
         current.onerror = null
         if (current.readyState === WebSocket.OPEN || current.readyState === WebSocket.CONNECTING) current.close()
       }
-      setConnected(false)
     }
 
     const queueRender = (nextData: NezhaWebsocketResponse) => {
@@ -99,7 +97,6 @@ export function WebSocketProvider({ path, children }: { path: string; children: 
         nextSocket.onopen = () => {
           if (socket !== nextSocket) return
           reconnectAttempts = 0
-          setConnected(true)
           armStaleTimer()
         }
 
@@ -114,7 +111,6 @@ export function WebSocketProvider({ path, children }: { path: string; children: 
           if (socket !== nextSocket) return
           socket = null
           clearStaleTimer()
-          setConnected(false)
           scheduleReconnect()
         }
 
@@ -123,7 +119,6 @@ export function WebSocketProvider({ path, children }: { path: string; children: 
         }
       } catch {
         socket = null
-        setConnected(false)
         scheduleReconnect()
       }
     }
@@ -159,7 +154,7 @@ export function WebSocketProvider({ path, children }: { path: string; children: 
     }
   }, [path])
 
-  const dataValue = useMemo(() => ({ data, connected }), [connected, data])
+  const dataValue = useMemo(() => ({ data }), [data])
   const controlsValue = useMemo(() => ({ needReconnect, setNeedReconnect }), [needReconnect])
 
   return (
