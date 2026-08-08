@@ -38,7 +38,14 @@ export function ServerSortBox({
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="server-sort__selected" aria-label={`排序字段：${selectedLabel}`}>
             <i className="server-sort__selected-icon ri-list-settings-line" aria-hidden="true" />
-            <span className="server-sort__selected-value">{selectedLabel}</span>
+            <span className="server-sort__label-slot">
+              <span className="server-sort__selected-sizer" aria-hidden="true">
+                {options.map((option) => (
+                  <span key={option.value}>{option.label}</span>
+                ))}
+              </span>
+              <span className="server-sort__selected-value">{selectedLabel}</span>
+            </span>
             <i className="ri-arrow-down-s-line ml-1 text-base" aria-hidden="true" />
           </Button>
         </DropdownMenuTrigger>

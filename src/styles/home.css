@@ -29,6 +29,22 @@
   font-weight: 700;
 }
 
+.server-sort__label-slot,
+.server-sort__selected-sizer {
+  display: grid;
+}
+
+.server-sort__label-slot > *,
+.server-sort__selected-sizer > * {
+  grid-area: 1 / 1;
+  white-space: nowrap;
+}
+
+.server-sort__selected-sizer {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .server-sort__order-icon {
   display: flex;
   align-items: center;

@@ -209,6 +209,11 @@ async function screenshot(page: Page, testInfo: TestInfo, name: string) {
 }
 
 test("dashboard interactions remain usable on desktop and mobile", async ({ page }, testInfo) => {
+  let worldMapRequestCount = 0
+  page.on("request", (request) => {
+    if (request.resourceType() === "image" && new URL(request.url()).pathname.endsWith("/world-map.svg")) worldMapRequestCount += 1
+  })
+
   await mockBackend(page)
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto("/")
@@ -266,21 +271,32 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await page.getByRole("button", { name: "节点分组：核心节点" }).click()
   await page.getByRole("menuitemradio", { name: "全部节点 2" }).click()
 
+  await expect.poll(() => worldMapRequestCount).toBe(1)
   await page.getByLabel("查看节点地图").click()
   await expect(page.getByRole("dialog", { name: "节点地图" })).toBeVisible()
   await screenshot(page, testInfo, "map-desktop.png")
   await page.getByRole("button", { name: "关闭" }).click()
+  await page.getByLabel("查看节点地图").click()
+  await expect(page.getByRole("dialog", { name: "节点地图" })).toBeVisible()
+  await page.getByRole("button", { name: "关闭" }).click()
+  expect(worldMapRequestCount).toBe(1)
 
-  await page.getByLabel(/排序字段/).click()
+  const sortTrigger = page.getByLabel(/排序字段/)
+  const initialSortWidth = (await sortTrigger.boundingBox())?.width
+  await sortTrigger.click()
   const sortMenu = page.locator(".server-sort-dropdown:visible")
   await expect(sortMenu).toHaveCSS("background-color", "rgb(255, 255, 255)")
   const [sortMenuBox, statusPanelBox] = await Promise.all([sortMenu.boundingBox(), page.locator(".status-current").boundingBox()])
   expect(sortMenuBox).not.toBeNull()
   expect(statusPanelBox).not.toBeNull()
   expect(sortMenuBox!.x + sortMenuBox!.width).toBeLessThanOrEqual(statusPanelBox!.x + statusPanelBox!.width + 1)
-  await expect(page.getByRole("menuitemradio", { name: "主机名称" })).toBeVisible()
+  await expect(page.getByRole("menuitemradio", { name: "1分钟负载" })).toBeVisible()
   await screenshot(page, testInfo, "sort-menu-desktop.png")
-  await page.getByRole("menuitemradio", { name: "主机名称" }).click()
+  await page.getByRole("menuitemradio", { name: "1分钟负载" }).click()
+  const selectedSortWidth = (await sortTrigger.boundingBox())?.width
+  expect(initialSortWidth).toBeDefined()
+  expect(selectedSortWidth).toBeDefined()
+  expect(Math.abs(selectedSortWidth! - initialSortWidth!)).toBeLessThanOrEqual(1)
 
   await page.keyboard.press("Control+K")
   await expect(page.getByRole("dialog", { name: "搜索服务器" })).toBeVisible()

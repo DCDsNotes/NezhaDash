@@ -8,9 +8,9 @@ import { loginUserQueryOptions, settingQueryOptions } from "@/lib/query-options"
 import { getServerDailyTransferList, getServerStatus } from "@/lib/server-view-model"
 import { resolveSiteName } from "@/lib/site-name"
 import { cn } from "@/lib/utils"
+import { preloadWorldMapImage } from "@/lib/world-map"
 import { useQuery } from "@tanstack/react-query"
-import { useEffect, useRef, useState } from "react"
-import { useMemo } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Link, Outlet } from "react-router-dom"
 
 type DashboardLinkState = {
@@ -39,10 +39,12 @@ function useDashboardLinkState(): DashboardLinkState {
 function SiteHeader({
   dashboardLink,
   onOpenMap,
+  onPreloadMap,
   onOpenTransfer,
 }: {
   dashboardLink: DashboardLinkState
   onOpenMap: () => void
+  onPreloadMap: () => void
   onOpenTransfer: () => void
 }) {
   const { data: settingData } = useQuery(settingQueryOptions())
@@ -68,7 +70,16 @@ function SiteHeader({
           <button type="button" className="probe-site-action" onClick={onOpenTransfer} aria-label="查看今日流量" title="查看今日流量">
             <i className="ri-exchange-2-line" aria-hidden="true" />
           </button>
-          <button type="button" className="probe-site-action" onClick={onOpenMap} aria-label="查看节点地图" title="查看节点地图">
+          <button
+            type="button"
+            className="probe-site-action"
+            onClick={onOpenMap}
+            onFocus={onPreloadMap}
+            onPointerEnter={onPreloadMap}
+            onTouchStart={onPreloadMap}
+            aria-label="查看节点地图"
+            title="查看节点地图"
+          >
             <i className="ri-map-2-line" aria-hidden="true" />
           </button>
           <a
@@ -173,9 +184,18 @@ export default function ProbeWorkspace() {
     document.title = resolveSiteName(settingData?.data?.config?.site_name)
   }, [settingData?.data?.config?.site_name])
 
+  function preloadMap() {
+    void preloadWorldMapImage()
+  }
+
+  function openMap() {
+    preloadMap()
+    setShowMap(true)
+  }
+
   return (
     <div className="probe-workspace">
-      <SiteHeader dashboardLink={dashboardLink} onOpenMap={() => setShowMap(true)} onOpenTransfer={() => setShowTransfer(true)} />
+      <SiteHeader dashboardLink={dashboardLink} onOpenMap={openMap} onPreloadMap={preloadMap} onOpenTransfer={() => setShowTransfer(true)} />
       <main className="probe-main">
         <Outlet context={workspace} />
       </main>

@@ -1125,6 +1125,7 @@ body {
   .status-controls__button span,
   .status-controls__button .ri-arrow-down-s-line,
   .status-controls .server-sort__selected-value,
+  .status-controls .server-sort__label-slot,
   .status-controls .server-sort__selected > .ri-arrow-down-s-line {
     display: none;
   }

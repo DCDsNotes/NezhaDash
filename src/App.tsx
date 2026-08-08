@@ -9,6 +9,7 @@ import { useBackground } from "./hooks/use-background"
 import { InjectContext } from "./lib/inject"
 import { settingQueryOptions } from "./lib/query-options"
 import { cn } from "./lib/utils"
+import { preloadWorldMapImage } from "./lib/world-map"
 import ErrorPage from "./pages/ErrorPage"
 
 export default function App() {
@@ -18,6 +19,10 @@ export default function App() {
   const customCode = settingData?.data?.config?.custom_code || ""
   const configuredLanguage = settingData?.data?.config?.language
   const { backgroundImage: customBackgroundImage } = useBackground(injectedCustomCode)
+
+  useEffect(() => {
+    void preloadWorldMapImage()
+  }, [])
 
   useEffect(() => {
     if (!customCode) {

@@ -1,3 +1,30 @@
+import worldMapImageUrl from "@/assets/world-map.svg?url"
+
+let worldMapPreloadImage: HTMLImageElement | null = null
+let worldMapPreloadPromise: Promise<void> | null = null
+
+export function preloadWorldMapImage() {
+  if (typeof Image === "undefined") return Promise.resolve()
+  if (worldMapPreloadImage?.complete && worldMapPreloadPromise) return worldMapPreloadPromise
+  if (worldMapPreloadPromise) return worldMapPreloadPromise
+
+  worldMapPreloadPromise = new Promise<void>((resolve) => {
+    const image = new Image()
+    worldMapPreloadImage = image
+    image.decoding = "async"
+    image.onload = () => {
+      void image
+        .decode()
+        .catch(() => undefined)
+        .finally(resolve)
+    }
+    image.onerror = () => resolve()
+    image.src = worldMapImageUrl
+  })
+
+  return worldMapPreloadPromise
+}
+
 export type WorldMapLocation = {
   key: string
   x: number
