@@ -415,7 +415,7 @@
 
 .server-monitor__minute--active {
   color: #fff;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+  text-shadow: none;
 }
 
 .server-monitor__minute-indicator {

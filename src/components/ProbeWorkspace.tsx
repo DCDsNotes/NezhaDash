@@ -73,10 +73,10 @@ function SiteHeader({
             href="/dashboard"
             target="_blank"
             rel="noopener noreferrer"
+            aria-label={dashboardLink.label}
             title={dashboardLink.title}
           >
             <i className={dashboardLink.icon} aria-hidden="true" />
-            <span>{dashboardLink.label}</span>
           </a>
         </nav>
       </div>

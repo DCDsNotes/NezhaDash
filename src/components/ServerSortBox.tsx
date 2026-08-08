@@ -42,7 +42,7 @@ export function ServerSortBox({
             <i className="ri-arrow-down-s-line ml-1 text-base" aria-hidden="true" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="server-sort-dropdown">
+        <DropdownMenuContent align="end" collisionPadding={8} className="server-sort-dropdown">
           <DropdownMenuRadioGroup
             value={value.prop}
             onValueChange={(prop) => {

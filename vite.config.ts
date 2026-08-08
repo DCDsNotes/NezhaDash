@@ -5,9 +5,16 @@ import { defineConfig } from "vite"
 
 process.env.BROWSERSLIST_IGNORE_OLD_DATA = "1"
 
+function normalizeProductionBase(value: string | undefined) {
+  const base = value?.trim()
+  if (!base || base === "." || base === "./" || base === "/") return "/"
+  if (/^[a-z][a-z\d+.-]*:\/\//i.test(base)) return base.endsWith("/") ? base : `${base}/`
+  return `/${base.replace(/^\/+|\/+$/g, "")}/`
+}
+
 // https://vite.dev/config/
 export default defineConfig(({ command }) => {
-  const productionBase = process.env.VITE_BASE_PATH?.trim() || "./"
+  const productionBase = normalizeProductionBase(process.env.VITE_BASE_PATH)
   const certDir = path.resolve(__dirname, "./.cert")
   const keyPath = path.join(certDir, "key.pem")
   const certPath = path.join(certDir, "cert.pem")

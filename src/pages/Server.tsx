@@ -129,7 +129,7 @@ function StatusControls({ workspace }: { workspace: ServerWorkspaceValue }) {
               <i className="ri-arrow-down-s-line" aria-hidden="true" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="server-sort-dropdown">
+          <DropdownMenuContent align="end" collisionPadding={8} className="server-sort-dropdown">
             <DropdownMenuRadioGroup value={workspace.currentGroup} onValueChange={workspace.setCurrentGroup}>
               {workspace.groups.map((group) => (
                 <DropdownMenuRadioItem key={group.key} value={group.value} className="server-sort-dropdown__item [&>span:first-child]:hidden">

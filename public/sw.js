@@ -6,7 +6,7 @@
 
 const APP_BASE = new URL("./", self.location.href).pathname
 const APP_INDEX = `${APP_BASE}index.html`
-const CACHE_VERSION = "v3"
+const CACHE_VERSION = "v4"
 const CACHE_SCOPE = APP_BASE.replace(/[^a-z0-9]/gi, "_")
 const STATIC_CACHE = `static-${CACHE_SCOPE}-${CACHE_VERSION}`
 const ASSET_CACHE = `asset-${CACHE_SCOPE}-${CACHE_VERSION}`
@@ -44,19 +44,23 @@ async function safeFetch(request) {
   }
 }
 
-async function networkFirst(request) {
+async function navigationNetworkFirst(request) {
   const cache = await caches.open(STATIC_CACHE)
   const response = await safeFetch(request)
-  if (response) {
+  if (response?.ok) {
     await cachePut(STATIC_CACHE, request, response.clone())
     return response
   }
+  if (response && response.status !== 404) return response
 
-  const cached = await cache.match(request, { ignoreSearch: false })
-  if (cached) return cached
-  const index = await cache.match(APP_INDEX)
-  if (index) return index
-  return offlineResponse()
+  const indexResponse = await safeFetch(APP_INDEX)
+  if (indexResponse?.ok) {
+    await cachePut(STATIC_CACHE, APP_INDEX, indexResponse.clone())
+    return indexResponse
+  }
+
+  const cached = (await cache.match(request, { ignoreSearch: false })) || (await cache.match(APP_INDEX)) || (await cache.match(APP_BASE))
+  return cached || response || offlineResponse()
 }
 
 async function cacheFirst(request) {
@@ -87,8 +91,12 @@ self.addEventListener("install", (event) => {
   self.skipWaiting()
   event.waitUntil(
     (async () => {
-      const cache = await caches.open(STATIC_CACHE)
-      await cache.addAll([APP_BASE, APP_INDEX]).catch(() => {})
+      await Promise.all(
+        [APP_BASE, APP_INDEX].map(async (url) => {
+          const response = await safeFetch(url)
+          if (response?.ok) await cachePut(STATIC_CACHE, url, response)
+        }),
+      )
     })(),
   )
 })
@@ -113,7 +121,7 @@ self.addEventListener("fetch", (event) => {
 
   // navigation (HTML)
   if (req.mode === "navigate") {
-    event.respondWith(networkFirst(req))
+    event.respondWith(navigationNetworkFirst(req))
     return
   }
 
