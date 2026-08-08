@@ -60,9 +60,17 @@ type TransferCounter = {
 }
 
 type TimedCacheEntry<T> = { now: number; value: T }
+type BillingViewModel = {
+  parsedData: PublicNoteData | null
+  remainingTime: RemainingTimeViewModel | null
+  remainingDays: ReturnType<typeof splitDaysText>
+  endDateText: string
+}
 
 const serverCardViewModelCache = new WeakMap<NezhaServer, TimedCacheEntry<ReturnType<typeof createServerCardViewModel>>>()
 const serverDetailStatusViewModelCache = new WeakMap<NezhaServer, TimedCacheEntry<ReturnType<typeof createServerDetailStatusViewModel>>>()
+const billingViewModelCache = new Map<string, { minute: number; value: BillingViewModel }>()
+const BILLING_CACHE_LIMIT = 256
 
 function roundPercent(value: number) {
   return Number(value.toFixed(1))
@@ -349,15 +357,26 @@ export function getServerRealtimeViewModel(server: NezhaServer, trafficType?: st
   }
 }
 
-export function getServerBillingViewModel(publicNote: string, now = Date.now()) {
+export function getServerBillingViewModel(publicNote: string, now = Date.now()): BillingViewModel {
+  const minute = Math.floor(now / 60_000)
+  const cached = billingViewModelCache.get(publicNote)
+  if (cached?.minute === minute) return cached.value
+
   const parsedData = parsePublicNote(publicNote)
   const remainingTime = computeRemainingTime(parsedData, now)
-  return {
+  const value = {
     parsedData,
     remainingTime,
     remainingDays: remainingTime?.type === "days" ? splitDaysText(remainingTime.value) : null,
     endDateText: formatEffectiveBillingEndDate(parsedData, now),
   }
+
+  if (billingViewModelCache.size >= BILLING_CACHE_LIMIT && !billingViewModelCache.has(publicNote)) {
+    const oldestKey = billingViewModelCache.keys().next().value
+    if (oldestKey !== undefined) billingViewModelCache.delete(oldestKey)
+  }
+  billingViewModelCache.set(publicNote, { minute, value })
+  return value
 }
 
 function createServerCardViewModel(now: number, server: NezhaServer) {
@@ -406,13 +425,8 @@ export function getServerStatus(now: number, server: NezhaServer) {
   return isServerOnline(now, server) ? "online" : "offline"
 }
 
-export function getServerStatusCounts(now: number, servers: NezhaServer[]) {
-  const total = servers.length
-  const online = servers.reduce((acc, server) => (getServerStatus(now, server) === "online" ? acc + 1 : acc), 0)
-  return { total, online, offline: Math.max(total - online, 0) }
-}
-
-export function getServerHeaderStats(now: number, servers: NezhaServer[]) {
+export function getServerOverviewStats(now: number, servers: NezhaServer[]) {
+  let online = 0
   let transferIn = 0
   let transferOut = 0
   let speedIn = 0
@@ -420,6 +434,7 @@ export function getServerHeaderStats(now: number, servers: NezhaServer[]) {
 
   servers.forEach((server) => {
     if (getServerStatus(now, server) !== "online") return
+    online += 1
     const dailyTransfer = getServerTransferStatsCounter(server, "today")
     transferIn += dailyTransfer.in
     transferOut += dailyTransfer.out
@@ -428,13 +443,20 @@ export function getServerHeaderStats(now: number, servers: NezhaServer[]) {
   })
 
   return {
-    transfer: {
-      inData: formatHeaderDecimal(transferIn),
-      outData: formatHeaderDecimal(transferOut),
+    totalCounts: {
+      total: servers.length,
+      online,
+      offline: Math.max(servers.length - online, 0),
     },
-    netSpeed: {
-      inData: formatHeaderBinary(speedIn),
-      outData: formatHeaderBinary(speedOut),
+    headerStats: {
+      transfer: {
+        inData: formatHeaderDecimal(transferIn),
+        outData: formatHeaderDecimal(transferOut),
+      },
+      netSpeed: {
+        inData: formatHeaderBinary(speedIn),
+        outData: formatHeaderBinary(speedOut),
+      },
     },
   }
 }
@@ -499,13 +521,7 @@ export function matchServerSearchWord(server: NezhaServer, word: string) {
 
 export function getServerDetailNameViewModel(server: NezhaServer) {
   const publicNote = resolvePublicNote(server.id, server.public_note || "")
-  let slogan = ""
-  try {
-    const raw = publicNote ? JSON.parse(publicNote) : null
-    slogan = raw?.customData?.slogan ? String(raw.customData.slogan) : ""
-  } catch {
-    slogan = ""
-  }
+  const slogan = parsePublicNote(publicNote)?.customData?.slogan || ""
 
   return {
     cpuInfo: parseCpuInfo(server.host?.cpu?.[0] || ""),

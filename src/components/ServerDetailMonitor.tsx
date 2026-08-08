@@ -326,20 +326,30 @@ function buildMonitorChartData({
 
 function readLocalBool(key: string, fallback: boolean) {
   if (typeof window === "undefined") return fallback
-  const raw = window.localStorage.getItem(key)
-  if (raw === null) return fallback
-  return raw === "true"
+  try {
+    const raw = window.localStorage.getItem(key)
+    return raw === null ? fallback : raw === "true"
+  } catch {
+    return fallback
+  }
 }
 
 function writeLocalBool(key: string, val: boolean) {
   if (typeof window === "undefined") return
-  window.localStorage.setItem(key, String(val))
+  try {
+    window.localStorage.setItem(key, String(val))
+  } catch {
+    // Keep the current preference in component state.
+  }
 }
 
 function readLocalChartType() {
   if (typeof window === "undefined") return "multi" as const
-  const raw = window.localStorage.getItem("nazhua_monitor_chart_type")
-  return raw === "single" ? ("single" as const) : ("multi" as const)
+  try {
+    return window.localStorage.getItem("nazhua_monitor_chart_type") === "single" ? ("single" as const) : ("multi" as const)
+  } catch {
+    return "multi" as const
+  }
 }
 
 export default function ServerDetailMonitor({ now, serverId }: { now: number; serverId: number }) {
@@ -408,7 +418,11 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
   function setChartTypeValue(isMulti: boolean) {
     const next = isMulti ? "multi" : "single"
     setChartType(next)
-    if (typeof window !== "undefined") window.localStorage.setItem("nazhua_monitor_chart_type", next)
+    try {
+      window.localStorage.setItem("nazhua_monitor_chart_type", next)
+    } catch {
+      // Keep the current preference in component state.
+    }
   }
 
   function toggleMinute(val: number) {

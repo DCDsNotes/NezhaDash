@@ -1,10 +1,10 @@
 import { Button } from "@/components/ui/button"
-import { useTranslation } from "react-i18next"
+import { useAppTranslation } from "@/i18n"
 import { useNavigate } from "react-router-dom"
 
 export default function NotFound() {
   const navigate = useNavigate()
-  const { t } = useTranslation()
+  const t = useAppTranslation()
 
   return (
     <div className="flex  flex-col items-center justify-center">

@@ -1,18 +1,15 @@
 import { type NezhaWebsocketResponse } from "@/types/nezha-api"
-import { createContext } from "react"
+import { type Dispatch, type SetStateAction, createContext } from "react"
 
-export interface WebSocketContextType {
+export type WebSocketDataContextValue = {
   data: NezhaWebsocketResponse | null
   connected: boolean
-  reconnect: () => void
-  needReconnect: boolean
-  setNeedReconnect: (needReconnect: boolean) => void
 }
 
-export const WebSocketContext = createContext<WebSocketContextType>({
-  data: null,
-  connected: false,
-  reconnect: () => {},
-  needReconnect: false,
-  setNeedReconnect: () => {},
-})
+export type WebSocketControlsContextValue = {
+  needReconnect: boolean
+  setNeedReconnect: Dispatch<SetStateAction<boolean>>
+}
+
+export const WebSocketDataContext = createContext<WebSocketDataContextValue | undefined>(undefined)
+export const WebSocketControlsContext = createContext<WebSocketControlsContextValue | undefined>(undefined)

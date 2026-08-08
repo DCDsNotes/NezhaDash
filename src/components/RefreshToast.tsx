@@ -1,13 +1,13 @@
 import { LoadingSpinner } from "@/components/loading/loading-spinner"
-import { useWebSocketContext } from "@/hooks/use-websocket-context"
+import { useWebSocketControls } from "@/hooks/use-websocket-context"
+import { useAppTranslation } from "@/i18n"
 import { useEffect } from "react"
-import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
 
 export default function RefreshToast() {
-  const { t } = useTranslation()
+  const t = useAppTranslation()
   const navigate = useNavigate()
-  const { needReconnect } = useWebSocketContext()
+  const { needReconnect } = useWebSocketControls()
 
   useEffect(() => {
     if (!needReconnect) return

@@ -7,30 +7,23 @@
 - 服务端状态：TanStack Query 5
 - 实时状态：原生 WebSocket + React Context
 - 样式：Tailwind CSS 3、shadcn 风格本地组件、Radix UI Primitives
-- 动效：Framer Motion，当前仅用于重连提示
-- 国际化：i18next、react-i18next
-- 通知：Sonner
+- 国际化：基于 `useSyncExternalStore` 的轻量本地词典
 
 ## 运行时结构
 
 ```text
 main.tsx
 └─ AppProviders
-   ├─ MotionProvider
    ├─ QueryClientProvider
-   ├─ WebSocketProvider
-   ├─ StatusProvider
-   └─ SortProvider
+   └─ WebSocketProvider
       ├─ RouterProvider
       │  └─ App
       │     ├─ RefreshToast
       │     └─ ProbeWorkspace
       │        ├─ SiteHeader
       │        ├─ Outlet
-      │        ├─ SiteFooter
       │        ├─ TransferDialog
-      │        └─ MapDialog
-      └─ Toaster
+      │        └─ MapDialog（按需加载）
 ```
 
 `src/providers.tsx` 只负责跨路由 Provider。`src/router.tsx` 只负责路由表。`src/App.tsx` 负责站点设置、自定义代码注入、背景和错误边界，`ProbeWorkspace` 负责页首、单列内容容器、页尾以及地图和流量弹层。首页与详情页均使用约 720px 的居中内容列；节点筛选、分组和排序位于首页“当前状态”区。视觉语言参考 SimpleStatus 的窄幅状态流、低装饰卡片和清晰状态层级，但业务语义与数据契约仍属于哪吒探针。
@@ -62,7 +55,7 @@ main.tsx
 
 ### WebSocket 实时状态
 
-`WebSocketProvider` 连接 `/api/v1/ws/server`，负责断线指数退避、30 秒消息陈旧检测和手动重连。`useNezhaWsData` 只负责安全解析最新一条消息。
+`WebSocketProvider` 连接 `/api/v1/ws/server`，负责带随机抖动的断线指数退避、30 秒单次消息陈旧检测以及在线/可见性恢复。页面进入后台或浏览器离线时主动断开，恢复可见后自动取得最新快照，避免后台标签持续消耗服务器和浏览器资源。实时消息会在动画帧内合并，只渲染最新快照。
 
 实时消息包含服务端时间和完整服务器数组。`useServerWorkspace` 将节点分组、状态、搜索、排序、统计、流量和位置聚合为同一份路由上下文；工作台、总览和搜索复用这份数据，详情页继续从同一个 WebSocket Context 读取，避免为高频消息建立多个连接。
 
@@ -72,8 +65,8 @@ main.tsx
 
 ### UI 状态与浏览器存储
 
-- React Context：在线筛选、排序、WebSocket 连接状态
-- 组件 state：弹层开关、图表范围、监控曲线选择
+- React Context：WebSocket 数据与连接控制（拆分上下文，避免无关广播）
+- 组件 state：在线筛选、排序、弹层开关、图表范围、监控曲线选择
 - `sessionStorage`：分组、滚动位置、公共备注缓存、自定义背景
 - `localStorage`：语言、监控聚合/刷新/削峰偏好
 
@@ -83,7 +76,7 @@ main.tsx
 
 `src/components/ui` 是本地拥有的 shadcn 风格组件代码。Dialog、DropdownMenu、Switch 和 ToggleGroup 由 Radix UI 提供焦点管理、键盘交互、ARIA 与 Portal 行为，Button 使用 Radix Slot 支持 `asChild`。
 
-业务组件中的数据逻辑与图表契约保持稳定。`src/styles/probe.css` 定义新工作台的网格、色彩、间距和响应式覆盖，`workspace.css` 保留详情组件和弹层的通用浅色适配。Tailwind 用于基础组件状态、可访问焦点和尺寸；领域图表继续由独立 CSS 和 SVG 组件绘制。
+业务组件中的数据逻辑与图表契约保持稳定。`src/styles/probe.css` 定义工作台的网格、色彩、间距和响应式覆盖，`workspace.css` 只保留首屏和弹层样式，详情样式随详情路由按需加载。Tailwind 用于基础组件状态、可访问焦点和尺寸；领域图表继续由独立 CSS 和 SVG 组件绘制。
 
 ## 核心功能
 

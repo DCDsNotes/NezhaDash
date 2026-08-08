@@ -1,7 +1,5 @@
-import { useWebSocketContext } from "@/hooks/use-websocket-context"
-
-export { parseNezhaWsMessage } from "@/lib/nezha-websocket"
+import { useWebSocketData } from "@/hooks/use-websocket-context"
 
 export function useNezhaWsData() {
-  return useWebSocketContext()
+  return useWebSocketData()
 }

@@ -34,6 +34,11 @@
   display: grid;
 }
 
+.server-sort__label-slot {
+  justify-items: start;
+  text-align: left;
+}
+
 .server-sort__label-slot > *,
 .server-sort__selected-sizer > * {
   grid-area: 1 / 1;
@@ -43,6 +48,11 @@
 .server-sort__selected-sizer {
   visibility: hidden;
   pointer-events: none;
+}
+
+.server-sort__selected-value {
+  width: 100%;
+  text-align: left;
 }
 
 .server-sort__order-icon {

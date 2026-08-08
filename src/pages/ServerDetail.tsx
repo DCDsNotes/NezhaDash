@@ -12,6 +12,7 @@ import { getServerDetailStatusViewModel, getServerStatus } from "@/lib/server-vi
 import { cn } from "@/lib/utils"
 import "@/styles/detail.css"
 import "@/styles/monitor.css"
+import "@/styles/shared.css"
 import { type NezhaServer } from "@/types/nezha-api"
 import { useEffect, useMemo } from "react"
 import { Link, Navigate, useParams } from "react-router-dom"

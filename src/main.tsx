@@ -1,9 +1,7 @@
 import "font-logos/assets/font-logos.css"
 import ReactDOM from "react-dom/client"
 import { RouterProvider } from "react-router-dom"
-import { Toaster } from "sonner"
 
-import "./i18n"
 import "./index.css"
 import { getApplicationBaseUrl } from "./lib/app-base"
 import { AppProviders } from "./providers"
@@ -15,7 +13,6 @@ import "./styles/map.css"
 import "./styles/probe.css"
 import "./styles/remixicon.css"
 import "./styles/search.css"
-import "./styles/shared.css"
 import "./styles/tokens.css"
 import "./styles/workspace.css"
 
@@ -23,17 +20,6 @@ const rootEl = document.getElementById("root")!
 ReactDOM.createRoot(rootEl).render(
   <AppProviders>
     <RouterProvider router={router} />
-    <Toaster
-      theme="light"
-      duration={1000}
-      toastOptions={{
-        classNames: {
-          default: "w-fit rounded-md border border-border bg-white px-2.5 py-1.5 text-foreground shadow-lg",
-        },
-      }}
-      position="top-center"
-      className="flex items-center justify-center"
-    />
   </AppProviders>,
 )
 
@@ -50,11 +36,8 @@ requestAnimationFrame(() => {
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     const serviceWorkerUrl = new URL("sw.js", getApplicationBaseUrl())
-    navigator.serviceWorker
-      .register(serviceWorkerUrl, { updateViaCache: "none" })
-      .then((registration) => registration.update())
-      .catch(() => {
-        // ignore
-      })
+    navigator.serviceWorker.register(serviceWorkerUrl, { updateViaCache: "none" }).catch(() => {
+      // ignore
+    })
   })
 }

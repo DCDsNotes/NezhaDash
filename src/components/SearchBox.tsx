@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { useNezhaWsData } from "@/hooks/use-nezha-ws-data"
 import { serverIdToServerKey } from "@/lib/server-key"
 import { getServerSearchViewModel, matchServerSearchWord } from "@/lib/server-view-model"
 import { type NezhaServer } from "@/types/nezha-api"
@@ -26,21 +25,16 @@ function SearchListItem({ server, onOpenDetail }: { server: NezhaServer; onOpenD
   )
 }
 
-export default function SearchBox() {
+export default function SearchBox({ servers }: { servers: NezhaServer[] }) {
   const navigate = useNavigate()
-  const { data: parsedWsData, connected } = useNezhaWsData()
   const [show, setShow] = useState(false)
   const [searchWord, setSearchWord] = useState("")
   const deferredSearchWord = useDeferredValue(searchWord)
   const inputRef = useRef<HTMLInputElement | null>(null)
 
-  const serverList = useMemo(
-    () => (connected && Array.isArray(parsedWsData?.servers) ? parsedWsData.servers : []),
-    [connected, parsedWsData?.servers],
-  )
   const searchResult = useMemo(
-    () => (show ? serverList.filter((server) => matchServerSearchWord(server, deferredSearchWord)) : []),
-    [deferredSearchWord, serverList, show],
+    () => (show ? servers.filter((server) => matchServerSearchWord(server, deferredSearchWord)) : []),
+    [deferredSearchWord, servers, show],
   )
 
   function handleOpenChange(open: boolean) {
@@ -69,7 +63,7 @@ export default function SearchBox() {
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [])
 
-  if (!serverList.length) return null
+  if (!servers.length) return null
 
   return (
     <Dialog open={show} onOpenChange={handleOpenChange}>

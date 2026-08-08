@@ -25,8 +25,8 @@ type BillingOverview = {
   renewals: { id: number; name: string; endDate: string; days: number | null; expired: boolean }[]
 }
 
-function getResourceSummaries(workspace: ServerWorkspaceValue): ResourceSummary[] {
-  const onlineServers = workspace.filteredServers.filter((server) => getServerStatus(workspace.now, server) === "online")
+function getResourceSummaries(now: number, servers: ServerWorkspaceValue["filteredServers"]): ResourceSummary[] {
+  const onlineServers = servers.filter((server) => getServerStatus(now, server) === "online")
   const resources = [
     { type: "cpu", label: "CPU" },
     { type: "mem", label: "内存" },
@@ -35,7 +35,7 @@ function getResourceSummaries(workspace: ServerWorkspaceValue): ResourceSummary[
   const totals = new Map(resources.map((resource) => [resource.type, { sum: 0, count: 0 }]))
 
   onlineServers.forEach((server) => {
-    getServerCardViewModel(workspace.now, server).rings.forEach((ring) => {
+    getServerCardViewModel(now, server).rings.forEach((ring) => {
       const total = totals.get(ring.type)
       if (!total || !Number.isFinite(ring.used)) return
       total.sum += ring.used
@@ -50,11 +50,11 @@ function getResourceSummaries(workspace: ServerWorkspaceValue): ResourceSummary[
   })
 }
 
-function getBillingOverview(workspace: ServerWorkspaceValue): BillingOverview {
+function getBillingOverview(now: number, servers: ServerWorkspaceValue["servers"]): BillingOverview {
   const overview: BillingOverview = { tracked: 0, expiringSoon: 0, expired: 0, perpetual: 0, nearest: null, renewals: [] }
 
-  workspace.servers.forEach((server) => {
-    const billing = getServerCardViewModel(workspace.now, server).billing
+  servers.forEach((server) => {
+    const billing = getServerCardViewModel(now, server).billing
     if (!billing.remainingTime) return
     overview.tracked += 1
 
@@ -169,8 +169,8 @@ export default function Servers() {
   const workspace = useOutletContext<ServerWorkspaceValue>()
   const [renewalOpen, setRenewalOpen] = useState(false)
   const availability = workspace.totalCounts.total > 0 ? (workspace.totalCounts.online / workspace.totalCounts.total) * 100 : 0
-  const resourceSummaries = useMemo(() => getResourceSummaries(workspace), [workspace])
-  const billingOverview = useMemo(() => getBillingOverview(workspace), [workspace])
+  const resourceSummaries = useMemo(() => getResourceSummaries(workspace.now, workspace.filteredServers), [workspace.filteredServers, workspace.now])
+  const billingOverview = useMemo(() => getBillingOverview(workspace.now, workspace.servers), [workspace.now, workspace.servers])
   const networkStats = workspace.headerStats
   const overallState = workspace.totalCounts.total === 0 ? "empty" : workspace.totalCounts.offline > 0 ? "attention" : "operational"
   const overallLabel =

@@ -1,17 +1,13 @@
 import { cn } from "@/lib/utils"
-
-const flagAssets = import.meta.glob("../../node_modules/flag-icons/flags/4x3/*.svg", {
-  eager: true,
-  import: "default",
-  query: "?url",
-}) as Record<string, string>
-
-const flagUrls = Object.fromEntries(Object.entries(flagAssets).map(([path, url]) => [path.slice(path.lastIndexOf("/") + 1, -4), url])) as Record<
-  string,
-  string
->
+import { useEffect, useState } from "react"
 
 let emojiFlagSupport: boolean | undefined
+let flagAssetsPromise: Promise<typeof import("@/lib/flag-assets")> | null = null
+
+function loadFlagAssets() {
+  flagAssetsPromise ||= import("@/lib/flag-assets")
+  return flagAssetsPromise
+}
 
 function normalizeCountryCode(raw: string | null | undefined) {
   const code = String(raw || "").trim()
@@ -42,19 +38,25 @@ function getUnicodeFlagIcon(countryCode: string) {
 }
 
 export default function ServerFlag({ country_code, className }: { country_code: string; className?: string }) {
-  // @ts-expect-error ForceUseSvgFlag is a global variable
   const forceUseSvgFlag = Boolean(window.ForceUseSvgFlag)
-
   const normalized = normalizeCountryCode(country_code)
-  const flagUrl = flagUrls[normalized] || flagUrls.cn
+  const useSvg = forceUseSvgFlag || !supportsEmojiFlags()
+  const [flagUrl, setFlagUrl] = useState("")
+
+  useEffect(() => {
+    if (!useSvg) return
+    let active = true
+    void loadFlagAssets().then(({ getFlagUrl }) => {
+      if (active) setFlagUrl(getFlagUrl(normalized))
+    })
+    return () => {
+      active = false
+    }
+  }, [normalized, useSvg])
 
   return (
     <span className={cn("server-flag", className)}>
-      {forceUseSvgFlag || !supportsEmojiFlags() ? (
-        <span className="fi" style={{ backgroundImage: `url("${flagUrl}")` }} />
-      ) : (
-        getUnicodeFlagIcon(normalized)
-      )}
+      {useSvg && flagUrl ? <span className="fi" style={{ backgroundImage: `url("${flagUrl}")` }} /> : getUnicodeFlagIcon(normalized)}
     </span>
   )
 }

@@ -1,17 +1,27 @@
 import SearchBox from "@/components/SearchBox"
-import WorldMap, { buildLocationsFromServers } from "@/components/WorldMap"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { type ServerWorkspaceValue, useServerWorkspace } from "@/hooks/use-server-workspace"
-import { useWebSocketContext } from "@/hooks/use-websocket-context"
-import { useWorldMapSize } from "@/hooks/use-world-map-size"
+import { useWebSocketControls } from "@/hooks/use-websocket-context"
 import { loginUserQueryOptions, settingQueryOptions } from "@/lib/query-options"
-import { getServerDailyTransferList, getServerStatus } from "@/lib/server-view-model"
+import { getServerDailyTransferList } from "@/lib/server-view-model"
 import { resolveSiteName } from "@/lib/site-name"
 import { cn } from "@/lib/utils"
-import { preloadWorldMapImage } from "@/lib/world-map"
 import { useQuery } from "@tanstack/react-query"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react"
 import { Link, Outlet } from "react-router-dom"
+
+let mapDialogPromise: ReturnType<typeof importMapDialog> | null = null
+
+function importMapDialog() {
+  return import("@/components/MapDialog")
+}
+
+function loadMapDialog() {
+  mapDialogPromise ||= importMapDialog()
+  return mapDialogPromise
+}
+
+const MapDialog = lazy(loadMapDialog)
 
 type DashboardLinkState = {
   icon: string
@@ -20,10 +30,10 @@ type DashboardLinkState = {
 }
 
 function useDashboardLinkState(): DashboardLinkState {
-  const { setNeedReconnect } = useWebSocketContext()
+  const { setNeedReconnect } = useWebSocketControls()
   const previousLoginState = useRef<boolean | null>(null)
   const { data: userData, isFetched, isError } = useQuery(loginUserQueryOptions())
-  const isLogin = isError ? false : userData ? !!userData.data?.id && !!document.cookie : false
+  const isLogin = isError ? false : Boolean(userData?.data?.id)
 
   useEffect(() => {
     if (!isFetched && !isError) return
@@ -38,11 +48,13 @@ function useDashboardLinkState(): DashboardLinkState {
 
 function SiteHeader({
   dashboardLink,
+  servers,
   onOpenMap,
   onPreloadMap,
   onOpenTransfer,
 }: {
   dashboardLink: DashboardLinkState
+  servers: ServerWorkspaceValue["servers"]
   onOpenMap: () => void
   onPreloadMap: () => void
   onOpenTransfer: () => void
@@ -65,7 +77,7 @@ function SiteHeader({
 
         <nav className="probe-site-actions" aria-label="页面工具">
           <div className="probe-site-actions__search">
-            <SearchBox />
+            <SearchBox servers={servers} />
           </div>
           <button type="button" className="probe-site-action" onClick={onOpenTransfer} aria-label="查看今日流量" title="查看今日流量">
             <i className="ri-exchange-2-line" aria-hidden="true" />
@@ -147,32 +159,6 @@ function TransferDialog({
   )
 }
 
-function MapDialog({ workspace, open, onOpenChange }: { workspace: ServerWorkspaceValue; open: boolean; onOpenChange: (open: boolean) => void }) {
-  const { width } = useWorldMapSize(open)
-  const mapWidth = typeof window !== "undefined" && window.innerWidth > 900 ? Math.min(Math.max(width, 760), 900) : width
-  const locations = useMemo(
-    () =>
-      open
-        ? buildLocationsFromServers(
-            workspace.filteredServers.map((server) => ({ ...server, online: getServerStatus(workspace.now, server) === "online" })),
-          )
-        : [],
-    [open, workspace.filteredServers, workspace.now],
-  )
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="dashboard-dialog probe-map-dialog">
-        <DialogTitle className="dashboard-dialog__title">节点地图</DialogTitle>
-        <DialogDescription className="dashboard-dialog__description">当前筛选中的在线节点分布</DialogDescription>
-        <div className="probe-map-dialog__canvas">
-          {locations.length > 0 ? <WorldMap locations={locations} mapWidth={mapWidth} /> : <div className="dashboard-empty">暂无在线节点位置</div>}
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
 export default function ProbeWorkspace() {
   const workspace = useServerWorkspace()
   const dashboardLink = useDashboardLinkState()
@@ -185,7 +171,7 @@ export default function ProbeWorkspace() {
   }, [settingData?.data?.config?.site_name])
 
   function preloadMap() {
-    void preloadWorldMapImage()
+    void loadMapDialog().then(({ preloadMapAssets }) => preloadMapAssets())
   }
 
   function openMap() {
@@ -195,12 +181,22 @@ export default function ProbeWorkspace() {
 
   return (
     <div className="probe-workspace">
-      <SiteHeader dashboardLink={dashboardLink} onOpenMap={openMap} onPreloadMap={preloadMap} onOpenTransfer={() => setShowTransfer(true)} />
+      <SiteHeader
+        dashboardLink={dashboardLink}
+        servers={workspace.servers}
+        onOpenMap={openMap}
+        onPreloadMap={preloadMap}
+        onOpenTransfer={() => setShowTransfer(true)}
+      />
       <main className="probe-main">
         <Outlet context={workspace} />
       </main>
       <TransferDialog workspace={workspace} open={showTransfer} onOpenChange={setShowTransfer} />
-      <MapDialog workspace={workspace} open={showMap} onOpenChange={setShowMap} />
+      {showMap ? (
+        <Suspense fallback={null}>
+          <MapDialog workspace={workspace} open onOpenChange={setShowMap} />
+        </Suspense>
+      ) : null}
     </div>
   )
 }

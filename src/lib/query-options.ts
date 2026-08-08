@@ -13,9 +13,9 @@ export const queryKeys = {
 export function settingQueryOptions() {
   return queryOptions({
     queryKey: queryKeys.setting,
-    queryFn: fetchSetting,
-    staleTime: 60_000,
-    refetchOnMount: true,
+    queryFn: ({ signal }) => fetchSetting(signal),
+    staleTime: 5 * 60_000,
+    refetchOnMount: false,
     refetchOnWindowFocus: true,
   })
 }
@@ -23,11 +23,10 @@ export function settingQueryOptions() {
 export function loginUserQueryOptions() {
   return queryOptions({
     queryKey: queryKeys.loginUser,
-    queryFn: fetchLoginUser,
+    queryFn: ({ signal }) => fetchLoginUser(signal),
+    staleTime: 5 * 60_000,
     refetchOnMount: false,
-    refetchOnWindowFocus: true,
-    refetchInterval: 30_000,
-    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: "always",
     retry: 0,
   })
 }
@@ -35,16 +34,18 @@ export function loginUserQueryOptions() {
 export function serverGroupsQueryOptions() {
   return queryOptions({
     queryKey: queryKeys.serverGroups,
-    queryFn: fetchServerGroup,
-    staleTime: 60_000,
+    queryFn: ({ signal }) => fetchServerGroup(signal),
+    staleTime: 5 * 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: true,
   })
 }
 
 export function monitorQueryOptions(serverId: number) {
   return queryOptions({
     queryKey: queryKeys.monitor(serverId),
-    queryFn: () => fetchMonitor(serverId),
-    refetchOnMount: true,
+    queryFn: ({ signal }) => fetchMonitor(serverId, signal),
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
     staleTime: 15_000,
   })
@@ -53,8 +54,7 @@ export function monitorQueryOptions(serverId: number) {
 export function serverSpeedQueryOptions(serverId: number) {
   return queryOptions({
     queryKey: queryKeys.serverSpeed(serverId),
-    queryFn: () => fetchServerSpeedHistory(serverId),
-    refetchOnMount: true,
+    queryFn: ({ signal }) => fetchServerSpeedHistory(serverId, signal),
     refetchOnWindowFocus: false,
     staleTime: 15_000,
   })

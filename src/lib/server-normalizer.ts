@@ -3,7 +3,10 @@ import dayjs from "dayjs"
 
 const lastActiveTimeCache = new WeakMap<NezhaServer, { source: string; value: number }>()
 const publicNoteCache = new Map<string, PublicNoteData | null>()
+const resolvedPublicNotes = new Map<number, string>()
+const hydratedPublicNoteIds = new Set<number>()
 const PUBLIC_NOTE_CACHE_LIMIT = 256
+const PUBLIC_NOTE_LENGTH_LIMIT = 256 * 1024
 
 export interface BillingData {
   startDate: string
@@ -26,6 +29,9 @@ export interface PlanData {
 export interface PublicNoteData {
   billingDataMod?: BillingData
   planDataMod?: PlanData
+  customData?: {
+    slogan?: string
+  }
 }
 
 function calcPercent(used: unknown, total: unknown) {
@@ -66,18 +72,30 @@ export function isServerOnline(now: number, serverInfo: NezhaServer) {
 }
 
 export function resolvePublicNote(serverId: number, publicNote: string): string {
-  if (typeof sessionStorage === "undefined") return publicNote
-
   const storageKey = `server_${serverId}_public_note`
-  const storedNote = sessionStorage.getItem(storageKey)
+  let storedNote = resolvedPublicNotes.get(serverId) || ""
 
-  if (!publicNote && storedNote) return storedNote
-
-  if (publicNote && storedNote !== publicNote) {
-    sessionStorage.setItem(storageKey, publicNote)
+  if (!hydratedPublicNoteIds.has(serverId)) {
+    hydratedPublicNoteIds.add(serverId)
+    try {
+      storedNote = sessionStorage.getItem(storageKey) || ""
+    } catch {
+      storedNote = ""
+    }
+    if (storedNote) resolvedPublicNotes.set(serverId, storedNote)
   }
 
-  return publicNote || ""
+  if (publicNote && storedNote !== publicNote) {
+    resolvedPublicNotes.set(serverId, publicNote)
+    try {
+      sessionStorage.setItem(storageKey, publicNote)
+    } catch {
+      // In-memory fallback is sufficient when storage is unavailable.
+    }
+    return publicNote
+  }
+
+  return publicNote || storedNote
 }
 
 export function normalizeServer(now: number, serverInfo: NezhaServer) {
@@ -131,12 +149,16 @@ export function getNextCycleTime(startDate: number, months: number, specifiedDat
   }
 
   let nextDate = start
-  let shouldContinue = true
-  while (shouldContinue) {
+  for (let cycle = 0; cycle < 1_200; cycle += 1) {
     nextDate = nextDate.add(months, "month")
-    shouldContinue = nextDate.valueOf() <= checkDate.valueOf()
+    if (nextDate.valueOf() > checkDate.valueOf()) return nextDate.valueOf()
   }
 
+  // Guard pathological dates without spending unbounded time in the browser.
+  const elapsedMonths = Math.max(0, checkDate.diff(start, "month"))
+  const cycleCount = Math.floor(elapsedMonths / months) + 1
+  nextDate = start.add(cycleCount * months, "month")
+  while (nextDate.valueOf() <= checkDate.valueOf()) nextDate = nextDate.add(months, "month")
   return nextDate.valueOf()
 }
 
@@ -153,13 +175,13 @@ export function formatBillingEndDate(endDate: unknown): string {
 }
 
 export function parsePublicNote(publicNote: string): PublicNoteData | null {
-  if (!publicNote) return null
+  if (!publicNote || publicNote.length > PUBLIC_NOTE_LENGTH_LIMIT) return null
   if (publicNoteCache.has(publicNote)) return publicNoteCache.get(publicNote) ?? null
 
   let parsed: PublicNoteData | null = null
   try {
     const data = JSON.parse(publicNote)
-    if (data.billingDataMod || data.planDataMod) {
+    if (data.billingDataMod || data.planDataMod || data.customData) {
       parsed = {
         ...(data.billingDataMod
           ? {
@@ -185,10 +207,17 @@ export function parsePublicNote(publicNote: string): PublicNoteData | null {
               },
             }
           : {}),
+        ...(data.customData
+          ? {
+              customData: {
+                slogan: data.customData.slogan ? String(data.customData.slogan) : "",
+              },
+            }
+          : {}),
       }
     }
-  } catch (error) {
-    console.error("Error parsing public note:", error)
+  } catch {
+    // Invalid public notes are treated as plain text by the rest of the UI.
   }
 
   if (publicNoteCache.size >= PUBLIC_NOTE_CACHE_LIMIT) {

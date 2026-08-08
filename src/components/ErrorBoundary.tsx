@@ -8,7 +8,6 @@ interface Props {
 
 interface State {
   hasError: boolean
-  error?: Error
 }
 
 class ErrorBoundary extends React.Component<Props, State> {
@@ -17,16 +16,13 @@ class ErrorBoundary extends React.Component<Props, State> {
     this.state = { hasError: false }
   }
 
-  static getDerivedStateFromError(error: Error): State {
-    return {
-      hasError: true,
-      error,
-    }
+  static getDerivedStateFromError(): State {
+    return { hasError: true }
   }
 
   render() {
     if (this.state.hasError) {
-      return <ErrorPage code={500} message={this.state.error?.message || "应用程序发生错误"} />
+      return <ErrorPage code={500} />
     }
 
     return this.props.children

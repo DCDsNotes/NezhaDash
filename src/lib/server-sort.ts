@@ -5,7 +5,7 @@ export type ServerSortOption = {
   value: string
 }
 
-export const serverSortOptions = (): ServerSortOption[] => [
+const SERVER_SORT_OPTIONS: ServerSortOption[] = [
   { label: "排序值", value: "DisplayIndex" },
   { label: "主机名称", value: "Name" },
   { label: "国家地区", value: "Host.CountryCode" },
@@ -30,6 +30,8 @@ export const serverSortOptions = (): ServerSortOption[] => [
   { label: "硬盘大小", value: "Host.DiskTotal" },
 ]
 
+export const serverSortOptions = () => SERVER_SORT_OPTIONS
+
 function num(v: unknown) {
   const n = Number(v)
   return Number.isFinite(n) ? n : 0
@@ -46,7 +48,7 @@ function getSortValue(server: NezhaServer, sortBy: string) {
   if (sortBy === "DisplayIndex") return getDisplayIndex(server)
   if (sortBy === "Name") return String(server.name || "")
 
-  if (sortBy.startsWith("$.") || sortBy.startsWith("$.")) {
+  if (sortBy.startsWith("$.")) {
     const key = sortBy.split(".")[1]
     if (key === "TotalTransfer") {
       return num(server.state?.net_in_transfer) + num(server.state?.net_out_transfer)
@@ -62,7 +64,7 @@ function getSortValue(server: NezhaServer, sortBy: string) {
 
   const hasDot = sortBy.includes(".")
   if (!hasDot) {
-    return (server as any)[sortBy]
+    return (server as unknown as Record<string, unknown>)[sortBy]
   }
 
   const [group, field] = sortBy.split(".")
@@ -70,10 +72,7 @@ function getSortValue(server: NezhaServer, sortBy: string) {
   if (group === "Host") {
     if (field === "CountryCode") return String(server.country_code || "")
     if (field === "Platform") return String(server.host?.platform || "")
-    if (field === "BootTime") {
-      const currentTime = Date.now()
-      return currentTime - num(server.host?.boot_time) * 1000
-    }
+    if (field === "BootTime") return -num(server.host?.boot_time)
     if (field === "MemTotal") return num(server.host?.mem_total)
     if (field === "SwapTotal") return num(server.host?.swap_total)
     if (field === "DiskTotal") return num(server.host?.disk_total)
@@ -96,16 +95,22 @@ function getSortValue(server: NezhaServer, sortBy: string) {
   return 0
 }
 
-export function serverSortHandler(a: NezhaServer, b: NezhaServer, sortBy: string, order: "asc" | "desc") {
-  if (!sortBy) return 0
-  const av = getSortValue(a, sortBy)
-  const bv = getSortValue(b, sortBy)
-
+function compareSortValues(av: unknown, bv: unknown) {
   let result = 0
   if (typeof av === "string" || typeof bv === "string") {
     result = String(av || "").localeCompare(String(bv || ""))
   } else {
     result = num(av) - num(bv)
   }
-  return order === "desc" ? -result : result
+  return result
+}
+
+export function sortServers(servers: NezhaServer[], sortBy: string, order: "asc" | "desc") {
+  if (!sortBy || servers.length < 2) return [...servers]
+  const direction = order === "desc" ? -1 : 1
+
+  return servers
+    .map((server, index) => ({ index, server, value: getSortValue(server, sortBy) }))
+    .sort((a, b) => direction * compareSortValues(a.value, b.value) || a.index - b.index)
+    .map(({ server }) => server)
 }

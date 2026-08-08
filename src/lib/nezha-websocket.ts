@@ -1,12 +1,15 @@
 import { type NezhaWebsocketResponse } from "@/types/nezha-api"
 
+const MAX_MESSAGE_LENGTH = 8 * 1024 * 1024
+
 export function parseNezhaWsMessage(data: string | undefined | null): NezhaWebsocketResponse | null {
-  if (!data) return null
+  if (!data || data.length > MAX_MESSAGE_LENGTH) return null
 
   try {
-    return JSON.parse(data) as NezhaWebsocketResponse
-  } catch (error) {
-    console.error("Failed to parse Nezha websocket message:", error)
+    const parsed = JSON.parse(data) as Partial<NezhaWebsocketResponse> | null
+    if (!parsed || !Number.isFinite(Number(parsed.now)) || !Array.isArray(parsed.servers)) return null
+    return { now: Number(parsed.now), servers: parsed.servers }
+  } catch {
     return null
   }
 }

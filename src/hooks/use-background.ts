@@ -8,6 +8,7 @@ declare global {
     ForceCardInline: boolean
     ForceShowMap: boolean
     ForcePeakCutEnabled: boolean
+    ForceUseSvgFlag: boolean
   }
 }
 
@@ -16,7 +17,12 @@ const BACKGROUND_CHANGE_EVENT = "backgroundChange"
 function readBackgroundImage() {
   if (window.CustomBackgroundImage) return window.CustomBackgroundImage
 
-  const savedImage = sessionStorage.getItem("savedBackgroundImage") || ""
+  let savedImage = ""
+  try {
+    savedImage = sessionStorage.getItem("savedBackgroundImage") || ""
+  } catch {
+    // Storage can be unavailable in hardened browser contexts.
+  }
   if (savedImage) window.CustomBackgroundImage = savedImage
   return savedImage || undefined
 }

@@ -1,99 +1,90 @@
-export const InjectContext = (content: string) => {
-  const tempDiv = document.createElement("div")
-  tempDiv.innerHTML = content
+const INJECTION_MARK = "data-injected"
+const injectedNodes = new Set<Node>()
 
-  const INJECTION_MARK = "data-injected" // 自定义属性标识
+function appendInjected(parent: HTMLElement, node: Node) {
+  if (node instanceof HTMLElement) node.setAttribute(INJECTION_MARK, "true")
+  injectedNodes.add(node)
+  parent.appendChild(node)
+}
 
-  // 清理已有的注入资源
-  const cleanInjectedResources = () => {
-    document.querySelectorAll(`[${INJECTION_MARK}]`).forEach((node) => node.remove())
-  }
+function cleanInjectedResources() {
+  injectedNodes.forEach((node) => node.parentNode?.removeChild(node))
+  injectedNodes.clear()
+  document.querySelectorAll(`[${INJECTION_MARK}]`).forEach((node) => node.remove())
+}
 
-  const loadExternalScript = (scriptElement: HTMLScriptElement): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const script = document.createElement("script")
-      script.src = scriptElement.src
-      script.async = false // 保持顺序执行
-      script.setAttribute(INJECTION_MARK, "true") // 添加标识
-      script.onload = () => resolve()
-      script.onerror = () => reject(new Error(`Failed to load script: ${scriptElement.src}`))
-      document.head.appendChild(script)
-    })
-  }
-
-  const executeInlineScript = (scriptContent: string): Promise<void> => {
-    return new Promise((resolve) => {
-      const script = document.createElement("script")
-      script.textContent = scriptContent
-      script.setAttribute(INJECTION_MARK, "true") // 添加标识
-      document.body.appendChild(script)
-      resolve()
-    })
-  }
-
-  const loadStyle = (styleElement: HTMLStyleElement): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      if ((styleElement as any).href) {
-        // 处理 <link>
-        const link = document.createElement("link")
-        link.rel = "stylesheet"
-        link.href = (styleElement as any).href
-        link.setAttribute(INJECTION_MARK, "true") // 添加标识
-        link.onload = () => resolve()
-        link.onerror = () => reject(new Error(`Failed to load stylesheet: ${link.href}`))
-        document.head.appendChild(link)
-      } else {
-        const style = document.createElement("style")
-        style.textContent = styleElement.textContent
-        style.setAttribute(INJECTION_MARK, "true") // 添加标识
-        document.head.appendChild(style)
-        resolve()
-      }
-    })
-  }
-
-  const handlers: { [key: string]: (element: HTMLElement) => Promise<void> } = {
-    SCRIPT: (element) => {
-      const scriptElement = element as HTMLScriptElement
-      if (scriptElement.src) {
-        // 加载外部脚本
-        return loadExternalScript(scriptElement)
-      } else {
-        // 执行内联脚本
-        return executeInlineScript(scriptElement.textContent || "")
-      }
-    },
-    STYLE: (element) => loadStyle(element as HTMLStyleElement),
-    META: (element) => {
-      const meta = element.cloneNode(true) as HTMLElement
-      meta.setAttribute(INJECTION_MARK, "true") // 添加标识
-      document.head.appendChild(meta) // 将 meta 标签插入到 <head>
-      return Promise.resolve()
-    },
-    DEFAULT: (element) => {
-      element.setAttribute(INJECTION_MARK, "true") // 添加标识
-      document.body.appendChild(element)
-      return Promise.resolve()
-    },
-  }
-
-  // 开始注入前清理已有资源
+export function clearInjectedContext() {
   cleanInjectedResources()
+}
 
-  const executeSequentially = async () => {
-    for (const node of Array.from(tempDiv.childNodes)) {
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        const element = node as HTMLElement
-        const handler = handlers[element.tagName] || handlers.DEFAULT
-        await handler(element) // 按顺序等待当前脚本或资源完成处理
-      } else if (node.nodeType === Node.TEXT_NODE) {
-        document.body.appendChild(document.createTextNode(node.textContent || ""))
-      }
-    }
-    console.log("All resources have been injected and executed in sequence.")
-  }
-
-  return executeSequentially().catch((error) => {
-    console.error("Error during resource injection:", error)
+function loadExternalScript(source: HTMLScriptElement) {
+  return new Promise<void>((resolve, reject) => {
+    const script = document.createElement("script")
+    script.src = source.src
+    script.async = false
+    if (source.type) script.type = source.type
+    if (source.integrity) script.integrity = source.integrity
+    if (source.crossOrigin) script.crossOrigin = source.crossOrigin
+    if (source.referrerPolicy) script.referrerPolicy = source.referrerPolicy
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error(`Failed to load custom script: ${source.src}`))
+    appendInjected(document.head, script)
   })
+}
+
+function executeInlineScript(source: HTMLScriptElement) {
+  const script = document.createElement("script")
+  if (source.type) script.type = source.type
+  script.textContent = source.textContent
+  appendInjected(document.body, script)
+}
+
+function loadStylesheet(source: HTMLLinkElement) {
+  return new Promise<void>((resolve, reject) => {
+    const link = document.createElement("link")
+    link.rel = "stylesheet"
+    link.href = source.href
+    if (source.integrity) link.integrity = source.integrity
+    if (source.crossOrigin) link.crossOrigin = source.crossOrigin
+    if (source.referrerPolicy) link.referrerPolicy = source.referrerPolicy
+    link.onload = () => resolve()
+    link.onerror = () => reject(new Error(`Failed to load custom stylesheet: ${source.href}`))
+    appendInjected(document.head, link)
+  })
+}
+
+/**
+ * Executes the trusted custom_code returned by the Nezha panel.
+ * This is intentionally privileged for compatibility with panel templates;
+ * only connect this frontend to a panel instance you control.
+ */
+export async function injectContext(content: string) {
+  cleanInjectedResources()
+  if (!content) return
+
+  const fragment = document.createRange().createContextualFragment(content)
+  for (const node of Array.from(fragment.childNodes)) {
+    if (!(node instanceof HTMLElement)) {
+      appendInjected(document.body, node)
+      continue
+    }
+
+    if (node instanceof HTMLScriptElement) {
+      if (node.src) await loadExternalScript(node)
+      else executeInlineScript(node)
+      continue
+    }
+
+    if (node instanceof HTMLStyleElement || node instanceof HTMLMetaElement) {
+      appendInjected(document.head, node)
+      continue
+    }
+
+    if (node instanceof HTMLLinkElement && node.rel.toLowerCase() === "stylesheet") {
+      await loadStylesheet(node)
+      continue
+    }
+
+    appendInjected(document.body, node)
+  }
 }

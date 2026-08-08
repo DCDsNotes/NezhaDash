@@ -81,7 +81,6 @@ export default defineConfig(({ command }) => {
             if (/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return "react"
             if (/[\\/]node_modules[\\/]@tanstack[\\/]/.test(id)) return "tanstack"
             if (/[\\/]node_modules[\\/]@radix-ui[\\/]/.test(id)) return "radix"
-            if (/[\\/]node_modules[\\/](i18next|react-i18next)[\\/]/.test(id)) return "i18n"
           },
         },
       },

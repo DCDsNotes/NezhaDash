@@ -20,7 +20,9 @@
 .world-map-group .world-map-img {
   width: var(--world-map-width, 1280px);
   height: var(--world-map-height, 621px);
-  background: url("../assets/world-map.svg") 50% 50% no-repeat;
+  background-image: var(--world-map-image);
+  background-position: 50% 50%;
+  background-repeat: no-repeat;
   background-size: 100%;
   opacity: 0.75;
 }

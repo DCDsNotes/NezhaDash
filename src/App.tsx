@@ -1,40 +1,37 @@
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
-import { useTranslation } from "react-i18next"
 
 import ErrorBoundary from "./components/ErrorBoundary"
 import ProbeWorkspace from "./components/ProbeWorkspace"
 import RefreshToast from "./components/RefreshToast"
 import { useBackground } from "./hooks/use-background"
-import { InjectContext } from "./lib/inject"
+import { hasStoredLanguage, setAppLanguage } from "./i18n"
+import { clearInjectedContext, injectContext } from "./lib/inject"
 import { settingQueryOptions } from "./lib/query-options"
 import { cn } from "./lib/utils"
-import { preloadWorldMapImage } from "./lib/world-map"
 import ErrorPage from "./pages/ErrorPage"
 
 export default function App() {
   const { data: settingData, error } = useQuery(settingQueryOptions())
-  const { i18n } = useTranslation()
   const [injectedCustomCode, setInjectedCustomCode] = useState<string | null>(null)
   const customCode = settingData?.data?.config?.custom_code || ""
   const configuredLanguage = settingData?.data?.config?.language
   const { backgroundImage: customBackgroundImage } = useBackground(injectedCustomCode)
 
   useEffect(() => {
-    void preloadWorldMapImage()
-  }, [])
-
-  useEffect(() => {
     if (!customCode) {
+      clearInjectedContext()
       setInjectedCustomCode(null)
       return
     }
 
     let active = true
     setInjectedCustomCode(null)
-    void InjectContext(customCode).then(() => {
-      if (active) setInjectedCustomCode(customCode)
-    })
+    void injectContext(customCode)
+      .catch(() => undefined)
+      .then(() => {
+        if (active) setInjectedCustomCode(customCode)
+      })
 
     return () => {
       active = false
@@ -42,13 +39,13 @@ export default function App() {
   }, [customCode])
 
   useEffect(() => {
-    if (configuredLanguage && !localStorage.getItem("language")) {
-      void i18n.changeLanguage(configuredLanguage)
+    if (configuredLanguage && !hasStoredLanguage()) {
+      setAppLanguage(configuredLanguage)
     }
-  }, [configuredLanguage, i18n])
+  }, [configuredLanguage])
 
   if (error) {
-    return <ErrorPage code={500} message={error.message} />
+    return <ErrorPage code={500} />
   }
 
   if (!settingData) {

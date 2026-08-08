@@ -271,18 +271,20 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await page.getByRole("button", { name: "节点分组：核心节点" }).click()
   await page.getByRole("menuitemradio", { name: "全部节点 2" }).click()
 
-  await expect.poll(() => worldMapRequestCount).toBe(1)
+  await expect.poll(() => worldMapRequestCount).toBe(0)
   await page.getByLabel("查看节点地图").click()
   await expect(page.getByRole("dialog", { name: "节点地图" })).toBeVisible()
+  await expect(page.locator(".world-map-img")).toHaveCSS("background-image", /blob:/)
   await screenshot(page, testInfo, "map-desktop.png")
   await page.getByRole("button", { name: "关闭" }).click()
   await page.getByLabel("查看节点地图").click()
   await expect(page.getByRole("dialog", { name: "节点地图" })).toBeVisible()
   await page.getByRole("button", { name: "关闭" }).click()
-  expect(worldMapRequestCount).toBe(1)
+  expect(worldMapRequestCount).toBe(0)
 
   const sortTrigger = page.getByLabel(/排序字段/)
   const initialSortWidth = (await sortTrigger.boundingBox())?.width
+  await expect(sortTrigger.locator(".server-sort__selected-value")).toHaveCSS("text-align", "left")
   await sortTrigger.click()
   const sortMenu = page.locator(".server-sort-dropdown:visible")
   await expect(sortMenu).toHaveCSS("background-color", "rgb(255, 255, 255)")

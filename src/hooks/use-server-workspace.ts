@@ -1,13 +1,10 @@
-import { type Status } from "@/context/status-context"
 import { useNezhaWsData } from "@/hooks/use-nezha-ws-data"
-import { useSort } from "@/hooks/use-sort"
-import { useStatus } from "@/hooks/use-status"
 import { serverGroupsQueryOptions } from "@/lib/query-options"
-import { serverSortHandler, serverSortOptions } from "@/lib/server-sort"
-import { getServerHeaderStats, getServerStatus, getServerStatusCounts, matchServerSearchWord } from "@/lib/server-view-model"
+import { serverSortOptions, sortServers } from "@/lib/server-sort"
+import { getServerOverviewStats, getServerStatus, matchServerSearchWord } from "@/lib/server-view-model"
 import { type NezhaServer, type ServerGroup } from "@/types/nezha-api"
 import { useQuery } from "@tanstack/react-query"
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 export type WorkspaceGroup = {
   key: string
@@ -16,8 +13,9 @@ export type WorkspaceGroup = {
   count: number
 }
 
+export type Status = "all" | "online" | "offline"
+
 export type ServerWorkspaceValue = {
-  connected: boolean
   isLoading: boolean
   isGroupError: boolean
   now: number
@@ -35,26 +33,39 @@ export type ServerWorkspaceValue = {
   setSortOrder: (value: "asc" | "desc") => void
   sortOptions: { value: string; label: string }[]
   groups: WorkspaceGroup[]
-  totalCounts: ReturnType<typeof getServerStatusCounts>
-  filteredCounts: ReturnType<typeof getServerStatusCounts>
-  headerStats: ReturnType<typeof getServerHeaderStats>
+  totalCounts: ReturnType<typeof getServerOverviewStats>["totalCounts"]
+  headerStats: ReturnType<typeof getServerOverviewStats>["headerStats"]
+}
+
+const WORKSPACE_SORT_OPTIONS = serverSortOptions().map(({ value, label }) => ({ value, label }))
+
+function getInitialGroup() {
+  try {
+    const savedGroup = sessionStorage.getItem("selectedGroup") || ""
+    return savedGroup === "All" ? "" : savedGroup
+  } catch {
+    return ""
+  }
 }
 
 export function useServerWorkspace(): ServerWorkspaceValue {
-  const { sortProp, sortOrder, setSortOrder, setSortProp } = useSort()
-  const { status, setStatus } = useStatus()
   const { data: groupData, isError: isGroupError } = useQuery(serverGroupsQueryOptions())
-  const { data: wsData, connected } = useNezhaWsData()
-  const [currentGroup, setCurrentGroupState] = useState("")
+  const { data: wsData } = useNezhaWsData()
+  const [status, setStatus] = useState<Status>("all")
+  const [sortProp, setSortProp] = useState("DisplayIndex")
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
+  const [currentGroup, setCurrentGroupState] = useState(getInitialGroup)
   const [searchWord, setSearchWord] = useState("")
 
-  useEffect(() => {
-    const savedGroup = sessionStorage.getItem("selectedGroup") || ""
-    setCurrentGroupState(savedGroup === "All" ? "" : savedGroup)
-  }, [])
-
   const now = wsData?.now || Date.now()
-  const servers = useMemo(() => (Array.isArray(wsData?.servers) ? wsData.servers : []), [wsData?.servers])
+  const servers = Array.isArray(wsData?.servers) ? wsData.servers : []
+
+  const groupServerIds = useMemo(() => {
+    const result = new Map<string, Set<number>>()
+    if (!Array.isArray(groupData?.data)) return result
+    groupData.data.forEach((item: ServerGroup) => result.set(item.group.name, new Set(Array.isArray(item.servers) ? item.servers : [])))
+    return result
+  }, [groupData?.data])
 
   const groups = useMemo<WorkspaceGroup[]>(() => {
     const existingIds = new Set(servers.map((server) => server.id))
@@ -62,7 +73,8 @@ export function useServerWorkspace(): ServerWorkspaceValue {
     if (!Array.isArray(groupData?.data)) return items
 
     groupData.data.forEach((item: ServerGroup) => {
-      const count = Array.isArray(item.servers) ? item.servers.filter((id) => existingIds.has(id)).length : 0
+      const serverIds = groupServerIds.get(item.group.name)
+      const count = serverIds ? Array.from(serverIds).reduce((sum, id) => sum + Number(existingIds.has(id)), 0) : 0
       if (count > 0) {
         items.push({
           key: String(item.group.id || item.group.name),
@@ -73,51 +85,65 @@ export function useServerWorkspace(): ServerWorkspaceValue {
       }
     })
     return items
-  }, [groupData?.data, servers])
+  }, [groupData?.data, groupServerIds, servers])
 
   const filteredServers = useMemo(() => {
-    const byGroup = servers.filter((server) => {
-      if (!currentGroup) return true
-      return !!groupData?.data?.some(
-        (group: ServerGroup) => group.group.name === currentGroup && Array.isArray(group.servers) && group.servers.includes(server.id),
-      )
-    })
+    const selectedGroupIds = currentGroup ? groupServerIds.get(currentGroup) : null
+    const byGroup = selectedGroupIds ? servers.filter((server) => selectedGroupIds.has(server.id)) : currentGroup ? [] : servers
     const byStatus = status === "all" ? byGroup : byGroup.filter((server) => getServerStatus(now, server) === status)
-    const bySearch = searchWord.trim() ? byStatus.filter((server) => matchServerSearchWord(server, searchWord.trim())) : byStatus
-    return [...bySearch].sort((a, b) => serverSortHandler(a, b, sortProp, sortOrder))
-  }, [currentGroup, groupData?.data, now, searchWord, servers, sortOrder, sortProp, status])
+    const normalizedSearch = searchWord.trim()
+    const bySearch = normalizedSearch ? byStatus.filter((server) => matchServerSearchWord(server, normalizedSearch)) : byStatus
+    return sortServers(bySearch, sortProp, sortOrder)
+  }, [currentGroup, groupServerIds, now, searchWord, servers, sortOrder, sortProp, status])
 
-  const totalCounts = useMemo(() => getServerStatusCounts(now, servers), [now, servers])
-  const filteredCounts = useMemo(() => getServerStatusCounts(now, filteredServers), [filteredServers, now])
-  const headerStats = useMemo(() => getServerHeaderStats(now, servers), [now, servers])
-  const sortOptions = useMemo(() => serverSortOptions().map((item) => ({ value: item.value, label: item.label })), [])
+  const { totalCounts, headerStats } = useMemo(() => getServerOverviewStats(now, servers), [now, servers])
 
-  function setCurrentGroup(value: string) {
+  const setCurrentGroup = useCallback((value: string) => {
     setCurrentGroupState(value)
-    sessionStorage.setItem("selectedGroup", value)
-  }
+    try {
+      sessionStorage.setItem("selectedGroup", value)
+    } catch {
+      // Keep the current selection in memory when storage is unavailable.
+    }
+  }, [])
 
-  return {
-    connected,
-    isLoading: !wsData,
-    isGroupError,
-    now,
-    servers,
-    filteredServers,
-    currentGroup,
-    setCurrentGroup,
-    status,
-    setStatus,
-    searchWord,
-    setSearchWord,
-    sortProp,
-    sortOrder,
-    setSortProp,
-    setSortOrder,
-    sortOptions,
-    groups,
-    totalCounts,
-    filteredCounts,
-    headerStats,
-  }
+  return useMemo(
+    () => ({
+      isLoading: !wsData,
+      isGroupError,
+      now,
+      servers,
+      filteredServers,
+      currentGroup,
+      setCurrentGroup,
+      status,
+      setStatus,
+      searchWord,
+      setSearchWord,
+      sortProp,
+      sortOrder,
+      setSortProp,
+      setSortOrder,
+      sortOptions: WORKSPACE_SORT_OPTIONS,
+      groups,
+      totalCounts,
+      headerStats,
+    }),
+    [
+      currentGroup,
+      filteredServers,
+      groups,
+      headerStats,
+      isGroupError,
+      now,
+      searchWord,
+      servers,
+      setCurrentGroup,
+      sortOrder,
+      sortProp,
+      status,
+      totalCounts,
+      wsData,
+    ],
+  )
 }
