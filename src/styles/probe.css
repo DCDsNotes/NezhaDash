@@ -1864,7 +1864,7 @@ body {
 }
 
 .probe-detail-priority strong {
-  align-items: baseline;
+  align-items: center;
 }
 
 .probe-main .server-detail-page .server-detail-status__rings--ring {

@@ -5,6 +5,7 @@ import { type ServerWorkspaceValue, useServerWorkspace } from "@/hooks/use-serve
 import { useWebSocketContext } from "@/hooks/use-websocket-context"
 import { useWorldMapSize } from "@/hooks/use-world-map-size"
 import { loginUserQueryOptions, settingQueryOptions } from "@/lib/query-options"
+import { resolveSiteName } from "@/lib/site-name"
 import { cn } from "@/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
@@ -43,7 +44,7 @@ function SiteHeader({
   onOpenTransfer: () => void
 }) {
   const { data: settingData } = useQuery(settingQueryOptions())
-  const siteName = settingData?.data?.config?.site_name || "哪吒探针"
+  const siteName = resolveSiteName(settingData?.data?.config?.site_name)
 
   return (
     <header className="probe-site-header">
@@ -157,7 +158,7 @@ export default function ProbeWorkspace() {
   const [showMap, setShowMap] = useState(false)
 
   useEffect(() => {
-    document.title = settingData?.data?.config?.site_name || "哪吒探针"
+    document.title = resolveSiteName(settingData?.data?.config?.site_name)
   }, [settingData?.data?.config?.site_name])
 
   return (

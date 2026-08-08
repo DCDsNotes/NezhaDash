@@ -122,7 +122,7 @@ async function mockBackend(page: Page) {
       await json({
         success: true,
         data: {
-          config: { debug: false, language: "zh-CN", site_name: "哪吒运行中心", user_template: "", admin_template: "", custom_code: "" },
+          config: { debug: false, language: "zh-CN", site_name: "哪吒监控", user_template: "", admin_template: "", custom_code: "" },
           version: "1.0.0",
         },
       })
@@ -213,7 +213,8 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto("/")
 
-  await expect(page).toHaveTitle("哪吒运行中心")
+  await expect(page).toHaveTitle("节点监控")
+  await expect(page.locator(".probe-site-brand strong")).toHaveText("节点监控")
   await expect(page.locator(".probe-node-item")).toHaveCount(2)
   await expect(page.locator(".status-hero > p")).toHaveText(/^最后更新：\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)
   const primaryNode = page.locator(".probe-node-item").filter({ hasText: "上海边缘节点" })
@@ -290,6 +291,21 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await page.getByTitle("查看今日流量").click()
   await expect(page.getByRole("dialog", { name: "今日流量" })).toBeVisible()
   await expect(page.locator(".dashboard-transfer-row")).toHaveCount(2)
+  const transferValuePositions = await page.locator(".dashboard-transfer-row__values").evaluateAll((rows) =>
+    rows.map((row) =>
+      Array.from(row.children).map((value) => {
+        const rect = value.getBoundingClientRect()
+        return { left: rect.left, top: rect.top }
+      }),
+    ),
+  )
+  for (let column = 0; column < 3; column += 1) {
+    const leftPositions = transferValuePositions.map((row) => row[column].left)
+    expect(Math.max(...leftPositions) - Math.min(...leftPositions)).toBeLessThanOrEqual(1)
+  }
+  for (const row of transferValuePositions) {
+    expect(Math.max(...row.map((value) => value.top)) - Math.min(...row.map((value) => value.top))).toBeLessThanOrEqual(1)
+  }
   await page.getByRole("button", { name: "关闭" }).click()
   await screenshot(page, testInfo, "dashboard-desktop.png")
 
@@ -301,6 +317,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await expect(page.locator(".probe-detail-priority")).toContainText("2027-01-01")
   await expect(page.locator(".probe-detail-priority")).toContainText(/\d+\s*天/)
   await expect(page.locator(".server-detail-header__cpu-model")).toHaveCSS("color", "rgb(82, 102, 124)")
+  await expect(page.locator(".probe-detail-priority strong").first()).toHaveCSS("align-items", "center")
   const priorityRows = await page.locator(".probe-detail-priority > div").evaluateAll((items) =>
     items.map((item) => {
       const label = item.querySelector("span")!.getBoundingClientRect()

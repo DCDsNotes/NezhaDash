@@ -3,6 +3,7 @@ import { useNezhaWsData } from "@/hooks/use-nezha-ws-data"
 import { useWebSocketContext } from "@/hooks/use-websocket-context"
 import { loginUserQueryOptions, settingQueryOptions } from "@/lib/query-options"
 import { type ServerDailyTransferViewModel, getServerDailyTransferList, getServerHeaderStats, getServerStatusCounts } from "@/lib/server-view-model"
+import { resolveSiteName } from "@/lib/site-name"
 import { cn } from "@/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import { AnimatePresence, m } from "framer-motion"
@@ -16,7 +17,7 @@ function Header() {
   const { data: settingData } = useQuery(settingQueryOptions())
   const { data: parsedWsData } = useNezhaWsData()
   const [showTransferPanel, setShowTransferPanel] = useState(false)
-  const siteName = settingData?.data?.config?.site_name || "哪吒探针"
+  const siteName = resolveSiteName(settingData?.data?.config?.site_name)
 
   const serverCount = useMemo(() => {
     if (!parsedWsData?.servers) return null
