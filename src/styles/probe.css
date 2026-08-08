@@ -1063,23 +1063,19 @@ body {
     gap: 7px;
   }
 
-  .status-facts,
-  .status-resources__grid {
+  .status-facts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .status-facts > div,
-  .status-resources__grid > div {
+  .status-facts > div {
     min-height: 78px;
   }
 
-  .status-facts > div:nth-child(2),
-  .status-resources__grid > div:nth-child(2) {
+  .status-facts > div:nth-child(2) {
     border-right: 0;
   }
 
-  .status-facts > div:nth-child(-n + 2),
-  .status-resources__grid > div:nth-child(-n + 2) {
+  .status-facts > div:nth-child(-n + 2) {
     border-bottom: 1px solid var(--probe-border);
   }
 
