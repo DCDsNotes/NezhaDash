@@ -239,7 +239,8 @@
 .server-monitor__placeholder-line {
   height: 12px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.12);
+  background: #f2f5f6;
+  box-shadow: none;
 }
 
 .server-monitor__placeholder-line--w60 {
@@ -253,7 +254,8 @@
 .server-monitor__placeholder-chart {
   height: var(--line-chart-size);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.08);
+  background: #f7f9fa;
+  box-shadow: none;
 }
 
 .server-monitor__empty {

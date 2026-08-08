@@ -23,7 +23,7 @@ const servers = [
         networkRoute: "CN2 GIA",
         extra: "边缘计算",
       },
-      customData: { slogan: "稳定连接每一处服务" },
+      customData: {},
     }),
     last_active: new Date(now - 5_000).toISOString(),
     country_code: "CN",
@@ -215,8 +215,11 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
 
   await expect(page).toHaveTitle("哪吒运行中心")
   await expect(page.locator(".probe-node-item")).toHaveCount(2)
+  await expect(page.locator(".status-hero > p")).toHaveText(/^最后更新：\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)
   const primaryNode = page.locator(".probe-node-item").filter({ hasText: "上海边缘节点" })
   await expect(primaryNode).toBeVisible()
+  await expect(primaryNode).not.toContainText("运行正常")
+  await expect(primaryNode).toContainText(/已运行\s*14天/)
   await expect(primaryNode).toContainText("18M/s")
   await expect(primaryNode).toContainText("7M/s")
   await expect(primaryNode).toContainText("CPU28.4%")
@@ -297,6 +300,16 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await expect(page.locator(".probe-detail-priority")).toContainText("7M/s")
   await expect(page.locator(".probe-detail-priority")).toContainText("2027-01-01")
   await expect(page.locator(".probe-detail-priority")).toContainText(/\d+\s*天/)
+  await expect(page.locator(".server-detail-header__cpu-model")).toHaveCSS("color", "rgb(82, 102, 124)")
+  const priorityRows = await page.locator(".probe-detail-priority > div").evaluateAll((items) =>
+    items.map((item) => {
+      const label = item.querySelector("span")!.getBoundingClientRect()
+      const value = item.querySelector("strong")!.getBoundingClientRect()
+      return { labelTop: label.top, valueTop: value.top }
+    }),
+  )
+  expect(Math.max(...priorityRows.map((row) => row.labelTop)) - Math.min(...priorityRows.map((row) => row.labelTop))).toBeLessThanOrEqual(1)
+  expect(Math.max(...priorityRows.map((row) => row.valueTop)) - Math.min(...priorityRows.map((row) => row.valueTop))).toBeLessThanOrEqual(1)
   await expect(page.getByRole("switch")).toHaveCount(3)
   await expect(page.getByRole("switch").nth(0)).toBeChecked()
   await expect(page.getByRole("switch").nth(1)).toBeChecked()

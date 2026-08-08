@@ -6,6 +6,7 @@ import { type ServerWorkspaceValue } from "@/hooks/use-server-workspace"
 import { serverIdToServerKey } from "@/lib/server-key"
 import { getServerCardViewModel, getServerStatus } from "@/lib/server-view-model"
 import { cn } from "@/lib/utils"
+import dayjs from "dayjs"
 import { useMemo, useState } from "react"
 import { Link, useOutletContext } from "react-router-dom"
 
@@ -166,13 +167,7 @@ export default function Servers() {
   const overallState = workspace.totalCounts.total === 0 ? "empty" : workspace.totalCounts.offline > 0 ? "attention" : "operational"
   const overallLabel =
     overallState === "empty" ? "暂无节点数据" : overallState === "attention" ? `${workspace.totalCounts.offline} 台节点需要关注` : "所有节点运行正常"
-  const updatedTime = new Date(workspace.now).toLocaleString("zh-CN", {
-    month: "numeric",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  })
+  const updatedTime = dayjs(workspace.now).format("YYYY-MM-DD HH:mm:ss")
 
   return (
     <div className="status-page">
@@ -185,7 +180,7 @@ export default function Servers() {
           <span className={cn("probe-status-dot", { "probe-status-dot--offline": overallState === "attention" })} />
           {overallLabel}
         </div>
-        <p>最后更新：{updatedTime}（实时连接自动同步）</p>
+        <p>最后更新：{updatedTime}</p>
       </section>
 
       {workspace.totalCounts.offline > 0 ? (

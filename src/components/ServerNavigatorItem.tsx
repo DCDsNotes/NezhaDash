@@ -30,7 +30,7 @@ export default function ServerNavigatorItem({ now, server, active }: { now: numb
         <span className="probe-node-item__name">
           <strong>{viewModel.info.name}</strong>
           <small>
-            {viewModel.info.online ? "运行正常" : "暂时离线"}，已运行 {viewModel.realtime.duration.value}
+            {viewModel.info.online ? "已运行" : "暂时离线，已运行"} {viewModel.realtime.duration.value}
             {viewModel.realtime.duration.unit}
           </small>
         </span>

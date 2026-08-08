@@ -669,8 +669,9 @@ body {
   height: 194px;
   border: 1px solid var(--probe-border);
   border-radius: var(--probe-radius);
-  background: linear-gradient(90deg, #f3f4f5 25%, #fafafa 50%, #f3f4f5 75%);
+  background: linear-gradient(90deg, #f7f8f9 25%, #fcfcfd 50%, #f7f8f9 75%);
   background-size: 200% 100%;
+  box-shadow: none;
   animation: probe-skeleton 1.3s ease-in-out infinite;
 }
 
@@ -1844,19 +1845,26 @@ body {
 .probe-detail-priority > div {
   display: grid;
   min-height: 96px;
+  grid-template-rows: 16px 32px;
   align-content: center;
   justify-items: center;
-  gap: 8px;
+  row-gap: 6px;
   text-align: center;
 }
 
 .probe-detail-priority span,
 .probe-detail-priority strong {
-  display: block;
+  display: flex;
   width: 100%;
   margin: 0;
-  line-height: 1.25;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
   text-align: center;
+}
+
+.probe-detail-priority strong {
+  align-items: baseline;
 }
 
 .probe-main .server-detail-page .server-detail-status__rings--ring {

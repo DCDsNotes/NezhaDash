@@ -618,7 +618,8 @@
 .server-card-skeleton {
   position: relative;
   overflow: hidden;
-  background: #e8eef2;
+  background: #f3f6f8;
+  box-shadow: none;
 }
 
 .dashboard-skeleton-heading {
@@ -635,7 +636,7 @@
 
 .server-card-skeleton {
   height: 144px;
-  border: 1px solid #e4ebf0;
+  border: 1px solid #eef2f4;
   border-radius: 10px;
 }
 
@@ -1063,6 +1064,11 @@
   color: #8593a2;
 }
 
+.server-detail-page .server-detail-header__cpu-model,
+.server-detail-page .server-detail-header__cpu-model-num {
+  color: #52667c;
+}
+
 .server-detail-page .server-detail-info__group {
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr);
@@ -1099,12 +1105,14 @@
 }
 
 .server-detail-page .server-monitor__placeholder-line {
-  background: #e9f1ee;
+  background: #f2f6f4;
+  box-shadow: none;
 }
 
 .server-detail-page .server-monitor__placeholder-chart {
-  background: #f4f8f6;
-  border: 1px solid #e6efeb;
+  background: #f8faf9;
+  border: 1px solid #f0f4f2;
+  box-shadow: none;
 }
 
 .server-detail-page .server-detail-info__content {
@@ -1144,8 +1152,15 @@
 }
 
 .server-detail-page .server-detail-skeleton {
-  border: 1px solid #e0e7ed;
-  background: #e8eef2;
+  border: 1px solid #eef2f4;
+  background: #f4f7f8;
+  box-shadow: none;
+}
+
+.dashboard-map-panel--skeleton,
+.world-map-skeleton,
+.probe-node-skeleton {
+  box-shadow: none;
 }
 
 .server-detail-page--offline {
