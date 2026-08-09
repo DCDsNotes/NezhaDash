@@ -1102,10 +1102,10 @@ body {
 
 .probe-node-item {
   display: grid;
-  grid-template-columns: minmax(180px, 1.35fr) minmax(110px, 0.75fr) minmax(180px, 1fr) minmax(95px, 0.65fr) 16px;
+  grid-template-columns: minmax(200px, 1fr) minmax(200px, 1fr) minmax(150px, 0.75fr) minmax(65px, 0.325fr) 16px;
   min-height: 88px;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   padding: 13px 15px;
   border: 0;
   border-bottom: 1px solid var(--probe-border-soft);
@@ -1165,14 +1165,6 @@ body {
 @media (min-width: 900px) {
   .probe-node-item {
     grid-template-columns: 260px 200px minmax(0, 1fr) 80px 16px;
-  }
-
-  .probe-node-item__identity {
-    width: 260px;
-  }
-
-  .probe-node-item__speeds {
-    width: 200px;
   }
 }
 
