@@ -1,15 +1,11 @@
 .server-detail-page {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px;
   width: var(--detail-container-width);
-  padding: 20px;
+  padding: 24px 0 56px;
   margin: auto;
   min-height: calc(100vh - var(--layout-header-height) - 80px);
-}
-
-.server-detail-page--offline {
-  filter: grayscale(1);
 }
 
 .server-detail-skeleton {
@@ -646,14 +642,6 @@
   color: #c57858;
 }
 
-/* The existing chart components keep their data and query logic, while these tokens bring them into the new workspace. */
-.server-detail-page {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 24px 0 56px;
-}
-
 .server-detail-page .top-world-map,
 .server-detail-page > .world-map-box {
   display: none;
@@ -827,7 +815,6 @@
   box-shadow: none;
 }
 
-.dashboard-map-panel--skeleton,
 .world-map-skeleton,
 .probe-node-skeleton {
   box-shadow: none;
@@ -843,97 +830,8 @@
 }
 
 @media (max-width: 760px) {
-  .dashboard-header__inner,
-  .dashboard-container {
-    width: min(100% - 28px, var(--list-container-width));
-  }
-
   .server-detail-page {
     width: min(100% - 28px, var(--detail-container-width));
-  }
-
-  .dashboard-header__inner {
-    min-height: 60px;
-  }
-
-  .dashboard-header__tools {
-    gap: 10px;
-  }
-
-  .dashboard-header__counts,
-  .dashboard-header__transfer span,
-  .dashboard-user-link span {
-    display: none;
-  }
-
-  .dashboard-header__transfer {
-    gap: 5px;
-    font-size: 11px;
-  }
-
-  .dashboard-user-link i {
-    font-size: 20px;
-  }
-
-  .server-page {
-    padding-top: 18px;
-  }
-
-  .dashboard-page-heading {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 17px;
-    padding-bottom: 18px;
-  }
-
-  .dashboard-overview-stats {
-    width: 100%;
-  }
-
-  .dashboard-overview-stats > div {
-    min-width: 0;
-    flex: 1;
-  }
-
-  .dashboard-map-panel {
-    display: none;
-  }
-
-  .dashboard-toolbar {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .dashboard-toolbar__filters,
-  .dashboard-toolbar__actions {
-    width: 100%;
-  }
-
-  .dashboard-toolbar__actions {
-    justify-content: space-between;
-  }
-
-  .server-card {
-    padding: 15px 14px 13px;
-  }
-
-  .server-card__content {
-    grid-template-columns: 1fr;
-    gap: 16px;
-    margin-top: 14px;
-  }
-
-  .server-card__metrics {
-    padding: 14px 0 0;
-    border-top: 1px solid #edf1f4;
-    border-left: 0;
-  }
-
-  .server-card__footer {
-    align-items: flex-start;
-  }
-
-  .server-detail-page {
     padding-top: 18px;
     padding-bottom: 40px;
     gap: 10px;
@@ -942,18 +840,5 @@
   .server-detail-page .server-detail-info {
     grid-template-columns: 1fr;
     gap: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dashboard-card,
-  .server-card {
-    transition: none;
-  }
-
-  .dashboard-skeleton-heading::after,
-  .dashboard-toolbar--skeleton::after,
-  .server-card-skeleton::after {
-    animation: none;
   }
 }

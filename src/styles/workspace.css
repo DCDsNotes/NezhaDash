@@ -1,25 +1,3 @@
-.nazha-layout {
-  min-height: 100dvh;
-  background: #f6f8fa;
-}
-
-.nazha-layout-bg {
-  display: none;
-}
-
-.nazha-layout-main {
-  min-height: 100dvh;
-  background: #f6f8fa;
-}
-
-.server-options {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 7px;
-}
-
-.server-options__item,
 .server-sort__selected,
 .server-sort__order-icon,
 .dashboard-search-trigger {
@@ -31,26 +9,12 @@
   box-shadow: 0 2px 6px rgba(51, 74, 99, 0.035);
 }
 
-.server-options__item {
-  padding: 0 11px;
-  cursor: pointer;
-}
-
-.server-options__item:hover,
-.server-options__item[data-state="on"],
-.server-options__item--active,
 .server-sort__selected:hover,
 .server-sort__order-icon:hover,
 .dashboard-search-trigger:hover {
   border-color: #b5e2d2;
   background: #effaf6;
   color: #078d65;
-}
-
-.server-options__label {
-  color: inherit;
-  font-size: 12px;
-  font-weight: 600;
 }
 
 .server-sort__selected-value {

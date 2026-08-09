@@ -82,6 +82,9 @@
 .ri-pulse-line {
   --ri-icon: url("../../node_modules/remixicon/icons/Health & Medical/pulse-line.svg?inline");
 }
+.ri-route-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/Map/route-line.svg?inline");
+}
 .ri-search-line {
   --ri-icon: url("../../node_modules/remixicon/icons/System/search-line.svg?inline");
 }
@@ -96,4 +99,7 @@
 }
 .ri-user-line {
   --ri-icon: url("../../node_modules/remixicon/icons/User & Faces/user-line.svg?inline");
+}
+.ri-wifi-off-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/Device/wifi-off-line.svg?inline");
 }
