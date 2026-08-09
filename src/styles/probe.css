@@ -1441,6 +1441,20 @@ body {
   margin: 0;
 }
 
+@media (min-width: 900px) {
+  .probe-node-item {
+    grid-template-columns: 260px 150px minmax(0, 1fr) 95px 16px;
+  }
+
+  .probe-node-item__identity {
+    width: 260px;
+  }
+
+  .probe-node-item__speeds {
+    width: 150px;
+  }
+}
+
 .probe-speed-metric {
   display: flex;
   min-width: 0;
@@ -2068,6 +2082,10 @@ body {
 .probe-main .server-detail-page .server-monitor__switch {
   flex: 0 0 auto;
   align-self: center;
+}
+
+.probe-main .server-detail-page .server-monitor__switch[data-state="unchecked"] {
+  background: var(--probe-border);
 }
 
 .probe-main .server-detail-page .server-monitor__switch-dot {

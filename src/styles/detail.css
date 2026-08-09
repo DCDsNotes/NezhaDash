@@ -933,16 +933,6 @@
     align-items: flex-start;
   }
 
-  .dashboard-transfer-row {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .dashboard-transfer-row__values {
-    padding-left: 15px;
-  }
-
   .server-detail-page {
     padding-top: 18px;
     padding-bottom: 40px;
