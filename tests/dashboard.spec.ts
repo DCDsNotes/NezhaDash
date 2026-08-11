@@ -1,4 +1,4 @@
-import { type Page, type TestInfo, expect, test } from "@playwright/test"
+import { type Page, type Route, type TestInfo, expect, test } from "@playwright/test"
 
 const now = Date.now()
 
@@ -209,6 +209,7 @@ async function screenshot(page: Page, testInfo: TestInfo, name: string) {
 }
 
 test("dashboard interactions remain usable on desktop and mobile", async ({ page }, testInfo) => {
+  test.setTimeout(60_000)
   let worldMapRequestCount = 0
   let serverSpeedRequestCount = 0
   let monitorRequestCount = 0
@@ -352,6 +353,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
 
   await page.goto("/missing-node-page")
   await expect(page.getByRole("heading", { name: "页面不存在" })).toBeVisible()
+  await expect(page).toHaveTitle("页面不存在 - 节点监控")
   await expect(page.locator(".not-found-page__path")).toContainText("/missing-node-page")
   await expect(page.locator(".not-found-page__visual")).toBeVisible()
   await assertNoHorizontalOverflow(page)
@@ -361,6 +363,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
 
   await page.getByLabel("查看 上海边缘节点 详情").click()
   await expect(page).toHaveURL(/\/server\/25ce76bd$/)
+  await expect(page).toHaveTitle("上海边缘节点 - 节点监控")
   await expect(page.getByText("网络速度", { exact: true })).toBeVisible()
   await expect(page.locator(".probe-detail-priority")).toContainText("18M/s")
   await expect(page.locator(".probe-detail-priority")).toContainText("7M/s")
@@ -427,6 +430,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
 
   await page.reload()
   await expect(page).toHaveURL(/\/server\/25ce76bd$/)
+  await expect(page).toHaveTitle("上海边缘节点 - 节点监控")
   await expect(page.getByText("网络速度", { exact: true })).toBeVisible()
   await expect(page.locator(".probe-detail-priority")).toContainText("18M/s")
 
@@ -478,18 +482,23 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
 
   await page.goto("/missing-node-page")
   await expect(page.getByRole("heading", { name: "页面不存在" })).toBeVisible()
+  await expect(page).toHaveTitle("页面不存在 - 节点监控")
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "not-found-mobile.png")
 })
 
-test("network diagnostics keeps expensive checks manual and renders all four test sections", async ({ page }, testInfo) => {
+test("network diagnostics keeps expensive checks manual and switches grouped test cards", async ({ page }, testInfo) => {
   await mockBackend(page)
   let publicIpRequests = 0
   let fallbackIpRequests = 0
   let traceRequests = 0
   let headerRequests = 0
+  let googleDnsRequests = 0
   let dnsRequests = 0
   let geographyRequests = 0
+  let connectivityRequests = 0
+  let activeConnectivityRequests = 0
+  let peakConnectivityRequests = 0
 
   await page.route("https://my.ip.cn/", async (route) => {
     publicIpRequests += 1
@@ -532,6 +541,22 @@ test("network diagnostics keeps expensive checks manual and renders all four tes
     })
   })
 
+  await page.route("https://dns.google/resolve?**", async (route) => {
+    googleDnsRequests += 1
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json; charset=utf-8",
+      headers: { "Access-Control-Allow-Origin": "*" },
+      body: JSON.stringify({
+        Status: 0,
+        Answer: [
+          { name: "o-o.myaddr.l.google.com.", type: 16, TTL: 60, data: "172.253.244.1" },
+          { name: "o-o.myaddr.l.google.com.", type: 16, TTL: 60, data: "edns0-client-subnet 198.51.100.0/24" },
+        ],
+      }),
+    })
+  })
+
   await page.route(/https:\/\/ipwho\.is\/.+/, async (route) => {
     geographyRequests += 1
     await route.fulfill({
@@ -570,19 +595,44 @@ test("network diagnostics keeps expensive checks manual and renders all four tes
 
   await networkLink.click()
   await expect(page).toHaveURL(/\/network$/)
+  await expect(page).toHaveTitle("分流查询 - 节点监控")
   await expect(page.getByRole("heading", { name: "网络与 IP 分流检测" })).toBeVisible()
   await expect(page.getByRole("heading", { name: "我的 IP" })).toBeVisible()
   await expect(page.getByRole("heading", { name: "网站分流测试" })).toBeVisible()
-  await expect(page.getByRole("heading", { name: "DNS 泄露测试" })).toBeVisible()
-  await expect(page.getByRole("heading", { name: "WebRTC 泄露测试" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "网络连通性测试" })).toHaveCount(0)
+  await expect(page.getByRole("heading", { name: "DNS 泄露测试" })).toHaveCount(0)
+  await expect(page.getByRole("heading", { name: "WebRTC 泄露测试" })).toHaveCount(0)
+  await expect(page.getByRole("tab", { name: "网站分流" })).toHaveAttribute("aria-selected", "true")
+  await expect(page.locator(".network-diagnostics__card:visible")).toHaveCount(2)
   await expect(page.getByText("198.51.100.88", { exact: true })).toBeVisible()
+  const headingMaskToggle = page.locator(".network-diagnostics__heading > .network-diagnostics__mask-toggle")
+  await expect(headingMaskToggle).toHaveCount(1)
+  const [headingBox, headingMaskBox] = await Promise.all([
+    page.locator(".network-diagnostics__heading").boundingBox(),
+    headingMaskToggle.boundingBox(),
+  ])
+  expect(headingBox).not.toBeNull()
+  expect(headingMaskBox).not.toBeNull()
+  expect(Math.abs(headingBox!.x + headingBox!.width - headingMaskBox!.x - headingMaskBox!.width)).toBeLessThanOrEqual(2)
+  expect(Math.abs(headingBox!.y + headingBox!.height - headingMaskBox!.y - headingMaskBox!.height)).toBeLessThanOrEqual(3)
+  await expect(page.locator(".network-diagnostics__intro > .network-diagnostics__privacy")).toBeVisible()
+  await expect(page.locator(".network-diagnostics > .network-diagnostics__privacy")).toHaveCount(0)
+  const maskIpToggle = page.getByRole("switch", { name: "隐藏 IP" })
+  await expect(maskIpToggle).not.toBeChecked()
+  await expect(maskIpToggle).toHaveCSS("width", "26px")
+  await expect(maskIpToggle).toHaveCSS("height", "14px")
+  await maskIpToggle.click()
+  await expect(page.getByText("198.51.*.*", { exact: true })).toBeVisible()
+  await maskIpToggle.click()
+  await expect(maskIpToggle).not.toBeChecked()
   await expect(page.getByText("查询服务")).toHaveCount(0)
   await expect(page.getByText(/数据来源/)).toHaveCount(0)
-  await expect(page.getByText("核心检测 8 个站点，完整检测 35 个站点")).toBeVisible()
+  await expect(page.getByText("核心检测 9 个站点，完整检测 36 个站点")).toBeVisible()
   expect(publicIpRequests).toBe(1)
   expect(fallbackIpRequests).toBe(0)
   expect(traceRequests).toBe(0)
   expect(headerRequests).toBe(0)
+  expect(googleDnsRequests).toBe(0)
   expect(dnsRequests).toBe(0)
 
   await page.getByRole("button", { name: "核心检测" }).evaluate((button) => {
@@ -590,13 +640,62 @@ test("network diagnostics keeps expensive checks manual and renders all four tes
     button.click()
   })
   await expect(page.getByText("检测到 2 个出口 IP")).toBeVisible()
-  await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__table-row")).toHaveCount(8)
-  await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__site-logo img")).toHaveCount(8)
-  await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__country-flag")).toHaveCount(8)
+  await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__table-row")).toHaveCount(9)
+  await expect(page.getByRole("columnheader", { name: "Geolocation" })).toBeVisible()
+  await expect(page.locator(".network-diagnostics__table--split [data-label='Geolocation']")).toHaveCount(9)
+  await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__site-logo img")).toHaveCount(9)
+  await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__country-flag")).toHaveCount(9)
+  const googleResult = page.locator(".network-diagnostics__table--split .network-diagnostics__table-row").filter({ hasText: "Google" })
+  await expect(googleResult.getByText("198.51.100.0/24", { exact: true })).toBeVisible()
+  await expect(googleResult.getByText("定位中国", { exact: true })).toBeVisible()
+  await maskIpToggle.click()
+  await expect(googleResult.getByText("198.51.*.*/24", { exact: true })).toBeVisible()
+  await maskIpToggle.click()
   expect(traceRequests).toBe(6)
   expect(headerRequests).toBe(2)
-  expect(geographyRequests).toBe(1)
+  expect(googleDnsRequests).toBe(1)
+  expect(geographyRequests).toBe(2)
 
+  const connectivityRoute = async (route: Route) => {
+    if (new URL(route.request().url()).hostname === "icons.duckduckgo.com") {
+      await route.fallback()
+      return
+    }
+    connectivityRequests += 1
+    activeConnectivityRequests += 1
+    peakConnectivityRequests = Math.max(peakConnectivityRequests, activeConnectivityRequests)
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 15))
+      await route.fulfill({ status: 204, headers: { "Access-Control-Allow-Origin": "*" }, body: "" })
+    } finally {
+      activeConnectivityRequests -= 1
+    }
+  }
+  const connectivityPattern = /^https:\/\//
+  await page.route(connectivityPattern, connectivityRoute)
+  await page.getByRole("tab", { name: "网站分流" }).focus()
+  await page.keyboard.press("ArrowRight")
+  await expect(page.getByRole("tab", { name: "网络连通性" })).toHaveAttribute("aria-selected", "true")
+  await expect(page.getByRole("heading", { name: "我的 IP" })).toBeVisible()
+  await expect(page.getByText("198.51.100.88", { exact: true })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "网络连通性测试" })).toBeVisible()
+  await expect(page.getByText("3 个区域，36 个站点，5 轮中位数")).toBeVisible()
+  await expect(page.locator(".network-diagnostics__connectivity-item")).toHaveCount(36)
+  await expect(page.locator(".network-diagnostics__connectivity-item .network-diagnostics__site-logo img")).toHaveCount(0)
+  await page.getByRole("button", { name: "开始测试" }).click()
+  await expect(page.getByText("已测试 36/36，可达 36")).toBeVisible({ timeout: 15_000 })
+  await expect(page.locator(".network-diagnostics__connectivity-sample")).toHaveCount(184)
+  expect(connectivityRequests).toBe(180)
+  expect(peakConnectivityRequests).toBe(10)
+  await assertNoHorizontalOverflow(page)
+  await screenshot(page, testInfo, "network-connectivity-desktop.png")
+  await page.unroute(connectivityPattern, connectivityRoute)
+
+  await page.getByRole("tab", { name: "泄露检测" }).click()
+  await expect(page.getByRole("heading", { name: "我的 IP" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "DNS 泄露测试" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "WebRTC 泄露测试" })).toBeVisible()
+  await expect(page.locator(".network-diagnostics__card:visible")).toHaveCount(2)
   await page.getByRole("button", { name: "快速测试" }).click()
   await expect(page.getByText("网页出口位于境外，但检测到了中国大陆 DNS 解析器，请核对代理规则。")).toBeVisible()
   await expect(page.locator(".network-diagnostics__table--dns .network-diagnostics__table-row")).toHaveCount(2)
@@ -608,9 +707,15 @@ test("network diagnostics keeps expensive checks manual and renders all four tes
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "network-diagnostics-mobile.png")
 
+  await page.getByRole("tab", { name: "网络连通性" }).click()
+  await assertNoHorizontalOverflow(page)
+  await screenshot(page, testInfo, "network-connectivity-mobile.png")
+
+  await page.getByRole("tab", { name: "网站分流" }).click()
   await page.getByRole("button", { name: "完整检测" }).click()
   await expect(page.getByRole("button", { name: "完整检测" })).toBeEnabled()
-  await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__table-row")).toHaveCount(35)
+  await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__table-row")).toHaveCount(36)
   expect(traceRequests).toBe(39)
   expect(headerRequests).toBe(4)
+  expect(googleDnsRequests).toBe(2)
 })

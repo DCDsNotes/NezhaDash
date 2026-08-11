@@ -1,4 +1,16 @@
 import ServerFlag from "@/components/ServerFlag"
+import { Switch } from "@/components/ui/switch"
+import {
+  CONNECTIVITY_PROBE_ROUNDS,
+  CONNECTIVITY_REGIONS,
+  CONNECTIVITY_TARGETS,
+  type ConnectivityRegion,
+  type ConnectivityRegionId,
+  type ConnectivityResult,
+  checkConnectivityTargets,
+  createConnectivityResults,
+  getConnectivityLatencyLevel,
+} from "@/lib/network-connectivity"
 import {
   type DiagnosticState,
   type DnsLeakResult,
@@ -25,6 +37,14 @@ type CheckState<T> = {
   result?: T
   message?: string
 }
+
+type DiagnosticTab = "split" | "connectivity" | "leaks"
+
+const DIAGNOSTIC_TABS: Array<{ id: DiagnosticTab; label: string; icon: string }> = [
+  { id: "split", label: "网站分流", icon: "ri-route-line" },
+  { id: "connectivity", label: "网络连通性", icon: "ri-wifi-line" },
+  { id: "leaks", label: "泄露检测", icon: "ri-shield-keyhole-line" },
+]
 
 const STATUS_ICONS: Record<DiagnosticState, string> = {
   idle: "ri-pulse-line",
@@ -94,15 +114,7 @@ function ActionButton({
   )
 }
 
-function DiagnosticSection({
-  id,
-  title,
-  description,
-  status,
-  actions,
-  children,
-  footer,
-}: {
+type DiagnosticBlockProps = {
   id: string
   title: string
   description: string
@@ -110,9 +122,11 @@ function DiagnosticSection({
   actions: React.ReactNode
   children: React.ReactNode
   footer?: React.ReactNode
-}) {
+}
+
+function DiagnosticBlock({ className, id, title, description, status, actions, children, footer }: DiagnosticBlockProps & { className: string }) {
   return (
-    <section className="network-diagnostics__card" aria-labelledby={id}>
+    <section className={className} aria-labelledby={id}>
       <header className="network-diagnostics__section-header">
         <div className="network-diagnostics__section-copy">
           <h2 id={id}>{title}</h2>
@@ -127,8 +141,31 @@ function DiagnosticSection({
   )
 }
 
+function DiagnosticSection(props: DiagnosticBlockProps) {
+  return <DiagnosticBlock {...props} className="network-diagnostics__card" />
+}
+
+function DiagnosticSubsection(props: DiagnosticBlockProps) {
+  return <DiagnosticBlock {...props} className="network-diagnostics__subsection" />
+}
+
 function EmptyResult({ children }: { children: React.ReactNode }) {
   return <div className="network-diagnostics__empty">{children}</div>
+}
+
+function IpMaskToggle({ checked, onCheckedChange }: { checked: boolean; onCheckedChange: (checked: boolean) => void }) {
+  return (
+    <div className="network-diagnostics__mask-toggle">
+      <span>隐藏 IP</span>
+      <Switch
+        checked={checked}
+        onCheckedChange={onCheckedChange}
+        aria-label="隐藏 IP"
+        className="network-diagnostics__mask-switch"
+        thumbClassName="network-diagnostics__mask-switch-thumb"
+      />
+    </div>
+  )
 }
 
 function SiteLogo({ label, logoUrl, fallbackUrl, ready }: { label: string; logoUrl?: string; fallbackUrl?: string; ready: boolean }) {
@@ -174,6 +211,109 @@ function CountryFlag({ countryCode }: { countryCode?: string }) {
   return <ServerFlag country_code={countryCode} className="network-diagnostics__country-flag" />
 }
 
+function formatSplitAddress(result: SplitResult, masked: boolean) {
+  if (!result.ip) return result.state === "running" ? "检测中" : "-"
+  const address = masked ? maskAddress(result.ip) : result.ip
+  return result.ipPrefix === undefined ? address : `${address}/${result.ipPrefix}`
+}
+
+function SplitResultStatus({ result }: { result: SplitResult }) {
+  if (result.state === "running") return <StatusLabel state="running">连接中</StatusLabel>
+  if (result.state === "error") return <StatusLabel state="error">{result.message || "失败"}</StatusLabel>
+  if (result.method !== "google-dns") return <StatusLabel state="success">{result.duration} ms</StatusLabel>
+  if (!result.countryCode) return <StatusLabel state="warning">无法判断</StatusLabel>
+  return result.countryCode === "CN" ? <StatusLabel state="warning">定位中国</StatusLabel> : <StatusLabel state="success">非中国定位</StatusLabel>
+}
+
+function hasExactSplitIp(result: SplitResult): result is SplitResult & { ip: string; state: "success" } {
+  return result.state === "success" && Boolean(result.ip) && result.ipPrefix === undefined
+}
+
+function getConnectivityRegionSummary(results: ConnectivityResult[]) {
+  const completed = results.filter((result) => result.state === "success" || result.state === "error")
+  const reachable = completed.filter((result) => result.state === "success")
+  if (completed.length === 0) return results.some((result) => result.state === "running") ? `已完成 0/${results.length}` : "等待测试"
+  if (completed.length < results.length) return `已完成 ${completed.length}/${results.length}`
+  if (reachable.length === 0) return `可达 0/${results.length}`
+
+  const average = Math.round(reachable.reduce((total, result) => total + (result.latency || 0), 0) / reachable.length)
+  return `可达 ${reachable.length}/${results.length}，平均 ${average} ms`
+}
+
+function getConnectivityResultLevel(result: ConnectivityResult) {
+  return result.state === "error" ? "timeout" : getConnectivityLatencyLevel(result.latency)
+}
+
+function ConnectivityRegionPanel({
+  region,
+  results,
+  disabled,
+  onRetest,
+}: {
+  region: ConnectivityRegion
+  results: ConnectivityResult[]
+  disabled: boolean
+  onRetest: (region: ConnectivityRegionId) => void
+}) {
+  return (
+    <section className="network-diagnostics__connectivity-region" aria-labelledby={`connectivity-region-${region.id}`}>
+      <header className="network-diagnostics__connectivity-region-header">
+        {region.countryCode ? (
+          <CountryFlag countryCode={region.countryCode} />
+        ) : (
+          <i className="ri-global-line network-diagnostics__connectivity-globe" aria-hidden="true" />
+        )}
+        <h3 id={`connectivity-region-${region.id}`}>{region.label}</h3>
+        <span>{getConnectivityRegionSummary(results)}</span>
+        <button
+          type="button"
+          className={results.some((result) => result.state === "running") ? "network-diagnostics__connectivity-refresh--running" : undefined}
+          disabled={disabled}
+          onClick={() => onRetest(region.id)}
+          aria-label={`重新测试${region.label}连通性`}
+        >
+          <i className="ri-refresh-line" aria-hidden="true" />
+          刷新
+        </button>
+      </header>
+      <div className="network-diagnostics__connectivity-grid" role="list">
+        {results.map((result) => (
+          <div className="network-diagnostics__connectivity-item" role="listitem" key={result.id}>
+            <SiteLogo label={result.name} logoUrl={result.logoUrl} fallbackUrl={getOriginFavicon(result.url)} ready={result.state !== "idle"} />
+            <div className="network-diagnostics__connectivity-copy">
+              <strong title={result.name}>{result.name}</strong>
+              <span className="network-diagnostics__connectivity-samples" aria-label={`${result.name} 测试样本`}>
+                {Array.from({ length: CONNECTIVITY_PROBE_ROUNDS }, (_, index) => {
+                  const sample = result.samples[index]
+                  const level = getConnectivityLatencyLevel(sample)
+                  return (
+                    <i
+                      className={`network-diagnostics__connectivity-sample network-diagnostics__connectivity-sample--${level}`}
+                      title={sample === null ? "超时" : sample === undefined ? "等待测试" : `${sample} ms`}
+                      key={index}
+                    />
+                  )
+                })}
+              </span>
+            </div>
+            <span
+              className={`network-diagnostics__connectivity-latency network-diagnostics__connectivity-latency--${getConnectivityResultLevel(result)}`}
+            >
+              {result.state === "running"
+                ? "测试中"
+                : result.state === "error"
+                  ? "超时"
+                  : result.latency === undefined
+                    ? "--"
+                    : `${result.latency} ms`}
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
 function WebRtcStatus({ candidate, baseline }: { candidate: WebRtcCandidate; baseline: Set<string> }) {
   if (candidate.address.endsWith(".local")) return <StatusLabel state="success">地址已保护</StatusLabel>
   if (candidate.private) return <StatusLabel state="warning">可能泄露</StatusLabel>
@@ -190,15 +330,19 @@ export default function NetworkDiagnostics() {
   const controllers = useRef(new Set<AbortController>())
   const publicIpTask = useRef<Promise<PublicIpResult | null> | null>(null)
   const splitTask = useRef<Promise<SplitResult[]> | null>(null)
+  const connectivityTask = useRef<Promise<ConnectivityResult[]> | null>(null)
   const dnsTask = useRef<Promise<DnsLeakResult | null> | null>(null)
   const webRtcTask = useRef<Promise<WebRtcResult | null> | null>(null)
   const [publicIp, setPublicIp] = useState<CheckState<PublicIpResult>>(
     cachedPublicIp ? { state: "success", result: cachedPublicIp, message: "已读取本次会话缓存" } : { state: "idle" },
   )
   const [maskIp, setMaskIp] = useState(false)
+  const [activeTab, setActiveTab] = useState<DiagnosticTab>("split")
   const [splitMode, setSplitMode] = useState<SplitMode>(cachedSplitResults.length > coreTargets.length ? "full" : "core")
   const [splitResults, setSplitResults] = useState<SplitResult[]>(cachedSplitResults)
   const [splitRunning, setSplitRunning] = useState(false)
+  const [connectivityResults, setConnectivityResults] = useState(createConnectivityResults)
+  const [connectivityRunning, setConnectivityRunning] = useState(false)
   const [dns, setDns] = useState<CheckState<DnsLeakResult>>({ state: "idle" })
   const [webRtc, setWebRtc] = useState<CheckState<WebRtcResult>>({ state: "idle" })
 
@@ -270,6 +414,37 @@ export default function NetworkDiagnostics() {
     return task
   }
 
+  function runConnectivity(region?: ConnectivityRegionId) {
+    if (connectivityTask.current) return connectivityTask.current
+    const targets = region ? CONNECTIVITY_TARGETS.filter((target) => target.region === region) : CONNECTIVITY_TARGETS
+    const targetIds = new Set(targets.map((target) => target.id))
+
+    const task = (async () => {
+      setConnectivityRunning(true)
+      setConnectivityResults((current) =>
+        current.map((result) => (targetIds.has(result.id) ? { ...result, state: "running", samples: [], latency: undefined } : result)),
+      )
+      try {
+        return await runAbortable((signal) =>
+          checkConnectivityTargets(targets, signal, (result) => {
+            setConnectivityResults((current) => current.map((item) => (item.id === result.id ? result : item)))
+          }),
+        )
+      } catch {
+        setConnectivityResults((current) =>
+          current.map((result) => (targetIds.has(result.id) && result.state === "running" ? { ...result, state: "error", samples: [] } : result)),
+        )
+        return []
+      } finally {
+        setConnectivityRunning(false)
+        connectivityTask.current = null
+      }
+    })()
+
+    connectivityTask.current = task
+    return task
+  }
+
   function runDns(rounds: 5 | 8) {
     if (dnsTask.current) return dnsTask.current
 
@@ -303,10 +478,9 @@ export default function NetworkDiagnostics() {
 
     const task = (async () => {
       setWebRtc({ state: "running", message: "正在通过多个 STUN 节点检查 UDP 出口" })
-      const baseline = [
-        publicIp.result?.ip,
-        ...splitResults.flatMap((result) => (result.state === "success" && result.ip ? [result.ip] : [])),
-      ].filter((address): address is string => Boolean(address))
+      const baseline = [publicIp.result?.ip, ...splitResults.filter(hasExactSplitIp).map((result) => result.ip)].filter(
+        (address): address is string => Boolean(address),
+      )
       try {
         const result = await runAbortable((signal) => checkWebRtcLeak(baseline, signal))
         setWebRtc({ state: result.state, result, message: result.message })
@@ -325,10 +499,10 @@ export default function NetworkDiagnostics() {
 
   const completedSplitResults = splitResults.filter((result) => result.state === "success" || result.state === "error")
   const successfulSplitResults = splitResults.filter((result) => result.state === "success")
+  const exactSplitResults = splitResults.filter(hasExactSplitIp)
   const splitExits = [
-    ...successfulSplitResults
+    ...exactSplitResults
       .reduce((exits, result) => {
-        if (!result.ip) return exits
         const existing = exits.get(result.ip)
         if (!existing || (!existing.countryCode && result.countryCode)) {
           exits.set(result.ip, { ip: result.ip, countryCode: result.countryCode })
@@ -355,8 +529,24 @@ export default function NetworkDiagnostics() {
         : splitState === "error"
           ? "未能取得网站出口数据"
           : `检测到 ${uniqueSplitIps.length} 个出口 IP`
+  const completedConnectivityResults = connectivityResults.filter((result) => result.state === "success" || result.state === "error")
+  const reachableConnectivityResults = connectivityResults.filter((result) => result.state === "success")
+  const connectivityState: DiagnosticState = connectivityRunning
+    ? "running"
+    : completedConnectivityResults.length === 0
+      ? "idle"
+      : reachableConnectivityResults.length === 0
+        ? "error"
+        : completedConnectivityResults.some((result) => result.state === "error")
+          ? "warning"
+          : "success"
+  const connectivityMessage = connectivityRunning
+    ? `已完成 ${completedConnectivityResults.length}/${CONNECTIVITY_TARGETS.length}`
+    : completedConnectivityResults.length === 0
+      ? `3 个区域，${CONNECTIVITY_TARGETS.length} 个站点，${CONNECTIVITY_PROBE_ROUNDS} 轮中位数`
+      : `已测试 ${completedConnectivityResults.length}/${CONNECTIVITY_TARGETS.length}，可达 ${reachableConnectivityResults.length}`
   const baselineAddresses = new Set(
-    [publicIp.result?.ip, ...successfulSplitResults.flatMap((result) => (result.ip ? [result.ip] : []))].filter((address): address is string =>
+    [publicIp.result?.ip, ...exactSplitResults.flatMap((result) => (result.ip ? [result.ip] : []))].filter((address): address is string =>
       Boolean(address),
     ),
   )
@@ -364,7 +554,21 @@ export default function NetworkDiagnostics() {
   function getCandidateLocation(candidate: WebRtcCandidate) {
     if (candidate.address.endsWith(".local")) return "mDNS 隐私地址"
     if (candidate.address === publicIp.result?.ip) return publicIp.result.location || "与网页出口一致"
-    return successfulSplitResults.find((result) => result.ip === candidate.address)?.location || (candidate.private ? "局域网" : "未查询")
+    return exactSplitResults.find((result) => result.ip === candidate.address)?.location || (candidate.private ? "局域网" : "未查询")
+  }
+
+  function handleTabKeyDown(event: React.KeyboardEvent<HTMLButtonElement>, index: number) {
+    let nextIndex: number | undefined
+    if (event.key === "ArrowRight") nextIndex = (index + 1) % DIAGNOSTIC_TABS.length
+    if (event.key === "ArrowLeft") nextIndex = (index - 1 + DIAGNOSTIC_TABS.length) % DIAGNOSTIC_TABS.length
+    if (event.key === "Home") nextIndex = 0
+    if (event.key === "End") nextIndex = DIAGNOSTIC_TABS.length - 1
+    if (nextIndex === undefined) return
+
+    event.preventDefault()
+    const tab = DIAGNOSTIC_TABS[nextIndex]
+    setActiveTab(tab.id)
+    document.getElementById(`diagnostic-tab-${tab.id}`)?.focus()
   }
 
   return (
@@ -380,9 +584,14 @@ export default function NetworkDiagnostics() {
           </span>
           <div>
             <h1 id="network-diagnostics-title">网络与 IP 分流检测</h1>
-            <p>分别检查网页出口、网站分流、DNS 解析与 WebRTC UDP 路径。</p>
+            <p>分别检查网页出口、网站分流、网络连通性、DNS 解析与 WebRTC UDP 路径。</p>
           </div>
+          <IpMaskToggle checked={maskIp} onCheckedChange={setMaskIp} />
         </div>
+        <aside className="network-diagnostics__privacy">
+          <i className="ri-shield-check-line" aria-hidden="true" />
+          <p>测试仅在需要时发起，结果只保存在当前浏览器内存。IP 查询是进入页面后唯一自动执行的外部请求，并缓存 5 分钟。</p>
+        </aside>
       </header>
 
       <DiagnosticSection
@@ -393,17 +602,9 @@ export default function NetworkDiagnostics() {
           <StatusLabel state={publicIp.state}>{publicIp.state === "running" ? "正在查询" : publicIp.message || "进入页面后自动查询一次"}</StatusLabel>
         }
         actions={
-          <>
-            {publicIp.result ? (
-              <ActionButton onClick={() => setMaskIp((current) => !current)}>
-                <i className={maskIp ? "ri-eye-line" : "ri-eye-off-line"} aria-hidden="true" />
-                {maskIp ? "显示 IP" : "隐藏 IP"}
-              </ActionButton>
-            ) : null}
-            <ActionButton onClick={() => void runPublicIp()} disabled={publicIp.state === "running"} primary>
-              {publicIp.result ? "重新查询" : "查询 IP"}
-            </ActionButton>
-          </>
+          <ActionButton onClick={() => void runPublicIp()} disabled={publicIp.state === "running"} primary>
+            {publicIp.result ? "重新查询" : "查询 IP"}
+          </ActionButton>
         }
       >
         {publicIp.result ? (
@@ -429,201 +630,268 @@ export default function NetworkDiagnostics() {
         )}
       </DiagnosticSection>
 
-      <DiagnosticSection
-        id="split-test-title"
-        title="网站分流测试"
-        description="连接国内与国际网站的轻量探测端点，核对每个网站实际使用的出口 IP。"
-        status={<StatusLabel state={splitState}>{splitMessage}</StatusLabel>}
-        actions={
-          <>
-            <ActionButton onClick={() => void runSplit("core")} disabled={splitRunning} primary={splitMode === "core" && splitRunning}>
-              核心检测
-            </ActionButton>
-            <ActionButton onClick={() => void runSplit("full")} disabled={splitRunning} primary={splitMode === "full" && splitRunning}>
-              完整检测
-            </ActionButton>
-          </>
-        }
-        footer={
-          <p>
-            完整检测包含参考站的 {allTargets.length} 个站点，仅在点击后发起请求。站点图标通过 DuckDuckGo 按需加载；仅对未返回国家代码的出口使用
-            ipwho.is 补充查询，相同 IP 缓存 24 小时。
-          </p>
-        }
+      <nav className="network-diagnostics__tabs" role="tablist" aria-label="诊断项目">
+        {DIAGNOSTIC_TABS.map((tab, index) => (
+          <button
+            type="button"
+            id={`diagnostic-tab-${tab.id}`}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            aria-controls={`diagnostic-panel-${tab.id}`}
+            tabIndex={activeTab === tab.id ? 0 : -1}
+            onClick={() => setActiveTab(tab.id)}
+            onKeyDown={(event) => handleTabKeyDown(event, index)}
+            key={tab.id}
+          >
+            <i className={tab.icon} aria-hidden="true" />
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+
+      <div
+        id={`diagnostic-panel-${activeTab}`}
+        className="network-diagnostics__tabpanel"
+        role="tabpanel"
+        aria-labelledby={`diagnostic-tab-${activeTab}`}
       >
-        {uniqueSplitIps.length > 0 ? (
-          <div className="network-diagnostics__exit-summary">
-            <span>分流出口 IP 汇总</span>
-            <div>
-              {splitExits.map((exit) => (
-                <span className="network-diagnostics__exit" key={exit.ip}>
-                  <CountryFlag countryCode={exit.countryCode} />
-                  <code>{maskIp ? maskAddress(exit.ip) : exit.ip}</code>
-                </span>
+        {activeTab === "split" ? (
+          <DiagnosticSection
+            id="split-test-title"
+            title="网站分流测试"
+            description="连接国内与国际网站的轻量探测端点，核对每个网站实际使用的出口 IP。"
+            status={<StatusLabel state={splitState}>{splitMessage}</StatusLabel>}
+            actions={
+              <>
+                <ActionButton onClick={() => void runSplit("core")} disabled={splitRunning} primary={splitMode === "core" && splitRunning}>
+                  核心检测
+                </ActionButton>
+                <ActionButton onClick={() => void runSplit("full")} disabled={splitRunning} primary={splitMode === "full" && splitRunning}>
+                  完整检测
+                </ActionButton>
+              </>
+            }
+            footer={
+              <p>
+                完整检测包含参考站的 {allTargets.length} 个站点，仅在点击后发起请求。站点图标通过 DuckDuckGo 按需加载；仅对未返回国家代码的出口使用
+                ipwho.is 补充查询，相同 IP 缓存 24 小时。Google 定位项通过 Google Public DNS 返回的匿名出口网段判断，不代表账号、设备或搜索偏好定位。
+              </p>
+            }
+          >
+            {uniqueSplitIps.length > 0 ? (
+              <div className="network-diagnostics__exit-summary">
+                <span>分流出口 IP 汇总</span>
+                <div>
+                  {splitExits.map((exit) => (
+                    <span className="network-diagnostics__exit" key={exit.ip}>
+                      <CountryFlag countryCode={exit.countryCode} />
+                      <code>{maskIp ? maskAddress(exit.ip) : exit.ip}</code>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {splitResults.length > 0 ? (
+              <div className="network-diagnostics__table network-diagnostics__table--split" role="table" aria-label="网站分流检测结果">
+                <div className="network-diagnostics__table-head" role="row">
+                  <span role="columnheader">网站</span>
+                  <span role="columnheader">类型</span>
+                  <span role="columnheader">出口 IP</span>
+                  <span role="columnheader">Geolocation</span>
+                  <span role="columnheader">状态</span>
+                </div>
+                {splitResults.map((result) => (
+                  <div className="network-diagnostics__table-row" role="row" key={result.id}>
+                    <div className="network-diagnostics__site" role="cell">
+                      <SiteLogo
+                        label={result.label}
+                        logoUrl={result.logoUrl}
+                        fallbackUrl={getOriginFavicon(result.url)}
+                        ready={result.state !== "running"}
+                      />
+                      <strong>{result.label}</strong>
+                    </div>
+                    <span role="cell" data-label="类型">
+                      {result.category}
+                    </span>
+                    <div className="network-diagnostics__address" role="cell" data-label="出口 IP">
+                      <span>
+                        {result.ip ? <CountryFlag countryCode={result.countryCode} /> : null}
+                        <code>{formatSplitAddress(result, maskIp)}</code>
+                      </span>
+                    </div>
+                    <span role="cell" data-label="Geolocation">
+                      {result.location || "-"}
+                    </span>
+                    <span role="cell" data-label="状态">
+                      <SplitResultStatus result={result} />
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyResult>选择核心检测或完整检测后显示网站、出口 IP、Geolocation 和连接状态。</EmptyResult>
+            )}
+          </DiagnosticSection>
+        ) : activeTab === "connectivity" ? (
+          <DiagnosticSection
+            id="connectivity-test-title"
+            title="网络连通性测试"
+            description="从当前浏览器直接测试日本、美国和全球常用站点的实时连通性与延迟。"
+            status={<StatusLabel state={connectivityState}>{connectivityMessage}</StatusLabel>}
+            actions={
+              <ActionButton onClick={() => void runConnectivity()} disabled={connectivityRunning} primary>
+                {completedConnectivityResults.length > 0 ? "重新测试" : "开始测试"}
+              </ActionButton>
+            }
+            footer={
+              <p>
+                每个站点执行 {CONNECTIVITY_PROBE_ROUNDS}{" "}
+                轮轻量请求并取中位数。测试只在当前浏览器发起，不经过探针服务器；超时通常表示站点被当前网络阻止或线路不可达。
+              </p>
+            }
+          >
+            <div className="network-diagnostics__connectivity-legend" aria-label="延迟分级">
+              <span>
+                <i className="network-diagnostics__connectivity-sample network-diagnostics__connectivity-sample--fast" aria-hidden="true" />
+                优于 100 ms
+              </span>
+              <span>
+                <i className="network-diagnostics__connectivity-sample network-diagnostics__connectivity-sample--normal" aria-hidden="true" />
+                100-399 ms
+              </span>
+              <span>
+                <i className="network-diagnostics__connectivity-sample network-diagnostics__connectivity-sample--slow" aria-hidden="true" />
+                400 ms 以上
+              </span>
+              <span>
+                <i className="network-diagnostics__connectivity-sample network-diagnostics__connectivity-sample--timeout" aria-hidden="true" />
+                超时
+              </span>
+            </div>
+            <div className="network-diagnostics__connectivity-regions">
+              {CONNECTIVITY_REGIONS.map((region) => (
+                <ConnectivityRegionPanel
+                  region={region}
+                  results={connectivityResults.filter((result) => result.region === region.id)}
+                  disabled={connectivityRunning}
+                  onRetest={(regionId) => void runConnectivity(regionId)}
+                  key={region.id}
+                />
               ))}
             </div>
-          </div>
-        ) : null}
-        {splitResults.length > 0 ? (
-          <div className="network-diagnostics__table network-diagnostics__table--split" role="table" aria-label="网站分流检测结果">
-            <div className="network-diagnostics__table-head" role="row">
-              <span role="columnheader">网站</span>
-              <span role="columnheader">类型</span>
-              <span role="columnheader">出口 IP</span>
-              <span role="columnheader">地区</span>
-              <span role="columnheader">状态</span>
-            </div>
-            {splitResults.map((result) => (
-              <div className="network-diagnostics__table-row" role="row" key={result.id}>
-                <div className="network-diagnostics__site" role="cell">
-                  <SiteLogo
-                    label={result.label}
-                    logoUrl={result.logoUrl}
-                    fallbackUrl={getOriginFavicon(result.url)}
-                    ready={result.state !== "running"}
-                  />
-                  <strong>{result.label}</strong>
-                </div>
-                <span role="cell" data-label="类型">
-                  {result.category}
-                </span>
-                <div className="network-diagnostics__address" role="cell" data-label="出口 IP">
-                  <span>
-                    {result.ip ? <CountryFlag countryCode={result.countryCode} /> : null}
-                    <code>{result.ip ? (maskIp ? maskAddress(result.ip) : result.ip) : result.state === "running" ? "检测中" : "-"}</code>
-                  </span>
-                </div>
-                <span role="cell" data-label="地区">
-                  {result.location || "-"}
-                </span>
-                <span role="cell" data-label="状态">
-                  {result.state === "running" ? (
-                    <StatusLabel state="running">连接中</StatusLabel>
-                  ) : result.state === "success" ? (
-                    <StatusLabel state="success">{result.duration} ms</StatusLabel>
-                  ) : (
-                    <StatusLabel state="error">{result.message || "失败"}</StatusLabel>
-                  )}
-                </span>
-              </div>
-            ))}
-          </div>
+          </DiagnosticSection>
         ) : (
-          <EmptyResult>选择核心检测或完整检测后显示网站、出口 IP、地区和连接状态。</EmptyResult>
-        )}
-      </DiagnosticSection>
-
-      <DiagnosticSection
-        id="dns-leak-title"
-        title="DNS 泄露测试"
-        description="通过随机 EDNS 域名识别当前网络实际使用的 DNS 解析器。"
-        status={<StatusLabel state={dns.state}>{dns.message || "快速测试 5 次，深度测试 8 次"}</StatusLabel>}
-        actions={
-          <>
-            <ActionButton onClick={() => void runDns(5)} disabled={dns.state === "running"} primary>
-              快速测试
-            </ActionButton>
-            <ActionButton onClick={() => void runDns(8)} disabled={dns.state === "running"}>
-              深度测试
-            </ActionButton>
-          </>
-        }
-        footer={
-          <p>
-            {dnsEndpoint
-              ? "当前使用站点配置的同源 DNS 检测服务。"
-              : "当前使用 ip-api.com EDNS 公共检测服务，仅限非商业使用。该服务会看到本次测试的 DNS 查询和网页出口 IP。"}
-          </p>
-        }
-      >
-        {dns.result?.resolvers.length ? (
-          <div className="network-diagnostics__table network-diagnostics__table--dns" role="table" aria-label="DNS 泄露检测结果">
-            <div className="network-diagnostics__table-head" role="row">
-              <span role="columnheader">序号</span>
-              <span role="columnheader">DNS 解析器 IP</span>
-              <span role="columnheader">归属地</span>
-              <span role="columnheader">服务商</span>
-              <span role="columnheader">状态</span>
-            </div>
-            {dns.result.resolvers.map((resolver, index) => {
-              const possibleLeak = isPossibleDnsLeak(publicIp.result?.location, resolver.location)
-              return (
-                <div className="network-diagnostics__table-row" role="row" key={resolver.ip}>
-                  <span role="cell">{index + 1}</span>
-                  <code role="cell" data-label="解析器 IP">
-                    {maskIp ? maskAddress(resolver.ip) : resolver.ip}
-                  </code>
-                  <span role="cell" data-label="归属地">
-                    {resolver.location || "未知"}
-                  </span>
-                  <span role="cell" data-label="服务商">
-                    {resolver.provider || "未知"}
-                  </span>
-                  <span role="cell" data-label="状态">
-                    <StatusLabel state={possibleLeak ? "warning" : "success"}>{possibleLeak ? "需核对" : "正常"}</StatusLabel>
-                  </span>
+          <section className="network-diagnostics__card" aria-label="DNS 与 WebRTC 泄露检测">
+            <DiagnosticSubsection
+              id="dns-leak-title"
+              title="DNS 泄露测试"
+              description="通过随机 EDNS 域名识别当前网络实际使用的 DNS 解析器。"
+              status={<StatusLabel state={dns.state}>{dns.message || "快速测试 5 次，深度测试 8 次"}</StatusLabel>}
+              actions={
+                <>
+                  <ActionButton onClick={() => void runDns(5)} disabled={dns.state === "running"} primary>
+                    快速测试
+                  </ActionButton>
+                  <ActionButton onClick={() => void runDns(8)} disabled={dns.state === "running"}>
+                    深度测试
+                  </ActionButton>
+                </>
+              }
+              footer={
+                <p>
+                  {dnsEndpoint
+                    ? "当前使用站点配置的同源 DNS 检测服务。"
+                    : "当前使用 ip-api.com EDNS 公共检测服务，仅限非商业使用。该服务会看到本次测试的 DNS 查询和网页出口 IP。"}
+                </p>
+              }
+            >
+              {dns.result?.resolvers.length ? (
+                <div className="network-diagnostics__table network-diagnostics__table--dns" role="table" aria-label="DNS 泄露检测结果">
+                  <div className="network-diagnostics__table-head" role="row">
+                    <span role="columnheader">序号</span>
+                    <span role="columnheader">DNS 解析器 IP</span>
+                    <span role="columnheader">归属地</span>
+                    <span role="columnheader">服务商</span>
+                    <span role="columnheader">状态</span>
+                  </div>
+                  {dns.result.resolvers.map((resolver, index) => {
+                    const possibleLeak = isPossibleDnsLeak(publicIp.result?.location, resolver.location)
+                    return (
+                      <div className="network-diagnostics__table-row" role="row" key={resolver.ip}>
+                        <span role="cell">{index + 1}</span>
+                        <code role="cell" data-label="解析器 IP">
+                          {maskIp ? maskAddress(resolver.ip) : resolver.ip}
+                        </code>
+                        <span role="cell" data-label="归属地">
+                          {resolver.location || "未知"}
+                        </span>
+                        <span role="cell" data-label="服务商">
+                          {resolver.provider || "未知"}
+                        </span>
+                        <span role="cell" data-label="状态">
+                          <StatusLabel state={possibleLeak ? "warning" : "success"}>{possibleLeak ? "需核对" : "正常"}</StatusLabel>
+                        </span>
+                      </div>
+                    )
+                  })}
                 </div>
-              )
-            })}
-          </div>
-        ) : dns.result ? (
-          <EmptyResult>未检测到 DNS 解析器。可能启用了加密 DNS，或当前网络阻止了探测。</EmptyResult>
-        ) : (
-          <EmptyResult>点击快速测试或深度测试后显示解析器 IP、归属地、服务商和状态。</EmptyResult>
-        )}
-      </DiagnosticSection>
+              ) : dns.result ? (
+                <EmptyResult>未检测到 DNS 解析器。可能启用了加密 DNS，或当前网络阻止了探测。</EmptyResult>
+              ) : (
+                <EmptyResult>点击快速测试或深度测试后显示解析器 IP、归属地、服务商和状态。</EmptyResult>
+              )}
+            </DiagnosticSubsection>
 
-      <DiagnosticSection
-        id="webrtc-leak-title"
-        title="WebRTC 泄露测试"
-        description="通过 Google 与 Cloudflare 的多个 STUN 节点检查 UDP、IPv4 和 IPv6 出口。"
-        status={<StatusLabel state={webRtc.state}>{webRtc.message || "检测不会请求摄像头或麦克风权限"}</StatusLabel>}
-        actions={
-          <ActionButton onClick={() => void runWebRtc()} disabled={webRtc.state === "running"} primary>
-            {webRtc.result ? "重新检测" : "开始检测"}
-          </ActionButton>
-        }
-        footer={<p>公网 UDP 地址会与我的 IP 和网站分流结果对比。不同出口可能是预期分流，也可能表示 UDP 未被代理接管。</p>}
-      >
-        {webRtc.result?.candidates.length ? (
-          <div className="network-diagnostics__table network-diagnostics__table--webrtc" role="table" aria-label="WebRTC 泄露检测结果">
-            <div className="network-diagnostics__table-head" role="row">
-              <span role="columnheader">序号</span>
-              <span role="columnheader">IP 地址</span>
-              <span role="columnheader">类型</span>
-              <span role="columnheader">归属地</span>
-              <span role="columnheader">状态</span>
-            </div>
-            {webRtc.result.candidates.map((candidate, index) => (
-              <div className="network-diagnostics__table-row" role="row" key={`${candidate.address}-${candidate.protocol}-${candidate.type}`}>
-                <span role="cell">{index + 1}</span>
-                <code role="cell" data-label="IP 地址">
-                  {maskIp ? maskAddress(candidate.address) : candidate.address}
-                </code>
-                <span role="cell" data-label="类型">
-                  {WEBRTC_TYPE_LABELS[candidate.type || ""] || candidate.type || "未知"}
-                  {candidate.protocol ? ` / ${candidate.protocol.toUpperCase()}` : ""}
-                </span>
-                <span role="cell" data-label="归属地">
-                  {getCandidateLocation(candidate)}
-                </span>
-                <span role="cell" data-label="状态">
-                  <WebRtcStatus candidate={candidate} baseline={baselineAddresses} />
-                </span>
-              </div>
-            ))}
-          </div>
-        ) : webRtc.result ? (
-          <EmptyResult>未发现可显示的 WebRTC 候选地址。</EmptyResult>
-        ) : (
-          <EmptyResult>点击开始检测后显示 WebRTC 地址、候选类型、归属信息和泄露状态。</EmptyResult>
+            <DiagnosticSubsection
+              id="webrtc-leak-title"
+              title="WebRTC 泄露测试"
+              description="通过 Google 与 Cloudflare 的多个 STUN 节点检查 UDP、IPv4 和 IPv6 出口。"
+              status={<StatusLabel state={webRtc.state}>{webRtc.message || "检测不会请求摄像头或麦克风权限"}</StatusLabel>}
+              actions={
+                <ActionButton onClick={() => void runWebRtc()} disabled={webRtc.state === "running"} primary>
+                  {webRtc.result ? "重新检测" : "开始检测"}
+                </ActionButton>
+              }
+              footer={<p>公网 UDP 地址会与我的 IP 和网站分流结果对比。不同出口可能是预期分流，也可能表示 UDP 未被代理接管。</p>}
+            >
+              {webRtc.result?.candidates.length ? (
+                <div className="network-diagnostics__table network-diagnostics__table--webrtc" role="table" aria-label="WebRTC 泄露检测结果">
+                  <div className="network-diagnostics__table-head" role="row">
+                    <span role="columnheader">序号</span>
+                    <span role="columnheader">IP 地址</span>
+                    <span role="columnheader">类型</span>
+                    <span role="columnheader">归属地</span>
+                    <span role="columnheader">状态</span>
+                  </div>
+                  {webRtc.result.candidates.map((candidate, index) => (
+                    <div className="network-diagnostics__table-row" role="row" key={`${candidate.address}-${candidate.protocol}-${candidate.type}`}>
+                      <span role="cell">{index + 1}</span>
+                      <code role="cell" data-label="IP 地址">
+                        {maskIp ? maskAddress(candidate.address) : candidate.address}
+                      </code>
+                      <span role="cell" data-label="类型">
+                        {WEBRTC_TYPE_LABELS[candidate.type || ""] || candidate.type || "未知"}
+                        {candidate.protocol ? ` / ${candidate.protocol.toUpperCase()}` : ""}
+                      </span>
+                      <span role="cell" data-label="归属地">
+                        {getCandidateLocation(candidate)}
+                      </span>
+                      <span role="cell" data-label="状态">
+                        <WebRtcStatus candidate={candidate} baseline={baselineAddresses} />
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : webRtc.result ? (
+                <EmptyResult>未发现可显示的 WebRTC 候选地址。</EmptyResult>
+              ) : (
+                <EmptyResult>点击开始检测后显示 WebRTC 地址、候选类型、归属信息和泄露状态。</EmptyResult>
+              )}
+            </DiagnosticSubsection>
+          </section>
         )}
-      </DiagnosticSection>
-
-      <aside className="network-diagnostics__privacy">
-        <i className="ri-shield-check-line" aria-hidden="true" />
-        <p>测试仅在需要时发起，结果只保存在当前浏览器内存。IP 查询是进入页面后唯一自动执行的外部请求，并缓存 5 分钟。</p>
-      </aside>
+      </div>
     </main>
   )
 }

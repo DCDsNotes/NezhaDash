@@ -46,6 +46,16 @@
   gap: 12px;
 }
 
+.network-diagnostics__heading > div {
+  min-width: 0;
+}
+
+.network-diagnostics__heading > .network-diagnostics__mask-toggle {
+  align-self: flex-end;
+  margin-left: auto;
+  padding-bottom: 2px;
+}
+
 .network-diagnostics__mark {
   display: inline-flex;
   width: 42px;
@@ -85,7 +95,7 @@
 }
 
 .network-diagnostics__heading p,
-.network-diagnostics__section-copy p {
+.network-diagnostics__section-copy > p {
   margin-top: 4px;
 }
 
@@ -94,6 +104,57 @@
   border: 1px solid var(--probe-border);
   border-radius: var(--probe-radius);
   background: var(--probe-surface);
+}
+
+.network-diagnostics__tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--probe-border);
+  border-radius: var(--probe-radius);
+  background: var(--probe-surface-subtle);
+}
+
+.network-diagnostics__tabs button {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-radius: calc(var(--probe-radius) - 1px);
+  background: transparent;
+  color: var(--probe-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.network-diagnostics__tabs button:hover:not([aria-selected="true"]) {
+  color: var(--probe-text);
+}
+
+.network-diagnostics__tabs button[aria-selected="true"] {
+  border-color: var(--probe-border);
+  background: var(--probe-surface);
+  color: var(--probe-accent-strong);
+  font-weight: 600;
+}
+
+.network-diagnostics__tabs button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--probe-accent) 42%, var(--probe-border));
+  outline-offset: 1px;
+}
+
+.network-diagnostics__tabpanel {
+  min-width: 0;
+}
+
+.network-diagnostics__subsection + .network-diagnostics__subsection {
+  border-top: 1px solid var(--probe-border);
 }
 
 .network-diagnostics__section-header {
@@ -199,6 +260,51 @@
   border-color: var(--probe-accent-strong);
   background: var(--probe-accent-strong);
   color: #fff;
+}
+
+.network-diagnostics__mask-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  color: var(--probe-text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+  user-select: none;
+}
+
+.network-diagnostics__mask-switch {
+  width: 26px;
+  height: 14px;
+  flex: 0 0 26px;
+  padding: 2px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--probe-border);
+  transition: background-color 0.2s ease;
+}
+
+.network-diagnostics__mask-switch-thumb {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--probe-surface);
+  box-shadow: 0 1px 2px rgb(36 50 72 / 20%);
+  transition: transform 0.2s ease;
+}
+
+.network-diagnostics__mask-switch[data-state="checked"] {
+  background: var(--probe-accent);
+}
+
+.network-diagnostics__mask-switch-thumb[data-state="checked"] {
+  transform: translateX(12px);
+}
+
+.network-diagnostics__mask-switch:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--probe-accent) 58%, var(--probe-border));
+  outline-offset: 2px;
+  box-shadow: none;
 }
 
 .network-diagnostics__empty {
@@ -416,7 +522,7 @@
 }
 
 .network-diagnostics__table--split > * {
-  grid-template-columns: minmax(120px, 1.25fr) minmax(76px, 0.8fr) minmax(120px, 1fr) 52px minmax(80px, 0.75fr);
+  grid-template-columns: minmax(120px, 1.25fr) minmax(76px, 0.8fr) minmax(120px, 1fr) minmax(104px, 0.9fr) minmax(72px, 0.65fr);
 }
 
 .network-diagnostics__table--dns > * {
@@ -427,9 +533,206 @@
   grid-template-columns: 38px minmax(140px, 1fr) minmax(120px, 0.9fr) minmax(100px, 0.9fr) 76px;
 }
 
+.network-diagnostics__connectivity-legend,
+.network-diagnostics__connectivity-region-header,
+.network-diagnostics__connectivity-region-header > button,
+.network-diagnostics__connectivity-item,
+.network-diagnostics__connectivity-samples {
+  display: flex;
+  align-items: center;
+}
+
+.network-diagnostics__connectivity-legend {
+  flex-wrap: wrap;
+  gap: 7px 18px;
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--probe-border-soft);
+  background: var(--probe-surface-subtle);
+  color: var(--probe-text-muted);
+  font-size: 11px;
+}
+
+.network-diagnostics__connectivity-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.network-diagnostics__connectivity-regions {
+  padding: 0 16px;
+}
+
+.network-diagnostics__connectivity-region {
+  padding: 15px 0 16px;
+  border-bottom: 1px solid var(--probe-border-soft);
+}
+
+.network-diagnostics__connectivity-region:last-child {
+  border-bottom: 0;
+}
+
+.network-diagnostics__connectivity-region-header {
+  min-width: 0;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.network-diagnostics__connectivity-region-header h3 {
+  margin: 0;
+  color: var(--probe-text);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.network-diagnostics__connectivity-region-header > span {
+  min-width: 0;
+  color: var(--probe-text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.network-diagnostics__connectivity-region-header > button {
+  min-height: 28px;
+  flex: 0 0 auto;
+  justify-content: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 4px 8px;
+  border: 1px solid var(--probe-border);
+  border-radius: var(--probe-radius);
+  background: var(--probe-surface);
+  color: var(--probe-text-secondary);
+  font-size: 11px;
+}
+
+.network-diagnostics__connectivity-region-header > button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--probe-accent) 42%, var(--probe-border));
+  color: var(--probe-accent-strong);
+}
+
+.network-diagnostics__connectivity-region-header > button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--probe-accent) 42%, var(--probe-border));
+  outline-offset: 2px;
+}
+
+.network-diagnostics__connectivity-region-header > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.network-diagnostics__connectivity-refresh--running i {
+  animation: network-diagnostics-spin 0.9s linear infinite;
+}
+
+.network-diagnostics__connectivity-globe {
+  width: 18px;
+  flex: 0 0 18px;
+  color: var(--probe-text-muted);
+  font-size: 15px;
+  text-align: center;
+}
+
+.network-diagnostics__connectivity-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.network-diagnostics__connectivity-item {
+  min-width: 0;
+  min-height: 50px;
+  gap: 7px;
+  padding: 7px 8px;
+  border: 1px solid var(--probe-border-soft);
+  border-radius: var(--probe-radius);
+  background: var(--probe-surface);
+}
+
+.network-diagnostics__connectivity-item .network-diagnostics__site-logo {
+  width: 20px;
+  height: 20px;
+  flex-basis: 20px;
+}
+
+.network-diagnostics__connectivity-copy {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.network-diagnostics__connectivity-copy strong {
+  display: block;
+  overflow: hidden;
+  color: var(--probe-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.network-diagnostics__connectivity-samples {
+  gap: 3px;
+  margin-top: 5px;
+}
+
+.network-diagnostics__connectivity-sample {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  flex: 0 0 5px;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: var(--probe-border);
+}
+
+.network-diagnostics__connectivity-sample--fast {
+  background: var(--probe-accent);
+}
+
+.network-diagnostics__connectivity-sample--normal {
+  background: color-mix(in srgb, var(--probe-accent) 48%, var(--probe-border));
+}
+
+.network-diagnostics__connectivity-sample--slow {
+  background: var(--probe-warning);
+}
+
+.network-diagnostics__connectivity-sample--timeout {
+  border-color: color-mix(in srgb, var(--probe-warning) 65%, var(--probe-border));
+  background: var(--probe-warning-soft);
+}
+
+.network-diagnostics__connectivity-sample--pending {
+  border-color: var(--probe-border);
+  background: var(--probe-surface);
+}
+
+.network-diagnostics__connectivity-latency {
+  flex: 0 0 auto;
+  color: var(--probe-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.network-diagnostics__connectivity-latency--fast {
+  color: var(--probe-accent-strong);
+}
+
+.network-diagnostics__connectivity-latency--normal {
+  color: var(--probe-text-secondary);
+}
+
+.network-diagnostics__connectivity-latency--slow,
+.network-diagnostics__connectivity-latency--timeout {
+  color: var(--probe-warning);
+}
+
 .network-diagnostics__privacy {
   align-items: flex-start;
   gap: 8px;
+  margin-top: 12px;
   padding: 10px 12px;
   border: 1px solid color-mix(in srgb, var(--probe-accent) 42%, var(--probe-border));
   border-radius: var(--probe-radius);
@@ -468,7 +771,25 @@
   }
 
   .network-diagnostics__heading {
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .network-diagnostics__heading > .network-diagnostics__mark {
+    grid-row: 1 / span 2;
+  }
+
+  .network-diagnostics__heading > .network-diagnostics__mask-toggle {
+    grid-column: 2;
+    justify-self: end;
+    margin-top: -2px;
+    margin-left: 0;
+    padding-bottom: 0;
+  }
+
+  .network-diagnostics__privacy {
+    margin-top: 10px;
   }
 
   .network-diagnostics h1 {
@@ -488,6 +809,28 @@
 
   .network-diagnostics__button {
     width: 100%;
+  }
+
+  .network-diagnostics__tabs button {
+    min-height: 40px;
+    padding-inline: 6px;
+  }
+
+  .network-diagnostics__connectivity-legend {
+    gap: 6px 12px;
+    padding-inline: 12px;
+  }
+
+  .network-diagnostics__connectivity-regions {
+    padding-inline: 12px;
+  }
+
+  .network-diagnostics__connectivity-region-header {
+    flex-wrap: wrap;
+  }
+
+  .network-diagnostics__connectivity-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .network-diagnostics__ip-result {
@@ -556,11 +899,17 @@
 
 @media (prefers-reduced-motion: reduce) {
   .network-diagnostics__status--running .ri-loader-4-line,
+  .network-diagnostics__connectivity-refresh--running i,
   .network-diagnostics__ip-skeleton span {
     animation: none;
   }
 
   .network-diagnostics__button:active:not(:disabled) {
     transform: none;
+  }
+
+  .network-diagnostics__mask-switch,
+  .network-diagnostics__mask-switch-thumb {
+    transition: none;
   }
 }

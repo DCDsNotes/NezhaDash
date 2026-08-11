@@ -3,12 +3,13 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { type ServerWorkspaceValue, useServerWorkspace } from "@/hooks/use-server-workspace"
 import { useWebSocketControls } from "@/hooks/use-websocket-context"
 import { loginUserQueryOptions, settingQueryOptions } from "@/lib/query-options"
+import { serverIdToServerKey } from "@/lib/server-key"
 import { getServerDailyTransferList } from "@/lib/server-view-model"
-import { resolveSiteName } from "@/lib/site-name"
+import { formatPageTitle, resolveSiteName } from "@/lib/site-name"
 import { cn } from "@/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react"
-import { Link, Outlet } from "react-router-dom"
+import { Link, Outlet, matchPath, useLocation } from "react-router-dom"
 
 let mapDialogPromise: ReturnType<typeof importMapDialog> | null = null
 
@@ -162,16 +163,30 @@ function TransferDialog({
   )
 }
 
+function getWorkspacePageName(pathname: string, workspace: Pick<ServerWorkspaceValue, "isLoading" | "servers">) {
+  if (matchPath({ path: "/", end: true }, pathname) || matchPath({ path: "/error", end: true }, pathname)) return ""
+  if (matchPath({ path: "/network", end: true }, pathname)) return "分流查询"
+
+  const serverMatch = matchPath({ path: "/server/:serverKey", end: true }, pathname)
+  if (!serverMatch) return "页面不存在"
+
+  const serverName = workspace.servers.find((server) => serverIdToServerKey(server.id) === serverMatch.params.serverKey)?.name
+  return serverName || (workspace.isLoading ? "" : "页面不存在")
+}
+
 export default function ProbeWorkspace() {
   const workspace = useServerWorkspace()
   const dashboardLink = useDashboardLinkState()
   const { data: settingData } = useQuery(settingQueryOptions())
+  const { pathname } = useLocation()
   const [showTransfer, setShowTransfer] = useState(false)
   const [showMap, setShowMap] = useState(false)
+  const configuredSiteName = settingData?.data?.config?.site_name
+  const pageTitle = formatPageTitle(getWorkspacePageName(pathname, workspace), configuredSiteName)
 
   useEffect(() => {
-    document.title = resolveSiteName(settingData?.data?.config?.site_name)
-  }, [settingData?.data?.config?.site_name])
+    document.title = pageTitle
+  }, [pageTitle])
 
   function preloadMap() {
     void loadMapDialog().then(({ preloadMapAssets }) => preloadMapAssets())

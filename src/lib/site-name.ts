@@ -6,3 +6,9 @@ export function resolveSiteName(siteName: unknown) {
   const normalized = String(siteName || "").trim()
   return !normalized || LEGACY_SITE_NAMES.has(normalized) ? DEFAULT_SITE_NAME : normalized
 }
+
+export function formatPageTitle(pageName: unknown, siteName: unknown) {
+  const resolvedSiteName = resolveSiteName(siteName)
+  const resolvedPageName = String(pageName || "").trim()
+  return resolvedPageName ? `${resolvedPageName} - ${resolvedSiteName}` : resolvedSiteName
+}

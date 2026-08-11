@@ -1,7 +1,7 @@
 export type DiagnosticState = "idle" | "running" | "success" | "warning" | "error"
 export type SplitMode = "core" | "full"
 
-type SplitMethod = "trace" | "header"
+type SplitMethod = "trace" | "header" | "google-dns"
 
 export interface PublicIpResult {
   ip: string
@@ -25,6 +25,7 @@ export interface SplitResult extends SplitTarget {
   ip?: string
   countryCode?: string
   location?: string
+  ipPrefix?: number
   duration?: number
   message?: string
 }
@@ -67,7 +68,7 @@ declare global {
   }
 }
 
-const getSiteLogoUrl = (domain: string) => `https://icons.duckduckgo.com/ip3/${domain}.ico`
+export const getSiteLogoUrl = (domain: string) => `https://icons.duckduckgo.com/ip3/${domain}.ico`
 
 const traceTarget = (id: string, label: string, category: string, domain: string, core = false, logoDomain = domain): SplitTarget => ({
   id,
@@ -99,6 +100,15 @@ const DEFAULT_SPLIT_TARGETS: SplitTarget[] = [
     core: true,
     method: "header",
     headerNames: ["x-request-ip", "x-response-cinfo"],
+  },
+  {
+    id: "google-location",
+    label: "Google",
+    category: "搜索与定位",
+    url: "https://dns.google/resolve?name=o-o.myaddr.l.google.com&type=TXT",
+    logoUrl: getSiteLogoUrl("www.google.com"),
+    core: true,
+    method: "google-dns",
   },
   traceTarget("cloudflare-cn", "Cloudflare 中国", "国内", "www.cloudflare-cn.com", true),
   traceTarget("qualcomm-cn", "高通中国", "国内", "www.qualcomm.cn", true),
@@ -365,6 +375,35 @@ function parseTrace(text: string) {
   }
 }
 
+function parseGoogleDnsSubnet(text: string) {
+  const data = JSON.parse(text.slice(0, 8_192)) as {
+    Status?: unknown
+    Answer?: unknown
+    edns_client_subnet?: unknown
+  }
+  if (data.Status !== 0) return {}
+
+  const answers = Array.isArray(data.Answer)
+    ? data.Answer.flatMap((answer) => {
+        if (!answer || typeof answer !== "object") return []
+        const value = sanitiseText((answer as { data?: unknown }).data, 128)
+        return value ? [value] : []
+      })
+    : []
+  const subnet = [...answers.filter((answer) => /edns0-client-subnet/i.test(answer)), sanitiseText(data.edns_client_subnet, 128)].find(
+    (value): value is string => Boolean(value),
+  )
+  if (!subnet) return {}
+
+  const normalisedSubnet = subnet.toLowerCase()
+  const ip = findIp(normalisedSubnet)
+  if (!ip) return {}
+
+  const prefix = Number(normalisedSubnet.slice(normalisedSubnet.indexOf(ip) + ip.length).match(/^\/(\d{1,3})/)?.[1])
+  const maxPrefix = ip.includes(":") ? 128 : 32
+  return Number.isInteger(prefix) && prefix >= 0 && prefix <= maxPrefix ? { ip, ipPrefix: prefix } : {}
+}
+
 async function lookupIpGeography(ip: string, signal: AbortSignal) {
   const cached = ipGeographyCache.get(ip)
   if (cached && cached.expiresAt > Date.now()) return cached.result
@@ -409,6 +448,10 @@ async function lookupIpGeography(ip: string, signal: AbortSignal) {
 
 async function requestSplitTarget(target: SplitTarget, parentSignal: AbortSignal) {
   if (target.method === "trace") return parseTrace(await fetchText(target.url, parentSignal))
+  if (target.method === "google-dns") {
+    const subnet = parseGoogleDnsSubnet(await fetchText(target.url, parentSignal))
+    return subnet.ip ? { ...subnet, ...(await lookupIpGeography(subnet.ip, parentSignal)) } : subnet
+  }
 
   const request = withTimeout(parentSignal)
   try {
