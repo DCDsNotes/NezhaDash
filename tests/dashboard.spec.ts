@@ -1,4 +1,4 @@
-import { type Page, type Route, type TestInfo, expect, test } from "@playwright/test"
+import { type Page, type TestInfo, expect, test } from "@playwright/test"
 
 const now = Date.now()
 
@@ -496,10 +496,7 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   let googleDnsRequests = 0
   let dnsRequests = 0
   let geographyRequests = 0
-  let connectivityRequests = 0
-  let activeConnectivityRequests = 0
-  let peakConnectivityRequests = 0
-  const connectivityUrls = new Set<string>()
+  let cloudflareTraceFailures = 0
 
   await page.route("https://my.ip.cn/", async (route) => {
     publicIpRequests += 1
@@ -540,6 +537,11 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
       headers: { "Access-Control-Allow-Origin": "*" },
       body: `ip=${isChinaTarget ? "198.51.100.10" : "203.0.113.20"}\nloc=${isChinaTarget ? "CN" : "SG"}\n`,
     })
+  })
+
+  await page.route(/https:\/\/(?:www\.cloudflare\.com|cdnjs\.cloudflare\.com)\/cdn-cgi\/trace/, async (route) => {
+    cloudflareTraceFailures += 1
+    await route.abort("failed")
   })
 
   await page.route("https://dns.google/resolve?**", async (route) => {
@@ -657,6 +659,10 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__country-flag")).toHaveCount(9)
   await expect(page.getByText("United States California Danville AT&T Internet", { exact: true }).first()).toBeVisible()
   await expect(page.getByText("China Sichuan Chengdu China Telecom", { exact: true }).first()).toBeVisible()
+  const cloudflareResult = page
+    .locator(".network-diagnostics__table--split .network-diagnostics__table-row")
+    .filter({ has: page.getByText("Cloudflare", { exact: true }) })
+  await expect(cloudflareResult.getByText("United States California Danville AT&T Internet", { exact: true })).toBeVisible()
   const googleResult = page.locator(".network-diagnostics__table--split .network-diagnostics__table-row").filter({ hasText: "Google" })
   await expect(googleResult.getByText("198.51.100.0/24", { exact: true })).toBeVisible()
   await expect(googleResult.getByText("定位中国", { exact: true })).toBeVisible()
@@ -667,35 +673,27 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   expect(headerRequests).toBe(2)
   expect(googleDnsRequests).toBe(1)
   expect(geographyRequests).toBe(3)
+  expect(cloudflareTraceFailures).toBe(1)
 
-  const connectivityRoute = async (route: Route) => {
-    if (new URL(route.request().url()).hostname === "icons.duckduckgo.com") {
-      await route.fallback()
-      return
+  await page.evaluate(() => {
+    const nativeFetch = window.fetch.bind(window)
+    const stats = { requests: 0, active: 0, peak: 0, urls: [] as string[] }
+    Object.assign(window, { __connectivityProbeStats: stats })
+    window.fetch = async (input, init) => {
+      if (init?.mode !== "no-cors") return nativeFetch(input, init)
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url
+      stats.requests += 1
+      stats.active += 1
+      stats.peak = Math.max(stats.peak, stats.active)
+      stats.urls.push(url)
+      try {
+        await new Promise((resolve) => window.setTimeout(resolve, 15))
+        return new Response(null, { status: 204 })
+      } finally {
+        stats.active -= 1
+      }
     }
-    connectivityRequests += 1
-    const requestUrl = new URL(route.request().url())
-    requestUrl.search = ""
-    connectivityUrls.add(requestUrl.href)
-    activeConnectivityRequests += 1
-    peakConnectivityRequests = Math.max(peakConnectivityRequests, activeConnectivityRequests)
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 15))
-      await route.fulfill(
-        route.request().resourceType() === "image"
-          ? {
-              status: 200,
-              contentType: "image/gif",
-              body: Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64"),
-            }
-          : { status: 200, contentType: "text/plain", headers: { "Access-Control-Allow-Origin": "*" }, body: "ok" },
-      )
-    } finally {
-      activeConnectivityRequests -= 1
-    }
-  }
-  const connectivityPattern = /^https:\/\//
-  await page.route(connectivityPattern, connectivityRoute)
+  })
   await page.getByRole("tab", { name: "网站分流" }).focus()
   await page.keyboard.press("ArrowRight")
   await expect(page.getByRole("tab", { name: "网络连通性" })).toHaveAttribute("aria-selected", "true")
@@ -713,16 +711,22 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   await page.getByRole("button", { name: "开始测试" }).click()
   await expect(page.getByText("已测试 36/36，可达 36")).toBeVisible({ timeout: 15_000 })
   await expect(page.locator(".network-diagnostics__connectivity-sample")).toHaveCount(184)
-  expect(connectivityRequests).toBe(180)
-  expect(peakConnectivityRequests).toBe(10)
-  expect([...connectivityUrls].some((url) => url.endsWith("/robots.txt"))).toBe(false)
-  expect(connectivityUrls.has("https://api.anthropic.com/favicon.ico")).toBe(true)
-  expect(connectivityUrls.has("https://static.cdninstagram.com/rsrc.php/yb/r/hLRJ1GG_y0J.ico")).toBe(true)
-  expect(connectivityUrls.has("https://http2.mlstatic.com/favicon.ico")).toBe(true)
+  const connectivityStats = await page.evaluate(
+    () =>
+      (
+        window as typeof window & {
+          __connectivityProbeStats: { requests: number; active: number; peak: number; urls: string[] }
+        }
+      ).__connectivityProbeStats,
+  )
+  expect(connectivityStats.requests).toBe(36 * 6)
+  expect(connectivityStats.peak).toBe(10)
+  expect(connectivityStats.urls.some((url) => url.endsWith("/robots.txt"))).toBe(false)
+  expect(connectivityStats.urls).toContain("https://api.anthropic.com/favicon.ico")
+  expect(connectivityStats.urls).toContain("https://static.cdninstagram.com/rsrc.php/yb/r/hLRJ1GG_y0J.ico")
+  expect(connectivityStats.urls).toContain("https://http2.mlstatic.com/favicon.ico")
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "network-connectivity-desktop.png")
-  await page.unroute(connectivityPattern, connectivityRoute)
-
   await page.getByRole("tab", { name: "泄露检测" }).click()
   await expect(page.getByRole("heading", { name: "我的 IP" })).toBeVisible()
   await expect(page.getByRole("heading", { name: "DNS 泄露测试" })).toBeVisible()
@@ -747,6 +751,11 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   await page.getByRole("button", { name: "完整检测" }).click()
   await expect(page.getByRole("button", { name: "完整检测" })).toBeEnabled()
   await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__table-row")).toHaveCount(36)
+  const cdnjsResult = page
+    .locator(".network-diagnostics__table--split .network-diagnostics__table-row")
+    .filter({ has: page.getByText("cdnjs", { exact: true }) })
+  await expect(cdnjsResult.getByText("United States California Danville AT&T Internet", { exact: true })).toBeVisible()
+  expect(cloudflareTraceFailures).toBe(3)
   expect(traceRequests).toBe(39)
   expect(headerRequests).toBe(4)
   expect(googleDnsRequests).toBe(2)

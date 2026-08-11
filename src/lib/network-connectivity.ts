@@ -112,8 +112,6 @@ function wait(duration: number, signal: AbortSignal) {
 }
 
 async function probeOnce(url: string, parentSignal: AbortSignal) {
-  if (/\.(?:gif|ico|jpe?g|png|svg|webp)$/i.test(new URL(url).pathname)) return probeImageOnce(url, parentSignal)
-
   const controller = new AbortController()
   const abort = () => controller.abort()
   const timer = window.setTimeout(abort, CONNECTIVITY_PROBE_TIMEOUT)
@@ -126,8 +124,6 @@ async function probeOnce(url: string, parentSignal: AbortSignal) {
     await fetch(url, {
       mode: "no-cors",
       cache: "no-store",
-      credentials: "omit",
-      referrerPolicy: "no-referrer",
       signal: controller.signal,
     })
     return Math.round(performance.now() - startedAt)
@@ -140,50 +136,6 @@ async function probeOnce(url: string, parentSignal: AbortSignal) {
   }
 }
 
-function probeImageOnce(url: string, parentSignal: AbortSignal) {
-  return new Promise<number | null>((resolve, reject) => {
-    const image = new Image()
-    const startedAt = performance.now()
-    let settled = false
-    let timer = 0
-
-    const cleanup = () => {
-      window.clearTimeout(timer)
-      parentSignal.removeEventListener("abort", abort)
-      image.onload = null
-      image.onerror = null
-    }
-    const finish = (latency: number | null) => {
-      if (settled) return
-      settled = true
-      cleanup()
-      resolve(latency)
-    }
-    const abort = () => {
-      if (settled) return
-      settled = true
-      cleanup()
-      image.removeAttribute("src")
-      reject(parentSignal.reason)
-    }
-
-    if (parentSignal.aborted) {
-      abort()
-      return
-    }
-
-    parentSignal.addEventListener("abort", abort, { once: true })
-    timer = window.setTimeout(() => finish(null), CONNECTIVITY_PROBE_TIMEOUT)
-    image.onload = () => finish(Math.round(performance.now() - startedAt))
-    image.onerror = () => finish(null)
-    image.referrerPolicy = "no-referrer"
-
-    const requestUrl = new URL(url)
-    requestUrl.searchParams.set("nezha_probe", `${Date.now()}-${Math.random().toString(36).slice(2)}`)
-    image.src = requestUrl.href
-  })
-}
-
 function median(values: number[]) {
   if (values.length === 0) return undefined
   const sorted = [...values].sort((left, right) => left - right)
@@ -192,9 +144,10 @@ function median(values: number[]) {
 
 async function checkConnectivityTarget(item: ConnectivityTarget, signal: AbortSignal): Promise<ConnectivityResult> {
   const samples: Array<number | null> = []
+  await probeOnce(item.url, signal)
   for (let round = 0; round < CONNECTIVITY_PROBE_ROUNDS; round += 1) {
     samples.push(await probeOnce(item.url, signal))
-    if (round < CONNECTIVITY_PROBE_ROUNDS - 1) await wait(60 + Math.random() * 100, signal)
+    if (round < CONNECTIVITY_PROBE_ROUNDS - 1) await wait(90 + Math.random() * 140, signal)
   }
 
   const latency = median(samples.filter((sample): sample is number => sample !== null))

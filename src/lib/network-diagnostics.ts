@@ -18,6 +18,7 @@ export interface SplitTarget {
   core: boolean
   method: SplitMethod
   headerNames?: string[]
+  fallbackUrl?: string
 }
 
 export interface SplitResult extends SplitTarget {
@@ -70,7 +71,15 @@ declare global {
 
 export const getSiteLogoUrl = (domain: string) => `https://icons.duckduckgo.com/ip3/${domain}.ico`
 
-const traceTarget = (id: string, label: string, category: string, domain: string, core = false, logoDomain = domain): SplitTarget => ({
+const traceTarget = (
+  id: string,
+  label: string,
+  category: string,
+  domain: string,
+  core = false,
+  logoDomain = domain,
+  fallbackDomain?: string,
+): SplitTarget => ({
   id,
   label,
   category,
@@ -78,6 +87,7 @@ const traceTarget = (id: string, label: string, category: string, domain: string
   logoUrl: getSiteLogoUrl(logoDomain),
   core,
   method: "trace",
+  fallbackUrl: fallbackDomain ? `https://${fallbackDomain}/cdn-cgi/trace` : undefined,
 })
 
 const DEFAULT_SPLIT_TARGETS: SplitTarget[] = [
@@ -135,8 +145,8 @@ const DEFAULT_SPLIT_TARGETS: SplitTarget[] = [
   traceTarget("shopify", "Shopify", "办公与工具", "shopify.com"),
   traceTarget("godaddy", "GoDaddy", "办公与工具", "godaddy.com"),
   traceTarget("product-hunt", "Product Hunt", "办公与工具", "producthunt.com"),
-  traceTarget("cloudflare", "Cloudflare", "网络", "www.cloudflare.com", true),
-  traceTarget("cdnjs", "cdnjs", "开发与 CDN", "cdnjs.cloudflare.com", false, "cdnjs.com"),
+  traceTarget("cloudflare", "Cloudflare", "网络", "www.cloudflare.com", true, "www.cloudflare.com", "speed.cloudflare.com"),
+  traceTarget("cdnjs", "cdnjs", "开发与 CDN", "cdnjs.cloudflare.com", false, "cdnjs.com", "speed.cloudflare.com"),
   traceTarget("npm", "npm Registry", "开发与 CDN", "registry.npmjs.org", true, "www.npmjs.com"),
   traceTarget("kali", "Kali Download", "开发与 CDN", "kali.download"),
   traceTarget("unpkg", "unpkg", "开发与 CDN", "unpkg.com"),
@@ -483,7 +493,18 @@ async function lookupIpGeography(ip: string, signal: AbortSignal): Promise<Pick<
 
 async function requestSplitTarget(target: SplitTarget, parentSignal: AbortSignal) {
   if (target.method === "trace") {
-    const trace = parseTrace(await fetchText(target.url, parentSignal))
+    let trace: ReturnType<typeof parseTrace> | undefined
+    let failure: unknown
+    for (const url of [target.url, target.fallbackUrl].filter((value): value is string => Boolean(value))) {
+      try {
+        trace = parseTrace(await fetchText(url, parentSignal))
+        if (trace.ip) break
+      } catch (error) {
+        if (parentSignal.aborted) throw error
+        failure = error
+      }
+    }
+    if (!trace) throw failure instanceof Error ? failure : new Error("响应中没有出口 IP")
     if (!trace.ip) return trace
     const geography = await lookupIpGeography(trace.ip, parentSignal)
     return {
