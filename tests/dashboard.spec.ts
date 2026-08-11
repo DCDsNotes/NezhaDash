@@ -688,6 +688,7 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
       stats.urls.push(url)
       try {
         await new Promise((resolve) => window.setTimeout(resolve, 15))
+        if (url === "https://www.noon.com/favicon.ico") throw new TypeError("Failed to fetch")
         return new Response(null, { status: 204 })
       } finally {
         stats.active -= 1
@@ -719,12 +720,14 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
         }
       ).__connectivityProbeStats,
   )
-  expect(connectivityStats.requests).toBe(36 * 6)
+  expect(connectivityStats.requests).toBe(36 * 6 + 1)
   expect(connectivityStats.peak).toBe(10)
   expect(connectivityStats.urls.some((url) => url.endsWith("/robots.txt"))).toBe(false)
   expect(connectivityStats.urls).toContain("https://api.anthropic.com/favicon.ico")
   expect(connectivityStats.urls).toContain("https://static.cdninstagram.com/rsrc.php/yb/r/hLRJ1GG_y0J.ico")
   expect(connectivityStats.urls).toContain("https://http2.mlstatic.com/favicon.ico")
+  expect(connectivityStats.urls.filter((url) => url === "https://www.noon.com/favicon.ico")).toHaveLength(1)
+  expect(connectivityStats.urls.filter((url) => url === "https://f.nooncdn.com/")).toHaveLength(6)
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "network-connectivity-desktop.png")
   await page.getByRole("tab", { name: "泄露检测" }).click()

@@ -15,6 +15,7 @@ export interface ConnectivityTarget {
   name: string
   region: ConnectivityRegionId
   url: string
+  fallbackUrl?: string
   logoUrl: string
 }
 
@@ -34,8 +35,15 @@ export const CONNECTIVITY_REGIONS: ConnectivityRegion[] = [
   { id: "global", label: "全球" },
 ]
 
-function target(region: ConnectivityRegionId, id: string, name: string, domain: string, url = `https://${domain}/favicon.ico`): ConnectivityTarget {
-  return { id, name, region, url, logoUrl: getSiteLogoUrl(domain) }
+function target(
+  region: ConnectivityRegionId,
+  id: string,
+  name: string,
+  domain: string,
+  url = `https://${domain}/favicon.ico`,
+  fallbackUrl = `https://${domain}/`,
+): ConnectivityTarget {
+  return { id, name, region, url, fallbackUrl, logoUrl: getSiteLogoUrl(domain) }
 }
 
 export const CONNECTIVITY_TARGETS: ConnectivityTarget[] = [
@@ -71,7 +79,7 @@ export const CONNECTIVITY_TARGETS: ConnectivityTarget[] = [
   target("global", "takealot", "Takealot", "www.takealot.com", "https://static.takealot.com/favicon.ico"),
   target("global", "pixpix", "PixPix", "www.pixpix.com"),
   target("global", "naver", "Naver", "www.naver.com"),
-  target("global", "noon", "Noon", "www.noon.com"),
+  target("global", "noon", "Noon", "www.noon.com", "https://www.noon.com/favicon.ico", "https://f.nooncdn.com/"),
   target("global", "wikipedia", "Wikipedia", "www.wikipedia.org", "https://www.wikipedia.org/static/favicon/wikipedia.ico"),
   target("global", "bbc", "BBC", "www.bbc.com"),
   target("global", "mistral", "Mistral AI", "mistral.ai"),
@@ -144,9 +152,15 @@ function median(values: number[]) {
 
 async function checkConnectivityTarget(item: ConnectivityTarget, signal: AbortSignal): Promise<ConnectivityResult> {
   const samples: Array<number | null> = []
-  await probeOnce(item.url, signal)
+  let probeUrl = item.url
+  const primaryWarmup = await probeOnce(probeUrl, signal)
+  if (primaryWarmup === null && item.fallbackUrl && item.fallbackUrl !== probeUrl) {
+    const fallbackWarmup = await probeOnce(item.fallbackUrl, signal)
+    if (fallbackWarmup !== null) probeUrl = item.fallbackUrl
+  }
+
   for (let round = 0; round < CONNECTIVITY_PROBE_ROUNDS; round += 1) {
-    samples.push(await probeOnce(item.url, signal))
+    samples.push(await probeOnce(probeUrl, signal))
     if (round < CONNECTIVITY_PROBE_ROUNDS - 1) await wait(90 + Math.random() * 140, signal)
   }
 
