@@ -20,6 +20,13 @@ export const router = createBrowserRouter(
             return { Component }
           },
         },
+        {
+          path: "network",
+          lazy: async () => {
+            const { default: Component } = await import("@/pages/NetworkDiagnostics")
+            return { Component }
+          },
+        },
         { path: "error", element: <ErrorPage /> },
         { path: "*", element: <NotFound /> },
       ],

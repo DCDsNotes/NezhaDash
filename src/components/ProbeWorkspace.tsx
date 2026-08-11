@@ -79,6 +79,9 @@ function SiteHeader({
           <div className="probe-site-actions__search">
             <SearchBox servers={servers} />
           </div>
+          <Link to="/network" className="probe-site-action" aria-label="IP 分流与泄露检测" title="IP 分流与泄露检测">
+            <i className="ri-route-line" aria-hidden="true" />
+          </Link>
           <button type="button" className="probe-site-action" onClick={onOpenTransfer} aria-label="查看今日流量" title="查看今日流量">
             <i className="ri-exchange-2-line" aria-hidden="true" />
           </button>

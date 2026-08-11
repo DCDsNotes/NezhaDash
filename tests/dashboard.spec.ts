@@ -481,3 +481,46 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "not-found-mobile.png")
 })
+
+test("network diagnostics only contacts test services after user action", async ({ page }, testInfo) => {
+  await mockBackend(page)
+  let traceRequests = 0
+
+  await page.route("**/cdn-cgi/trace", async (route) => {
+    traceRequests += 1
+    const hostname = new URL(route.request().url()).hostname
+    const isChinaTarget = hostname.endsWith(".cn")
+    await route.fulfill({
+      status: 200,
+      contentType: "text/plain; charset=utf-8",
+      headers: { "Access-Control-Allow-Origin": "*" },
+      body: `ip=${isChinaTarget ? "198.51.100.10" : "203.0.113.20"}\nloc=${isChinaTarget ? "CN" : "SG"}\n`,
+    })
+  })
+
+  await page.goto("/")
+  const networkLink = page.getByRole("link", { name: "IP 分流与泄露检测" })
+  await expect(networkLink).toBeVisible()
+  await expect(page.locator(".probe-site-actions__search + a[aria-label='IP 分流与泄露检测']")).toHaveCount(1)
+
+  await networkLink.click()
+  await expect(page).toHaveURL(/\/network$/)
+  await expect(page.getByRole("heading", { name: "网络与 IP 分流检测" })).toBeVisible()
+  await expect(page.getByText("尚未配置同源检测服务")).toBeVisible()
+  await expect(page.getByRole("button", { name: "检测 DNS" })).toBeDisabled()
+  expect(traceRequests).toBe(0)
+
+  await page.getByRole("button", { name: "检测分流" }).evaluate((button) => {
+    button.click()
+    button.click()
+  })
+  await expect(page.getByText("发现 2 个出口，当前存在分流")).toBeVisible()
+  await expect(page.locator(".network-diagnostics__split-row .network-diagnostics__status--success")).toHaveCount(4)
+  expect(traceRequests).toBe(4)
+  await assertNoHorizontalOverflow(page)
+  await screenshot(page, testInfo, "network-diagnostics-desktop.png")
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await assertNoHorizontalOverflow(page)
+  await screenshot(page, testInfo, "network-diagnostics-mobile.png")
+})
