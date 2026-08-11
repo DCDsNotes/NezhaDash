@@ -743,6 +743,19 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   await screenshot(page, testInfo, "network-diagnostics-desktop.png")
 
   await page.setViewportSize({ width: 390, height: 844 })
+  const mobileHeading = page.locator(".network-diagnostics__heading")
+  const mobileHeadingDescription = mobileHeading.locator("p")
+  await expect(mobileHeadingDescription).toBeHidden()
+  const [mobileMarkBox, mobileTitleBox, mobileMaskBox] = await Promise.all([
+    mobileHeading.locator(".network-diagnostics__mark").boundingBox(),
+    mobileHeading.getByRole("heading", { name: "网络与 IP 分流检测" }).boundingBox(),
+    headingMaskToggle.boundingBox(),
+  ])
+  expect(mobileMarkBox).not.toBeNull()
+  expect(mobileTitleBox).not.toBeNull()
+  expect(mobileMaskBox).not.toBeNull()
+  const mobileHeadingCenters = [mobileMarkBox!, mobileTitleBox!, mobileMaskBox!].map((box) => box.y + box.height / 2)
+  expect(Math.max(...mobileHeadingCenters) - Math.min(...mobileHeadingCenters)).toBeLessThanOrEqual(1)
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "network-diagnostics-mobile.png")
 
