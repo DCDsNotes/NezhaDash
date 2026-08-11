@@ -1,10 +1,22 @@
 export type DiagnosticState = "idle" | "running" | "success" | "warning" | "error"
+export type SplitMode = "core" | "full"
+
+type SplitMethod = "trace" | "header"
+
+export interface PublicIpResult {
+  ip: string
+  location?: string
+  source: string
+}
 
 export interface SplitTarget {
   id: string
   label: string
   category: string
   url: string
+  core: boolean
+  method: SplitMethod
+  headerNames?: string[]
 }
 
 export interface SplitResult extends SplitTarget {
@@ -24,6 +36,7 @@ export interface DnsResolver {
 export interface DnsLeakResult {
   resolvers: DnsResolver[]
   complete: boolean
+  source: "same-origin" | "ip-api"
 }
 
 export interface WebRtcCandidate {
@@ -52,36 +65,78 @@ declare global {
   }
 }
 
+const traceTarget = (id: string, label: string, category: string, domain: string, core = false): SplitTarget => ({
+  id,
+  label,
+  category,
+  url: `https://${domain}/cdn-cgi/trace`,
+  core,
+  method: "trace",
+})
+
 const DEFAULT_SPLIT_TARGETS: SplitTarget[] = [
   {
-    id: "cloudflare-cn",
-    label: "Cloudflare 中国",
-    category: "中国站点",
-    url: "https://www.cloudflare-cn.com/cdn-cgi/trace",
+    id: "netease",
+    label: "网易",
+    category: "国内",
+    url: "https://necaptcha.nosdn.127.net/ab7f4275c1744aa28e0a8f3a1c58c532.png",
+    core: true,
+    method: "header",
+    headerNames: ["cdn-user-ip"],
   },
   {
-    id: "qualcomm-cn",
-    label: "高通中国",
-    category: "中国站点",
-    url: "https://www.qualcomm.cn/cdn-cgi/trace",
+    id: "bytedance",
+    label: "字节跳动",
+    category: "国内",
+    url: "https://perfops.byte-test.com/500b-bench.jpg",
+    core: true,
+    method: "header",
+    headerNames: ["x-request-ip", "x-response-cinfo"],
   },
-  {
-    id: "cloudflare-global",
-    label: "Cloudflare",
-    category: "国际站点",
-    url: "https://www.cloudflare.com/cdn-cgi/trace",
-  },
-  {
-    id: "chatgpt",
-    label: "ChatGPT",
-    category: "国际站点",
-    url: "https://chatgpt.com/cdn-cgi/trace",
-  },
+  traceTarget("cloudflare-cn", "Cloudflare 中国", "国内", "www.cloudflare-cn.com", true),
+  traceTarget("qualcomm-cn", "高通中国", "国内", "www.qualcomm.cn", true),
+  traceTarget("discord", "Discord", "社交与通讯", "gateway.discord.gg", true),
+  traceTarget("x", "X", "社交与通讯", "x.com"),
+  traceTarget("medium", "Medium", "社交与通讯", "medium.com"),
+  traceTarget("anthropic", "Anthropic", "AI", "anthropic.com"),
+  traceTarget("claude", "Claude", "AI", "claude.ai"),
+  traceTarget("chatgpt", "ChatGPT", "AI", "chatgpt.com", true),
+  traceTarget("openai", "OpenAI", "AI", "openai.com"),
+  traceTarget("sora", "Sora", "AI", "sora.com"),
+  traceTarget("grok", "Grok", "AI", "grok.com"),
+  traceTarget("pixpix", "PixPix", "AI", "pixpix.com"),
+  traceTarget("perplexity", "Perplexity", "AI", "www.perplexity.ai"),
+  traceTarget("midjourney", "Midjourney", "AI", "midjourney.com"),
+  traceTarget("coinbase", "Coinbase", "数字资产", "coinbase.com"),
+  traceTarget("okx", "OKX", "数字资产", "www.okx.com"),
+  traceTarget("binance", "Binance", "数字资产", "www.binance.info"),
+  traceTarget("crypto", "Crypto.com", "数字资产", "crypto.com"),
+  traceTarget("zoom", "Zoom", "办公与工具", "zoom.us"),
+  traceTarget("one-password", "1Password", "办公与工具", "1password.com"),
+  traceTarget("wise", "Wise", "办公与工具", "wise.com"),
+  traceTarget("notion", "Notion", "办公与工具", "notion.so"),
+  traceTarget("shopify", "Shopify", "办公与工具", "shopify.com"),
+  traceTarget("godaddy", "GoDaddy", "办公与工具", "godaddy.com"),
+  traceTarget("product-hunt", "Product Hunt", "办公与工具", "producthunt.com"),
+  traceTarget("cloudflare", "Cloudflare", "网络", "www.cloudflare.com", true),
+  traceTarget("cdnjs", "cdnjs", "开发与 CDN", "cdnjs.cloudflare.com"),
+  traceTarget("npm", "npm Registry", "开发与 CDN", "registry.npmjs.org", true),
+  traceTarget("kali", "Kali Download", "开发与 CDN", "kali.download"),
+  traceTarget("unpkg", "unpkg", "开发与 CDN", "unpkg.com"),
+  traceTarget("nodejs", "Node.js", "开发与 CDN", "nodejs.org"),
+  traceTarget("gitlab", "GitLab", "开发与 CDN", "gitlab.com"),
+  traceTarget("crunchyroll", "Crunchyroll", "流媒体", "crunchyroll.com"),
 ]
 
-const REQUEST_TIMEOUT = 7_000
-const MAX_CUSTOM_TARGETS = 12
-const DEFAULT_STUN_URLS = ["stun:stun.cloudflare.com:3478"]
+const REQUEST_TIMEOUT = 6_000
+const PUBLIC_IP_CACHE_TTL = 5 * 60_000
+const SPLIT_CACHE_TTL = 5 * 60_000
+const MAX_CUSTOM_TARGETS = 40
+const MAX_DNS_ROUNDS = 8
+const DEFAULT_STUN_URLS = ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478", "stun:stun1.l.google.com:19302"]
+
+let publicIpCache: { result: PublicIpResult; expiresAt: number } | null = null
+const splitCache = new Map<string, { result: SplitResult; expiresAt: number }>()
 
 function isSafeHttpsUrl(value: string) {
   try {
@@ -93,31 +148,95 @@ function isSafeHttpsUrl(value: string) {
 }
 
 function normaliseAddress(value: string) {
-  return value.trim().replace(/^\[|\]$/g, "").toLowerCase()
+  return value
+    .trim()
+    .replace(/^\[|\]$/g, "")
+    .toLowerCase()
+}
+
+function isIpv4Address(value: string) {
+  const parts = value.split(".").map(Number)
+  return parts.length === 4 && parts.every((part) => Number.isInteger(part) && part >= 0 && part <= 255)
+}
+
+function isIpv6Address(value: string) {
+  if (!/^[0-9a-f:.]+$/i.test(value) || value.length > 45) return false
+  const compressed = value.split("::")
+  if (compressed.length > 2) return false
+
+  let groupCount = 0
+  for (const [sectionIndex, section] of compressed.entries()) {
+    if (!section) continue
+    const groups = section.split(":")
+    for (const [groupIndex, group] of groups.entries()) {
+      if (group.includes(".")) {
+        if (sectionIndex !== compressed.length - 1 || groupIndex !== groups.length - 1 || !isIpv4Address(group)) return false
+        groupCount += 2
+      } else {
+        if (!/^[0-9a-f]{1,4}$/i.test(group)) return false
+        groupCount += 1
+      }
+    }
+  }
+
+  return compressed.length === 2 ? groupCount < 8 : groupCount === 8
+}
+
+function isIpAddress(value: string) {
+  const address = normaliseAddress(value)
+  if (address.includes(":")) return isIpv6Address(address)
+  return isIpv4Address(address)
+}
+
+function findIp(value: string | null) {
+  if (!value) return undefined
+  const matches = value.match(/(?:\d{1,3}\.){3}\d{1,3}|[0-9a-f]{0,4}:[0-9a-f:]+/gi) || []
+  return matches.map(normaliseAddress).find(isIpAddress)
+}
+
+function sanitiseText(value: unknown, maxLength: number) {
+  return typeof value === "string"
+    ? value
+        .replace(/<[^>]*>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, maxLength)
+    : undefined
 }
 
 function sanitiseSplitTargets(targets: NetworkDiagnosticsRuntimeConfig["splitTargets"]): SplitTarget[] {
   if (!Array.isArray(targets)) return []
 
   return targets.slice(0, MAX_CUSTOM_TARGETS).flatMap((target, index) => {
-    const label = target.label?.trim().slice(0, 36)
+    const label = sanitiseText(target.label, 36)
     const url = target.url?.trim()
     if (!label || !url || !isSafeHttpsUrl(url)) return []
 
     return [
       {
-        id: `${target.id?.trim().slice(0, 40) || "custom"}-${index + 1}`,
+        id: `${sanitiseText(target.id, 40) || "custom"}-${index + 1}`,
         label,
-        category: target.category?.trim().slice(0, 20) || "自定义站点",
+        category: sanitiseText(target.category, 20) || "自定义站点",
         url,
+        core: target.core !== false,
+        method: "trace" as const,
       },
     ]
   })
 }
 
-export function getSplitTargets() {
+export function getSplitTargets(mode: SplitMode = "full") {
   const configured = sanitiseSplitTargets(window.NetworkDiagnosticsConfig?.splitTargets)
-  return configured.length > 0 ? configured : DEFAULT_SPLIT_TARGETS
+  const targets = configured.length > 0 ? configured : DEFAULT_SPLIT_TARGETS
+  return mode === "core" ? targets.filter((target) => target.core) : targets
+}
+
+export function getCachedSplitResults() {
+  const now = Date.now()
+  return [...splitCache.values()].flatMap((entry) => {
+    if (entry.expiresAt <= now) return []
+    return [entry.result]
+  })
 }
 
 export function getDnsEndpoint() {
@@ -159,6 +278,65 @@ function withTimeout(parentSignal: AbortSignal, timeout = REQUEST_TIMEOUT) {
   }
 }
 
+async function fetchText(url: string, parentSignal: AbortSignal, init?: RequestInit) {
+  const request = withTimeout(parentSignal)
+  try {
+    const response = await fetch(url, {
+      cache: "no-store",
+      credentials: "omit",
+      referrerPolicy: "no-referrer",
+      ...init,
+      signal: request.signal,
+    })
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    return await response.text()
+  } finally {
+    request.dispose()
+  }
+}
+
+function parseIpCn(text: string): PublicIpResult | null {
+  const ip = findIp(text)
+  if (!ip) return null
+  const location = sanitiseText(text.match(/归属地[：:]\s*(.+)/)?.[1], 120)
+  return { ip, location, source: "IP.cn" }
+}
+
+function parseIp138(text: string): PublicIpResult | null {
+  const ip = findIp(text)
+  if (!ip) return null
+  const location = sanitiseText(text.match(/来自[：:]\s*([^<\r\n]+)/)?.[1], 120)
+  return { ip, location, source: "iP138.com" }
+}
+
+export function getCachedPublicIp() {
+  return publicIpCache && publicIpCache.expiresAt > Date.now() ? publicIpCache.result : null
+}
+
+export async function checkPublicIp(signal: AbortSignal, force = false): Promise<PublicIpResult> {
+  const cached = getCachedPublicIp()
+  if (!force && cached) return cached
+
+  const providers = [
+    { url: "https://my.ip.cn/", parse: parseIpCn },
+    { url: "https://2026.ip138.com/", parse: parseIp138 },
+  ]
+
+  for (const provider of providers) {
+    try {
+      const result = provider.parse((await fetchText(provider.url, signal)).slice(0, 16_384))
+      if (result) {
+        publicIpCache = { result, expiresAt: Date.now() + PUBLIC_IP_CACHE_TTL }
+        return result
+      }
+    } catch (error) {
+      if (signal.aborted) throw error
+    }
+  }
+
+  throw new Error("无法连接 IP 查询服务")
+}
+
 function parseTrace(text: string) {
   const fields = new Map(
     text
@@ -167,36 +345,47 @@ function parseTrace(text: string) {
       .map((line) => line.split(/=(.*)/s).slice(0, 2))
       .filter((pair): pair is [string, string] => pair.length === 2 && Boolean(pair[0])),
   )
-
-  const ip = fields.get("ip")?.trim().slice(0, 64)
+  const ip = normaliseAddress(fields.get("ip") || "")
   return {
-    ip: ip && /^[0-9a-f:.]+$/i.test(ip) ? ip : undefined,
-    location: fields.get("loc")?.trim().toUpperCase().slice(0, 8),
+    ip: isIpAddress(ip) ? ip : undefined,
+    location: sanitiseText(fields.get("loc")?.toUpperCase(), 8),
   }
 }
 
-export async function checkSplitTarget(target: SplitTarget, parentSignal: AbortSignal): Promise<SplitResult> {
-  const startedAt = performance.now()
-  const request = withTimeout(parentSignal)
+async function requestSplitTarget(target: SplitTarget, parentSignal: AbortSignal) {
+  if (target.method === "trace") return parseTrace(await fetchText(target.url, parentSignal))
 
+  const request = withTimeout(parentSignal)
   try {
     const response = await fetch(target.url, {
+      method: "HEAD",
       cache: "no-store",
       credentials: "omit",
       referrerPolicy: "no-referrer",
       signal: request.signal,
     })
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const ip = target.headerNames?.map((name) => findIp(response.headers.get(name))).find(Boolean)
+    return { ip }
+  } finally {
+    request.dispose()
+  }
+}
 
-    const trace = parseTrace(await response.text())
-    if (!trace.ip) throw new Error("响应中没有出口 IP")
+export async function checkSplitTarget(target: SplitTarget, parentSignal: AbortSignal): Promise<SplitResult> {
+  const startedAt = performance.now()
+  try {
+    const result = await requestSplitTarget(target, parentSignal)
+    if (!result.ip) throw new Error("响应中没有出口 IP")
 
-    return {
+    const completed: SplitResult = {
       ...target,
-      ...trace,
+      ...result,
       state: "success",
       duration: Math.round(performance.now() - startedAt),
     }
+    splitCache.set(target.id, { result: completed, expiresAt: Date.now() + SPLIT_CACHE_TTL })
+    return completed
   } catch (error) {
     if (parentSignal.aborted) throw error
     return {
@@ -205,16 +394,10 @@ export async function checkSplitTarget(target: SplitTarget, parentSignal: AbortS
       duration: Math.round(performance.now() - startedAt),
       message: error instanceof Error ? error.message : "请求失败",
     }
-  } finally {
-    request.dispose()
   }
 }
 
-export async function checkSplitTargets(
-  targets: SplitTarget[],
-  signal: AbortSignal,
-  onResult: (result: SplitResult) => void,
-) {
+export async function checkSplitTargets(targets: SplitTarget[], signal: AbortSignal, onResult: (result: SplitResult) => void) {
   const results = new Array<SplitResult>(targets.length)
   let nextIndex = 0
 
@@ -229,7 +412,8 @@ export async function checkSplitTargets(
     }
   }
 
-  await Promise.all(Array.from({ length: Math.min(2, targets.length) }, () => worker()))
+  const concurrency = targets.length > 12 ? 4 : 3
+  await Promise.all(Array.from({ length: Math.min(concurrency, targets.length) }, () => worker()))
   return results.filter(Boolean)
 }
 
@@ -275,11 +459,11 @@ function wait(duration: number, signal: AbortSignal) {
 
 type DnsStartResponse = { sessionId: string; probeUrls?: string[] }
 
-export async function checkDnsLeak(endpoint: string, signal: AbortSignal): Promise<DnsLeakResult> {
-  const started = await postJson<DnsStartResponse>(endpoint, { action: "start" }, signal)
+async function checkSameOriginDnsLeak(endpoint: string, rounds: number, signal: AbortSignal): Promise<DnsLeakResult> {
+  const started = await postJson<DnsStartResponse>(endpoint, { action: "start", rounds }, signal)
   if (!started.sessionId) throw new Error("DNS 检测服务未返回会话标识")
 
-  const probeUrls = (started.probeUrls || []).filter(isSafeHttpsUrl).slice(0, 8)
+  const probeUrls = (started.probeUrls || []).filter(isSafeHttpsUrl).slice(0, rounds)
   await Promise.allSettled(
     probeUrls.map(async (url) => {
       const request = withTimeout(signal, 3_000)
@@ -293,32 +477,72 @@ export async function checkDnsLeak(endpoint: string, signal: AbortSignal): Promi
 
   for (let attempt = 0; attempt < 4; attempt += 1) {
     if (attempt > 0) await wait(700, signal)
-    const result = await postJson<DnsLeakResult>(endpoint, { action: "result", sessionId: started.sessionId }, signal)
+    const result = await postJson<{ resolvers?: DnsResolver[]; complete?: boolean }>(
+      endpoint,
+      { action: "result", sessionId: started.sessionId },
+      signal,
+    )
     if (result.complete || result.resolvers?.length) {
       const resolvers = Array.isArray(result.resolvers)
         ? result.resolvers.slice(0, 12).flatMap((resolver) => {
-            const ip = typeof resolver?.ip === "string" ? resolver.ip.trim().slice(0, 64) : ""
-            if (!ip || !/^[0-9a-f:.]+$/i.test(ip)) return []
+            const ip = typeof resolver?.ip === "string" ? normaliseAddress(resolver.ip).slice(0, 64) : ""
+            if (!isIpAddress(ip)) return []
             return [
               {
                 ip,
-                provider: typeof resolver.provider === "string" ? resolver.provider.trim().slice(0, 80) : undefined,
-                location: typeof resolver.location === "string" ? resolver.location.trim().slice(0, 80) : undefined,
+                provider: sanitiseText(resolver.provider, 80),
+                location: sanitiseText(resolver.location, 80),
               },
             ]
           })
         : []
-      return { resolvers, complete: Boolean(result.complete) }
+      return { resolvers, complete: Boolean(result.complete), source: "same-origin" }
     }
   }
 
-  return { resolvers: [], complete: false }
+  return { resolvers: [], complete: false, source: "same-origin" }
+}
+
+async function checkIpApiDnsLeak(rounds: number, signal: AbortSignal): Promise<DnsLeakResult> {
+  const resolvers = new Map<string, DnsResolver>()
+  let nextIndex = 0
+
+  async function worker() {
+    while (!signal.aborted) {
+      const index = nextIndex++
+      if (index >= rounds) return
+      const token = crypto.randomUUID().replace(/-/g, "")
+      try {
+        const text = await fetchText(`https://${token}.edns.ip-api.com/json`, signal)
+        const data = JSON.parse(text.slice(0, 8_192)) as { dns?: { ip?: unknown; geo?: unknown } }
+        const ip = typeof data.dns?.ip === "string" ? normaliseAddress(data.dns.ip) : ""
+        if (!isIpAddress(ip)) continue
+        const geo = sanitiseText(data.dns?.geo, 120)
+        const parts = geo?.split(/\s+-\s+/) || []
+        resolvers.set(ip, {
+          ip,
+          location: parts[0] || geo,
+          provider: parts.slice(1).join(" - ") || undefined,
+        })
+      } catch (error) {
+        if (signal.aborted) throw error
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(2, rounds) }, () => worker()))
+  return { resolvers: [...resolvers.values()].slice(0, 12), complete: true, source: "ip-api" }
+}
+
+export function checkDnsLeak(endpoint: string | null, rounds: number, signal: AbortSignal) {
+  const safeRounds = Math.max(1, Math.min(MAX_DNS_ROUNDS, Math.floor(rounds)))
+  return endpoint ? checkSameOriginDnsLeak(endpoint, safeRounds, signal) : checkIpApiDnsLeak(safeRounds, signal)
 }
 
 function isPrivateAddress(value: string) {
   const address = normaliseAddress(value)
   if (address.endsWith(".local")) return true
-  if (address === "::1" || address.startsWith("fe80:") || address.startsWith("fc") || address.startsWith("fd")) return true
+  if (address === "::" || address === "::1" || address.startsWith("fe80:") || address.startsWith("fc") || address.startsWith("fd")) return true
 
   const parts = address.split(".").map(Number)
   if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false
@@ -334,7 +558,7 @@ function isPrivateAddress(value: string) {
 function parseCandidate(candidate: RTCIceCandidate): WebRtcCandidate | null {
   const fields = candidate.candidate.split(/\s+/)
   const address = normaliseAddress(candidate.address || fields[4] || "")
-  if (!address) return null
+  if (!address || (!isIpAddress(address) && !address.endsWith(".local"))) return null
   const typeIndex = fields.indexOf("typ")
 
   return {
@@ -374,7 +598,7 @@ export async function checkWebRtcLeak(baselineAddresses: string[] | Promise<stri
         if (parsed) candidates.set(`${parsed.address}-${parsed.protocol}-${parsed.type}`, parsed)
       }
       peer.onicecandidateerror = () => {
-        // Some networks block UDP. The timeout path still returns a useful neutral result.
+        // UDP may be blocked. The timeout still returns a useful neutral result.
       }
       if (signal.aborted) abort()
       else signal.addEventListener("abort", abort, { once: true })
@@ -401,7 +625,7 @@ export async function checkWebRtcLeak(baselineAddresses: string[] | Promise<stri
       publicAddresses,
       message: exposesPrivateAddress
         ? "未取得公网 UDP 出口，但浏览器暴露了局域网地址。"
-        : "未发现可对比的公网候选，WebRTC 可能已受保护或当前网络阻止了 UDP。",
+        : "未发现公网候选。WebRTC 可能受到保护，或当前网络阻止了 UDP。",
     }
   }
 
@@ -411,9 +635,9 @@ export async function checkWebRtcLeak(baselineAddresses: string[] | Promise<stri
     candidates: list,
     publicAddresses,
     message: hasDifferentExit
-      ? "WebRTC 的 UDP 出口与网页出口不同，可能是预期分流，也可能存在泄露，请结合代理规则判断。"
+      ? "WebRTC 的 UDP 出口与网页出口不同，请结合代理规则判断是否泄露。"
       : baseline.size > 0
         ? "WebRTC 的公网 UDP 出口与网页出口一致。"
-        : "已取得 WebRTC 公网 UDP 出口，请先运行 IP 分流以进行对比。",
+        : "已取得 WebRTC 公网 UDP 出口，请先查询我的 IP 以进行对比。",
   }
 }

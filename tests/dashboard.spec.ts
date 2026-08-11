@@ -482,9 +482,42 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await screenshot(page, testInfo, "not-found-mobile.png")
 })
 
-test("network diagnostics only contacts test services after user action", async ({ page }, testInfo) => {
+test("network diagnostics keeps expensive checks manual and renders all four test sections", async ({ page }, testInfo) => {
   await mockBackend(page)
+  let publicIpRequests = 0
+  let fallbackIpRequests = 0
   let traceRequests = 0
+  let headerRequests = 0
+  let dnsRequests = 0
+
+  await page.route("https://my.ip.cn/", async (route) => {
+    publicIpRequests += 1
+    await route.fulfill({
+      status: 200,
+      contentType: "text/plain; charset=utf-8",
+      headers: { "Access-Control-Allow-Origin": "*" },
+      body: "ip：198.51.100.88 归属地：美国 加利福尼亚 TestNet",
+    })
+  })
+
+  await page.route("https://2026.ip138.com/", async (route) => {
+    fallbackIpRequests += 1
+    await route.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: "<p>您的IP是：198.51.100.88 来自：美国</p>" })
+  })
+
+  await page.route(/https:\/\/(?:necaptcha\.nosdn\.127\.net|perfops\.byte-test\.com)\/.+/, async (route) => {
+    headerRequests += 1
+    const isNetease = new URL(route.request().url()).hostname.startsWith("necaptcha")
+    await route.fulfill({
+      status: 200,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Expose-Headers": "*",
+        [isNetease ? "cdn-user-ip" : "x-request-ip"]: "198.51.100.10",
+      },
+      body: "",
+    })
+  })
 
   await page.route("**/cdn-cgi/trace", async (route) => {
     traceRequests += 1
@@ -498,6 +531,21 @@ test("network diagnostics only contacts test services after user action", async 
     })
   })
 
+  await page.route(/https:\/\/[a-f0-9]+\.edns\.ip-api\.com\/json/, async (route) => {
+    dnsRequests += 1
+    const isChinaResolver = dnsRequests % 2 === 1
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json; charset=utf-8",
+      headers: { "Access-Control-Allow-Origin": "*" },
+      body: JSON.stringify({
+        dns: isChinaResolver
+          ? { ip: "125.64.134.133", geo: "China - China Telecom" }
+          : { ip: "203.0.113.53", geo: "Singapore - Example Resolver" },
+      }),
+    })
+  })
+
   await page.goto("/")
   const networkLink = page.getByRole("link", { name: "IP 分流与泄露检测" })
   await expect(networkLink).toBeVisible()
@@ -506,21 +554,41 @@ test("network diagnostics only contacts test services after user action", async 
   await networkLink.click()
   await expect(page).toHaveURL(/\/network$/)
   await expect(page.getByRole("heading", { name: "网络与 IP 分流检测" })).toBeVisible()
-  await expect(page.getByText("尚未配置同源检测服务")).toBeVisible()
-  await expect(page.getByRole("button", { name: "检测 DNS" })).toBeDisabled()
+  await expect(page.getByRole("heading", { name: "我的 IP" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "网站分流测试" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "DNS 泄露测试" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "WebRTC 泄露测试" })).toBeVisible()
+  await expect(page.getByText("198.51.100.88", { exact: true })).toBeVisible()
+  await expect(page.getByText("核心检测 8 个站点，完整检测 35 个站点")).toBeVisible()
+  expect(publicIpRequests).toBe(1)
+  expect(fallbackIpRequests).toBe(0)
   expect(traceRequests).toBe(0)
+  expect(headerRequests).toBe(0)
+  expect(dnsRequests).toBe(0)
 
-  await page.getByRole("button", { name: "检测分流" }).evaluate((button) => {
+  await page.getByRole("button", { name: "核心检测" }).evaluate((button) => {
     button.click()
     button.click()
   })
-  await expect(page.getByText("发现 2 个出口，当前存在分流")).toBeVisible()
-  await expect(page.locator(".network-diagnostics__split-row .network-diagnostics__status--success")).toHaveCount(4)
-  expect(traceRequests).toBe(4)
+  await expect(page.getByText("检测到 2 个出口 IP")).toBeVisible()
+  await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__table-row")).toHaveCount(8)
+  expect(traceRequests).toBe(6)
+  expect(headerRequests).toBe(2)
+
+  await page.getByRole("button", { name: "快速测试" }).click()
+  await expect(page.getByText("网页出口位于境外，但检测到了中国大陆 DNS 解析器，请核对代理规则。")).toBeVisible()
+  await expect(page.locator(".network-diagnostics__table--dns .network-diagnostics__table-row")).toHaveCount(2)
+  expect(dnsRequests).toBe(5)
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "network-diagnostics-desktop.png")
 
   await page.setViewportSize({ width: 390, height: 844 })
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "network-diagnostics-mobile.png")
+
+  await page.getByRole("button", { name: "完整检测" }).click()
+  await expect(page.getByRole("button", { name: "完整检测" })).toBeEnabled()
+  await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__table-row")).toHaveCount(35)
+  expect(traceRequests).toBe(39)
+  expect(headerRequests).toBe(4)
 })
