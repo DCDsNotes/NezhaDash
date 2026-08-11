@@ -14,6 +14,7 @@ export interface SplitTarget {
   label: string
   category: string
   url: string
+  logoUrl: string
   core: boolean
   method: SplitMethod
   headerNames?: string[]
@@ -22,6 +23,7 @@ export interface SplitTarget {
 export interface SplitResult extends SplitTarget {
   state: Exclude<DiagnosticState, "warning">
   ip?: string
+  countryCode?: string
   location?: string
   duration?: number
   message?: string
@@ -65,11 +67,14 @@ declare global {
   }
 }
 
-const traceTarget = (id: string, label: string, category: string, domain: string, core = false): SplitTarget => ({
+const getSiteLogoUrl = (domain: string) => `https://icons.duckduckgo.com/ip3/${domain}.ico`
+
+const traceTarget = (id: string, label: string, category: string, domain: string, core = false, logoDomain = domain): SplitTarget => ({
   id,
   label,
   category,
   url: `https://${domain}/cdn-cgi/trace`,
+  logoUrl: getSiteLogoUrl(logoDomain),
   core,
   method: "trace",
 })
@@ -80,6 +85,7 @@ const DEFAULT_SPLIT_TARGETS: SplitTarget[] = [
     label: "网易",
     category: "国内",
     url: "https://necaptcha.nosdn.127.net/ab7f4275c1744aa28e0a8f3a1c58c532.png",
+    logoUrl: getSiteLogoUrl("www.163.com"),
     core: true,
     method: "header",
     headerNames: ["cdn-user-ip"],
@@ -89,13 +95,14 @@ const DEFAULT_SPLIT_TARGETS: SplitTarget[] = [
     label: "字节跳动",
     category: "国内",
     url: "https://perfops.byte-test.com/500b-bench.jpg",
+    logoUrl: getSiteLogoUrl("www.bytedance.com"),
     core: true,
     method: "header",
     headerNames: ["x-request-ip", "x-response-cinfo"],
   },
   traceTarget("cloudflare-cn", "Cloudflare 中国", "国内", "www.cloudflare-cn.com", true),
   traceTarget("qualcomm-cn", "高通中国", "国内", "www.qualcomm.cn", true),
-  traceTarget("discord", "Discord", "社交与通讯", "gateway.discord.gg", true),
+  traceTarget("discord", "Discord", "社交与通讯", "gateway.discord.gg", true, "discord.com"),
   traceTarget("x", "X", "社交与通讯", "x.com"),
   traceTarget("medium", "Medium", "社交与通讯", "medium.com"),
   traceTarget("anthropic", "Anthropic", "AI", "anthropic.com"),
@@ -119,8 +126,8 @@ const DEFAULT_SPLIT_TARGETS: SplitTarget[] = [
   traceTarget("godaddy", "GoDaddy", "办公与工具", "godaddy.com"),
   traceTarget("product-hunt", "Product Hunt", "办公与工具", "producthunt.com"),
   traceTarget("cloudflare", "Cloudflare", "网络", "www.cloudflare.com", true),
-  traceTarget("cdnjs", "cdnjs", "开发与 CDN", "cdnjs.cloudflare.com"),
-  traceTarget("npm", "npm Registry", "开发与 CDN", "registry.npmjs.org", true),
+  traceTarget("cdnjs", "cdnjs", "开发与 CDN", "cdnjs.cloudflare.com", false, "cdnjs.com"),
+  traceTarget("npm", "npm Registry", "开发与 CDN", "registry.npmjs.org", true, "www.npmjs.com"),
   traceTarget("kali", "Kali Download", "开发与 CDN", "kali.download"),
   traceTarget("unpkg", "unpkg", "开发与 CDN", "unpkg.com"),
   traceTarget("nodejs", "Node.js", "开发与 CDN", "nodejs.org"),
@@ -131,12 +138,15 @@ const DEFAULT_SPLIT_TARGETS: SplitTarget[] = [
 const REQUEST_TIMEOUT = 6_000
 const PUBLIC_IP_CACHE_TTL = 5 * 60_000
 const SPLIT_CACHE_TTL = 5 * 60_000
+const IP_GEOGRAPHY_CACHE_TTL = 24 * 60 * 60_000
 const MAX_CUSTOM_TARGETS = 40
 const MAX_DNS_ROUNDS = 8
 const DEFAULT_STUN_URLS = ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478", "stun:stun1.l.google.com:19302"]
 
 let publicIpCache: { result: PublicIpResult; expiresAt: number } | null = null
 const splitCache = new Map<string, { result: SplitResult; expiresAt: number }>()
+const ipGeographyCache = new Map<string, { result: Pick<SplitResult, "countryCode" | "location">; expiresAt: number }>()
+const ipGeographyTasks = new Map<string, Promise<Pick<SplitResult, "countryCode" | "location">>>()
 
 function isSafeHttpsUrl(value: string) {
   try {
@@ -218,6 +228,7 @@ function sanitiseSplitTargets(targets: NetworkDiagnosticsRuntimeConfig["splitTar
         label,
         category: sanitiseText(target.category, 20) || "自定义站点",
         url,
+        logoUrl: getSiteLogoUrl(new URL(url).hostname),
         core: target.core !== false,
         method: "trace" as const,
       },
@@ -346,9 +357,53 @@ function parseTrace(text: string) {
       .filter((pair): pair is [string, string] => pair.length === 2 && Boolean(pair[0])),
   )
   const ip = normaliseAddress(fields.get("ip") || "")
+  const countryCode = sanitiseText(fields.get("loc")?.toUpperCase(), 2)
   return {
     ip: isIpAddress(ip) ? ip : undefined,
-    location: sanitiseText(fields.get("loc")?.toUpperCase(), 8),
+    countryCode: countryCode && /^[A-Z]{2}$/.test(countryCode) ? countryCode : undefined,
+    location: countryCode,
+  }
+}
+
+async function lookupIpGeography(ip: string, signal: AbortSignal) {
+  const cached = ipGeographyCache.get(ip)
+  if (cached && cached.expiresAt > Date.now()) return cached.result
+  const running = ipGeographyTasks.get(ip)
+  if (running) return running
+
+  const task = (async () => {
+    try {
+      const text = await fetchText(`https://ipwho.is/${encodeURIComponent(ip)}?fields=success,country,country_code,region,city`, signal)
+      const data = JSON.parse(text.slice(0, 2_048)) as {
+        success?: unknown
+        country?: unknown
+        country_code?: unknown
+        region?: unknown
+        city?: unknown
+      }
+      if (data.success !== true) return {}
+
+      const countryCode = sanitiseText(data.country_code, 2)?.toUpperCase()
+      const location = [data.country, data.region, data.city]
+        .map((value) => sanitiseText(value, 48))
+        .filter(Boolean)
+        .join(" / ")
+      const result = {
+        countryCode: countryCode && /^[A-Z]{2}$/.test(countryCode) ? countryCode : undefined,
+        location: sanitiseText(location, 120),
+      }
+      ipGeographyCache.set(ip, { result, expiresAt: Date.now() + IP_GEOGRAPHY_CACHE_TTL })
+      return result
+    } catch (error) {
+      if (signal.aborted) throw error
+      return {}
+    }
+  })()
+  ipGeographyTasks.set(ip, task)
+  try {
+    return await task
+  } finally {
+    if (ipGeographyTasks.get(ip) === task) ipGeographyTasks.delete(ip)
   }
 }
 
@@ -366,7 +421,7 @@ async function requestSplitTarget(target: SplitTarget, parentSignal: AbortSignal
     })
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const ip = target.headerNames?.map((name) => findIp(response.headers.get(name))).find(Boolean)
-    return { ip }
+    return ip ? { ip, ...(await lookupIpGeography(ip, parentSignal)) } : { ip }
   } finally {
     request.dispose()
   }

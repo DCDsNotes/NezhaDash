@@ -1,3 +1,4 @@
+import ServerFlag from "@/components/ServerFlag"
 import {
   type DiagnosticState,
   type DnsLeakResult,
@@ -130,6 +131,49 @@ function EmptyResult({ children }: { children: React.ReactNode }) {
   return <div className="network-diagnostics__empty">{children}</div>
 }
 
+function SiteLogo({ label, logoUrl, fallbackUrl, ready }: { label: string; logoUrl?: string; fallbackUrl?: string; ready: boolean }) {
+  return (
+    <span className="network-diagnostics__site-logo" aria-hidden="true">
+      <span>{label.slice(0, 1).toUpperCase()}</span>
+      {ready && logoUrl ? (
+        <img
+          src={logoUrl}
+          alt=""
+          width="22"
+          height="22"
+          loading="lazy"
+          decoding="async"
+          fetchPriority="low"
+          referrerPolicy="no-referrer"
+          onError={(event) => {
+            if (fallbackUrl && event.currentTarget.dataset.fallback !== "true") {
+              event.currentTarget.dataset.fallback = "true"
+              event.currentTarget.src = fallbackUrl
+              return
+            }
+            event.currentTarget.hidden = true
+          }}
+        />
+      ) : null}
+    </span>
+  )
+}
+
+function getOriginFavicon(url: string) {
+  try {
+    return `${new URL(url).origin}/favicon.ico`
+  } catch {
+    return undefined
+  }
+}
+
+function CountryFlag({ countryCode }: { countryCode?: string }) {
+  if (!countryCode || !/^[A-Z]{2}$/i.test(countryCode)) {
+    return <i className="ri-global-line network-diagnostics__country-placeholder" aria-hidden="true" />
+  }
+  return <ServerFlag country_code={countryCode} className="network-diagnostics__country-flag" />
+}
+
 function WebRtcStatus({ candidate, baseline }: { candidate: WebRtcCandidate; baseline: Set<string> }) {
   if (candidate.address.endsWith(".local")) return <StatusLabel state="success">地址已保护</StatusLabel>
   if (candidate.private) return <StatusLabel state="warning">可能泄露</StatusLabel>
@@ -183,7 +227,7 @@ export default function NetworkDiagnostics() {
       setPublicIp((current) => ({ state: "running", result: current.result }))
       try {
         const result = await runAbortable((signal) => checkPublicIp(signal, force))
-        setPublicIp({ state: "success", result, message: `数据来源：${result.source}` })
+        setPublicIp({ state: "success", result, message: "查询完成" })
         return result
       } catch (error) {
         setPublicIp((current) => ({ state: "error", result: current.result, message: getErrorMessage(error, "IP 查询失败") }))
@@ -281,7 +325,19 @@ export default function NetworkDiagnostics() {
 
   const completedSplitResults = splitResults.filter((result) => result.state === "success" || result.state === "error")
   const successfulSplitResults = splitResults.filter((result) => result.state === "success")
-  const uniqueSplitIps = [...new Set(successfulSplitResults.flatMap((result) => (result.ip ? [result.ip] : [])))]
+  const splitExits = [
+    ...successfulSplitResults
+      .reduce((exits, result) => {
+        if (!result.ip) return exits
+        const existing = exits.get(result.ip)
+        if (!existing || (!existing.countryCode && result.countryCode)) {
+          exits.set(result.ip, { ip: result.ip, countryCode: result.countryCode })
+        }
+        return exits
+      }, new Map<string, { ip: string; countryCode?: string }>())
+      .values(),
+  ]
+  const uniqueSplitIps = splitExits.map((exit) => exit.ip)
   const splitState: DiagnosticState = splitRunning
     ? "running"
     : splitResults.length === 0
@@ -332,7 +388,7 @@ export default function NetworkDiagnostics() {
       <DiagnosticSection
         id="public-ip-title"
         title="我的 IP"
-        description="查询当前网页连接使用的 IPv4 地址、归属地和数据来源。"
+        description="查询当前网页连接使用的 IPv4 地址和归属地。"
         status={
           <StatusLabel state={publicIp.state}>{publicIp.state === "running" ? "正在查询" : publicIp.message || "进入页面后自动查询一次"}</StatusLabel>
         }
@@ -361,10 +417,6 @@ export default function NetworkDiagnostics() {
                 <dt>归属地</dt>
                 <dd>{publicIp.result.location || "未知"}</dd>
               </div>
-              <div>
-                <dt>查询服务</dt>
-                <dd>{publicIp.result.source}</dd>
-              </div>
             </dl>
           </div>
         ) : publicIp.state === "running" ? (
@@ -392,14 +444,22 @@ export default function NetworkDiagnostics() {
             </ActionButton>
           </>
         }
-        footer={<p>完整检测包含参考站的 {allTargets.length} 个站点，仅在点击后发起请求。地区代码由测试站点返回，不额外查询地理位置。</p>}
+        footer={
+          <p>
+            完整检测包含参考站的 {allTargets.length} 个站点，仅在点击后发起请求。站点图标通过 DuckDuckGo 按需加载；仅对未返回国家代码的出口使用
+            ipwho.is 补充查询，相同 IP 缓存 24 小时。
+          </p>
+        }
       >
         {uniqueSplitIps.length > 0 ? (
           <div className="network-diagnostics__exit-summary">
             <span>分流出口 IP 汇总</span>
             <div>
-              {uniqueSplitIps.map((ip) => (
-                <code key={ip}>{maskIp ? maskAddress(ip) : ip}</code>
+              {splitExits.map((exit) => (
+                <span className="network-diagnostics__exit" key={exit.ip}>
+                  <CountryFlag countryCode={exit.countryCode} />
+                  <code>{maskIp ? maskAddress(exit.ip) : exit.ip}</code>
+                </span>
               ))}
             </div>
           </div>
@@ -415,13 +475,24 @@ export default function NetworkDiagnostics() {
             </div>
             {splitResults.map((result) => (
               <div className="network-diagnostics__table-row" role="row" key={result.id}>
-                <strong role="cell">{result.label}</strong>
+                <div className="network-diagnostics__site" role="cell">
+                  <SiteLogo
+                    label={result.label}
+                    logoUrl={result.logoUrl}
+                    fallbackUrl={getOriginFavicon(result.url)}
+                    ready={result.state !== "running"}
+                  />
+                  <strong>{result.label}</strong>
+                </div>
                 <span role="cell" data-label="类型">
                   {result.category}
                 </span>
-                <code role="cell" data-label="出口 IP">
-                  {result.ip ? (maskIp ? maskAddress(result.ip) : result.ip) : result.state === "running" ? "检测中" : "-"}
-                </code>
+                <div className="network-diagnostics__address" role="cell" data-label="出口 IP">
+                  <span>
+                    {result.ip ? <CountryFlag countryCode={result.countryCode} /> : null}
+                    <code>{result.ip ? (maskIp ? maskAddress(result.ip) : result.ip) : result.state === "running" ? "检测中" : "-"}</code>
+                  </span>
+                </div>
                 <span role="cell" data-label="地区">
                   {result.location || "-"}
                 </span>

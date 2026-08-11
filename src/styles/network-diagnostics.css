@@ -242,7 +242,7 @@
 }
 
 .network-diagnostics__ip-result dl {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
 }
 
@@ -305,6 +305,66 @@
   color: var(--probe-text-secondary);
   font-size: 11px;
   overflow-wrap: anywhere;
+}
+
+.network-diagnostics__exit,
+.network-diagnostics__site,
+.network-diagnostics__address > span {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.network-diagnostics__exit,
+.network-diagnostics__address > span {
+  gap: 6px;
+}
+
+.network-diagnostics__site {
+  gap: 9px;
+}
+
+.network-diagnostics__site-logo {
+  position: relative;
+  display: inline-grid;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--probe-border-soft);
+  border-radius: var(--probe-radius);
+  background: var(--probe-surface-subtle);
+  color: var(--probe-text-muted);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.network-diagnostics__site-logo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--probe-surface);
+  object-fit: contain;
+}
+
+.network-diagnostics__country-flag.server-flag,
+.network-diagnostics__country-placeholder {
+  width: 18px;
+  height: 14px;
+  flex: 0 0 18px;
+  font-size: 14px;
+  line-height: 14px;
+}
+
+.network-diagnostics__country-placeholder {
+  color: var(--probe-text-muted);
+  text-align: center;
+}
+
+.network-diagnostics__address {
+  min-width: 0;
 }
 
 .network-diagnostics__table {

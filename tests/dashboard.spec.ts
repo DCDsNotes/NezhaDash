@@ -489,6 +489,7 @@ test("network diagnostics keeps expensive checks manual and renders all four tes
   let traceRequests = 0
   let headerRequests = 0
   let dnsRequests = 0
+  let geographyRequests = 0
 
   await page.route("https://my.ip.cn/", async (route) => {
     publicIpRequests += 1
@@ -531,6 +532,24 @@ test("network diagnostics keeps expensive checks manual and renders all four tes
     })
   })
 
+  await page.route(/https:\/\/ipwho\.is\/.+/, async (route) => {
+    geographyRequests += 1
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json; charset=utf-8",
+      headers: { "Access-Control-Allow-Origin": "*" },
+      body: JSON.stringify({ success: true, country: "China", country_code: "CN", region: "Sichuan", city: "Chengdu" }),
+    })
+  })
+
+  await page.route("https://icons.duckduckgo.com/**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "image/gif",
+      body: Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64"),
+    })
+  })
+
   await page.route(/https:\/\/[a-f0-9]+\.edns\.ip-api\.com\/json/, async (route) => {
     dnsRequests += 1
     const isChinaResolver = dnsRequests % 2 === 1
@@ -539,9 +558,7 @@ test("network diagnostics keeps expensive checks manual and renders all four tes
       contentType: "application/json; charset=utf-8",
       headers: { "Access-Control-Allow-Origin": "*" },
       body: JSON.stringify({
-        dns: isChinaResolver
-          ? { ip: "125.64.134.133", geo: "China - China Telecom" }
-          : { ip: "203.0.113.53", geo: "Singapore - Example Resolver" },
+        dns: isChinaResolver ? { ip: "125.64.134.133", geo: "China - China Telecom" } : { ip: "203.0.113.53", geo: "Singapore - Example Resolver" },
       }),
     })
   })
@@ -559,6 +576,8 @@ test("network diagnostics keeps expensive checks manual and renders all four tes
   await expect(page.getByRole("heading", { name: "DNS 泄露测试" })).toBeVisible()
   await expect(page.getByRole("heading", { name: "WebRTC 泄露测试" })).toBeVisible()
   await expect(page.getByText("198.51.100.88", { exact: true })).toBeVisible()
+  await expect(page.getByText("查询服务")).toHaveCount(0)
+  await expect(page.getByText(/数据来源/)).toHaveCount(0)
   await expect(page.getByText("核心检测 8 个站点，完整检测 35 个站点")).toBeVisible()
   expect(publicIpRequests).toBe(1)
   expect(fallbackIpRequests).toBe(0)
@@ -572,8 +591,11 @@ test("network diagnostics keeps expensive checks manual and renders all four tes
   })
   await expect(page.getByText("检测到 2 个出口 IP")).toBeVisible()
   await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__table-row")).toHaveCount(8)
+  await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__site-logo img")).toHaveCount(8)
+  await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__country-flag")).toHaveCount(8)
   expect(traceRequests).toBe(6)
   expect(headerRequests).toBe(2)
+  expect(geographyRequests).toBe(1)
 
   await page.getByRole("button", { name: "快速测试" }).click()
   await expect(page.getByText("网页出口位于境外，但检测到了中国大陆 DNS 解析器，请核对代理规则。")).toBeVisible()
