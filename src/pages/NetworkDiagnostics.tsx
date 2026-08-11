@@ -23,6 +23,7 @@ import {
   checkPublicIp,
   checkSplitTargets,
   checkWebRtcLeak,
+  formatGeolocation,
   getCachedPublicIp,
   getCachedSplitResults,
   getDnsEndpoint,
@@ -121,10 +122,9 @@ type DiagnosticBlockProps = {
   status: React.ReactNode
   actions: React.ReactNode
   children: React.ReactNode
-  footer?: React.ReactNode
 }
 
-function DiagnosticBlock({ className, id, title, description, status, actions, children, footer }: DiagnosticBlockProps & { className: string }) {
+function DiagnosticBlock({ className, id, title, description, status, actions, children }: DiagnosticBlockProps & { className: string }) {
   return (
     <section className={className} aria-labelledby={id}>
       <header className="network-diagnostics__section-header">
@@ -136,7 +136,6 @@ function DiagnosticBlock({ className, id, title, description, status, actions, c
         <div className="network-diagnostics__section-actions">{actions}</div>
       </header>
       {children}
-      {footer ? <footer className="network-diagnostics__section-footer">{footer}</footer> : null}
     </section>
   )
 }
@@ -671,12 +670,6 @@ export default function NetworkDiagnostics() {
                 </ActionButton>
               </>
             }
-            footer={
-              <p>
-                完整检测包含参考站的 {allTargets.length} 个站点，仅在点击后发起请求。站点图标通过 DuckDuckGo 按需加载；仅对未返回国家代码的出口使用
-                ipwho.is 补充查询，相同 IP 缓存 24 小时。Google 定位项通过 Google Public DNS 返回的匿名出口网段判断，不代表账号、设备或搜索偏好定位。
-              </p>
-            }
           >
             {uniqueSplitIps.length > 0 ? (
               <div className="network-diagnostics__exit-summary">
@@ -721,7 +714,7 @@ export default function NetworkDiagnostics() {
                       </span>
                     </div>
                     <span role="cell" data-label="Geolocation">
-                      {result.location || "-"}
+                      {formatGeolocation(result.location, result.countryCode) || "-"}
                     </span>
                     <span role="cell" data-label="状态">
                       <SplitResultStatus result={result} />
@@ -743,12 +736,6 @@ export default function NetworkDiagnostics() {
               <ActionButton onClick={() => void runConnectivity()} disabled={connectivityRunning} primary>
                 {completedConnectivityResults.length > 0 ? "重新测试" : "开始测试"}
               </ActionButton>
-            }
-            footer={
-              <p>
-                每个站点执行 {CONNECTIVITY_PROBE_ROUNDS}{" "}
-                轮轻量请求并取中位数。测试只在当前浏览器发起，不经过探针服务器；超时通常表示站点被当前网络阻止或线路不可达。
-              </p>
             }
           >
             <div className="network-diagnostics__connectivity-legend" aria-label="延迟分级">
@@ -798,13 +785,6 @@ export default function NetworkDiagnostics() {
                   </ActionButton>
                 </>
               }
-              footer={
-                <p>
-                  {dnsEndpoint
-                    ? "当前使用站点配置的同源 DNS 检测服务。"
-                    : "当前使用 ip-api.com EDNS 公共检测服务，仅限非商业使用。该服务会看到本次测试的 DNS 查询和网页出口 IP。"}
-                </p>
-              }
             >
               {dns.result?.resolvers.length ? (
                 <div className="network-diagnostics__table network-diagnostics__table--dns" role="table" aria-label="DNS 泄露检测结果">
@@ -853,7 +833,6 @@ export default function NetworkDiagnostics() {
                   {webRtc.result ? "重新检测" : "开始检测"}
                 </ActionButton>
               }
-              footer={<p>公网 UDP 地址会与我的 IP 和网站分流结果对比。不同出口可能是预期分流，也可能表示 UDP 未被代理接管。</p>}
             >
               {webRtc.result?.candidates.length ? (
                 <div className="network-diagnostics__table network-diagnostics__table--webrtc" role="table" aria-label="WebRTC 泄露检测结果">

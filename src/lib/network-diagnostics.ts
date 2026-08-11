@@ -158,6 +158,40 @@ const splitCache = new Map<string, { result: SplitResult; expiresAt: number }>()
 const ipGeographyCache = new Map<string, { result: Pick<SplitResult, "countryCode" | "location">; expiresAt: number }>()
 const ipGeographyTasks = new Map<string, Promise<Pick<SplitResult, "countryCode" | "location">>>()
 
+type RegionNames = { of: (countryCode: string) => string | undefined }
+type IntlWithDisplayNames = typeof Intl & {
+  DisplayNames?: new (locales: string | string[], options: { type: "region" }) => RegionNames
+}
+
+const regionNames = (() => {
+  try {
+    const DisplayNames = (Intl as IntlWithDisplayNames).DisplayNames
+    return DisplayNames ? new DisplayNames("en", { type: "region" }) : undefined
+  } catch {
+    return undefined
+  }
+})()
+
+const regionNameFallbacks: Record<string, string> = {
+  CN: "China",
+  DE: "Germany",
+  FR: "France",
+  GB: "United Kingdom",
+  HK: "Hong Kong",
+  JP: "Japan",
+  KR: "South Korea",
+  SG: "Singapore",
+  TW: "Taiwan",
+  US: "United States",
+}
+
+export function formatGeolocation(location?: string, countryCode?: string) {
+  const value = location?.trim()
+  const code = (/^[a-z]{2}$/i.test(value || "") ? value : countryCode)?.toUpperCase()
+  if (!code || (value && value.toUpperCase() !== code)) return value
+  return regionNames?.of(code) || regionNameFallbacks[code] || value || code
+}
+
 function isSafeHttpsUrl(value: string) {
   try {
     const url = new URL(value)
@@ -371,7 +405,7 @@ function parseTrace(text: string) {
   return {
     ip: isIpAddress(ip) ? ip : undefined,
     countryCode: countryCode && /^[A-Z]{2}$/.test(countryCode) ? countryCode : undefined,
-    location: countryCode,
+    location: formatGeolocation(countryCode, countryCode),
   }
 }
 
@@ -404,7 +438,7 @@ function parseGoogleDnsSubnet(text: string) {
   return Number.isInteger(prefix) && prefix >= 0 && prefix <= maxPrefix ? { ip, ipPrefix: prefix } : {}
 }
 
-async function lookupIpGeography(ip: string, signal: AbortSignal) {
+async function lookupIpGeography(ip: string, signal: AbortSignal): Promise<Pick<SplitResult, "countryCode" | "location">> {
   const cached = ipGeographyCache.get(ip)
   if (cached && cached.expiresAt > Date.now()) return cached.result
   const running = ipGeographyTasks.get(ip)
@@ -412,21 +446,22 @@ async function lookupIpGeography(ip: string, signal: AbortSignal) {
 
   const task = (async () => {
     try {
-      const text = await fetchText(`https://ipwho.is/${encodeURIComponent(ip)}?fields=success,country,country_code,region,city`, signal)
+      const text = await fetchText(`https://ipwho.is/${encodeURIComponent(ip)}?fields=success,country,country_code,region,city,connection`, signal)
       const data = JSON.parse(text.slice(0, 2_048)) as {
         success?: unknown
         country?: unknown
         country_code?: unknown
         region?: unknown
         city?: unknown
+        connection?: { isp?: unknown }
       }
       if (data.success !== true) return {}
 
       const countryCode = sanitiseText(data.country_code, 2)?.toUpperCase()
-      const location = [data.country, data.region, data.city]
+      const location = [data.country, data.region, data.city, data.connection?.isp]
         .map((value) => sanitiseText(value, 48))
-        .filter(Boolean)
-        .join(" / ")
+        .filter((value, index, values): value is string => Boolean(value) && values.indexOf(value) === index)
+        .join(" ")
       const result = {
         countryCode: countryCode && /^[A-Z]{2}$/.test(countryCode) ? countryCode : undefined,
         location: sanitiseText(location, 120),
@@ -447,7 +482,16 @@ async function lookupIpGeography(ip: string, signal: AbortSignal) {
 }
 
 async function requestSplitTarget(target: SplitTarget, parentSignal: AbortSignal) {
-  if (target.method === "trace") return parseTrace(await fetchText(target.url, parentSignal))
+  if (target.method === "trace") {
+    const trace = parseTrace(await fetchText(target.url, parentSignal))
+    if (!trace.ip) return trace
+    const geography = await lookupIpGeography(trace.ip, parentSignal)
+    return {
+      ...trace,
+      countryCode: geography.countryCode || trace.countryCode,
+      location: geography.location || trace.location,
+    }
+  }
   if (target.method === "google-dns") {
     const subnet = parseGoogleDnsSubnet(await fetchText(target.url, parentSignal))
     return subnet.ip ? { ...subnet, ...(await lookupIpGeography(subnet.ip, parentSignal)) } : subnet

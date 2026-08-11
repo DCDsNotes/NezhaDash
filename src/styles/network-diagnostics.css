@@ -86,7 +86,6 @@
 
 .network-diagnostics__heading p,
 .network-diagnostics__section-copy p,
-.network-diagnostics__section-footer p,
 .network-diagnostics__empty,
 .network-diagnostics__privacy p {
   color: var(--probe-text-muted);
@@ -149,6 +148,12 @@
   outline-offset: 1px;
 }
 
+.network-diagnostics__tabs button > i {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+}
+
 .network-diagnostics__tabpanel {
   min-width: 0;
 }
@@ -178,12 +183,6 @@
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
-}
-
-.network-diagnostics__section-footer {
-  padding: 9px 16px;
-  border-top: 1px solid var(--probe-border-soft);
-  background: var(--probe-surface-subtle);
 }
 
 .network-diagnostics__status {
@@ -626,11 +625,14 @@
 }
 
 .network-diagnostics__connectivity-globe {
+  display: inline-flex;
   width: 18px;
+  height: 18px;
   flex: 0 0 18px;
+  align-items: center;
+  justify-content: center;
   color: var(--probe-text-muted);
   font-size: 15px;
-  text-align: center;
 }
 
 .network-diagnostics__connectivity-grid {
