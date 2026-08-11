@@ -72,9 +72,10 @@ export default defineConfig(({ command }) => {
       assetsInlineLimit: 0,
       rollupOptions: {
         output: {
-          entryFileNames: `assets/[name].[hash].js`,
-          chunkFileNames: `assets/[name].[hash].js`,
-          assetFileNames: `assets/[name].[hash].[ext]`,
+          // A dot-prefixed hash can resemble a blocked file extension such as `.DB`.
+          entryFileNames: `assets/[name]-[hash].js`,
+          chunkFileNames: `assets/[name]-[hash].js`,
+          assetFileNames: `assets/[name]-[hash].[ext]`,
           manualChunks(id) {
             if (id.includes("commonjsHelpers")) return "react"
             if (!id.includes("node_modules")) return
