@@ -570,107 +570,246 @@
   height: 12px;
 }
 
-.network-diagnostics__ai-grid {
+.network-diagnostics__ai-service-tabs {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  padding: 12px;
+  gap: 3px;
+  padding: 3px;
+  border-bottom: 1px solid var(--probe-border-soft);
+  background: var(--probe-surface-subtle);
 }
 
-.network-diagnostics__ai-card {
+.network-diagnostics__ai-service-tabs button {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid transparent;
+  border-radius: calc(var(--probe-radius) - 1px);
+  background: transparent;
+  color: var(--probe-text-secondary);
+  font-size: 12px;
+}
+
+.network-diagnostics__ai-service-tabs button[aria-selected="true"] {
+  border-color: var(--probe-border);
+  background: var(--probe-surface);
+  color: var(--probe-accent-strong);
+  font-weight: 600;
+}
+
+.network-diagnostics__ai-service-tabs button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--probe-accent) 42%, var(--probe-border));
+  outline-offset: 1px;
+}
+
+.network-diagnostics__ai-dashboard {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 10px;
+  background: var(--probe-surface-subtle);
+}
+
+.network-diagnostics__ai-panel-card {
+  position: relative;
   min-width: 0;
   overflow: hidden;
-  border: 1px solid var(--probe-border-soft);
+  border: 1px solid var(--probe-border);
   border-radius: var(--probe-radius);
   background: var(--probe-surface);
 }
 
-.network-diagnostics__ai-card-header {
-  display: flex;
-  min-height: 48px;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--probe-border-soft);
-  color: var(--probe-text);
-}
-
-.network-diagnostics__ai-card-header > i {
-  color: var(--probe-accent-strong);
-  font-size: 18px;
-}
-
-.network-diagnostics__ai-card-header h3 {
+.network-diagnostics__ai-panel-card > h3 {
+  min-height: 44px;
   margin: 0;
-  font-size: 13px;
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--probe-border-soft);
+  color: var(--probe-text-secondary);
+  font-size: 11px;
   font-weight: 650;
+  line-height: 1.5;
 }
 
-.network-diagnostics__ai-row {
-  display: grid;
-  min-height: 58px;
-  grid-template-columns: minmax(105px, 1fr) minmax(145px, 1.4fr) auto;
+.network-diagnostics__ai-device-card {
+  grid-column: 1 / -1;
+}
+
+.network-diagnostics__ai-metric {
+  display: flex;
+  min-height: 42px;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 14px;
+  padding: 9px 0;
   border-bottom: 1px solid var(--probe-border-soft);
   color: var(--probe-text-secondary);
   font-size: 11px;
 }
 
-.network-diagnostics__ai-row:last-child {
+.network-diagnostics__ai-metric:last-child {
   border-bottom: 0;
 }
 
-.network-diagnostics__ai-detail {
-  display: grid;
-  min-width: 0;
-  gap: 4px;
+.network-diagnostics__ai-metric > span:first-child {
+  flex: 0 0 auto;
+  color: var(--probe-text-muted);
 }
 
-.network-diagnostics__ai-detail > span {
+.network-diagnostics__ai-metric > strong {
+  min-width: 0;
+  color: var(--probe-text);
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.network-diagnostics__ai-inline,
+.network-diagnostics__ai-device-value {
   display: inline-flex;
   min-width: 0;
   align-items: center;
+  justify-content: flex-end;
   gap: 6px;
 }
 
-.network-diagnostics__ai-detail code,
-.network-diagnostics__ai-detail > span:last-child {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.network-diagnostics__ai-device-value {
+  flex-wrap: wrap;
+}
+
+.network-diagnostics__ai-tag {
+  display: inline-flex;
+  min-height: 20px;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: var(--probe-radius);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
   white-space: nowrap;
 }
 
-.network-diagnostics__ai-card--skeleton {
+.network-diagnostics__ai-tag--safe {
+  background: var(--probe-accent-soft);
+  color: var(--probe-accent-strong);
+}
+
+.network-diagnostics__ai-tag--warning {
+  background: #fff6dc;
+  color: #966300;
+}
+
+.network-diagnostics__ai-tag--danger {
+  background: #fff0ed;
+  color: #b44332;
+}
+
+.network-diagnostics__ai-tag--neutral {
+  background: var(--probe-surface-subtle);
+  color: var(--probe-text-muted);
+}
+
+.network-diagnostics__ai-score {
+  padding: 14px;
+  text-align: center;
+}
+
+.network-diagnostics__ai-score > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.network-diagnostics__ai-score > div:first-child > strong {
+  color: var(--probe-accent-strong);
+  font-size: 27px;
+  line-height: 1;
+}
+
+.network-diagnostics__ai-score > span {
+  display: block;
+  margin-top: 8px;
+  color: var(--probe-text-secondary);
+  font-size: 11px;
+}
+
+.network-diagnostics__ai-gauge {
+  position: relative;
+  height: 7px;
+  margin-top: 14px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #ca4f3d, #e59f3d 38%, #d9c749 55%, #61b871 78%, var(--probe-accent-strong));
+}
+
+.network-diagnostics__ai-gauge > span {
+  position: absolute;
+  top: -4px;
+  width: 3px;
+  height: 15px;
+  border-radius: 2px;
+  background: var(--probe-text);
+  transform: translateX(-50%);
+}
+
+.network-diagnostics__ai-gauge-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 5px;
+  color: var(--probe-text-muted);
+  font-size: 9px;
+}
+
+.network-diagnostics__ai-card-action {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  min-height: 27px;
+  padding: 4px 8px;
+  border: 1px solid var(--probe-border);
+  border-radius: var(--probe-radius);
+  background: var(--probe-surface);
+  color: var(--probe-text-secondary);
+  font-size: 10px;
+}
+
+.network-diagnostics__ai-card-action:disabled {
+  opacity: 0.55;
+}
+
+.network-diagnostics__ai-dashboard--skeleton {
   pointer-events: none;
 }
 
-.network-diagnostics__skeleton--ai-icon {
-  width: 18px;
-  height: 18px;
-  flex: 0 0 18px;
+.network-diagnostics__ai-dashboard--skeleton .network-diagnostics__ai-panel-card {
+  padding: 14px;
+}
+
+.network-diagnostics__ai-dashboard--skeleton .network-diagnostics__ai-panel-card:nth-child(-n + 3) {
+  min-height: 296px;
+}
+
+.network-diagnostics__ai-dashboard--skeleton .network-diagnostics__ai-panel-card:nth-child(n + 4):nth-child(-n + 6) {
+  min-height: 170px;
+}
+
+.network-diagnostics__ai-dashboard--skeleton .network-diagnostics__ai-device-card {
+  min-height: 464px;
 }
 
 .network-diagnostics__skeleton--ai-title {
-  width: 74px;
-  height: 14px;
-}
-
-.network-diagnostics__skeleton--ai-site {
-  width: min(112px, 100%);
+  width: 42%;
   height: 13px;
+  margin-bottom: 22px;
 }
 
-.network-diagnostics__skeleton--ai-detail {
-  width: min(150px, 100%);
-  height: 12px;
-}
-
-.network-diagnostics__skeleton--ai-status {
-  width: 48px;
-  height: 12px;
+.network-diagnostics__skeleton--ai-row {
+  width: 100%;
+  height: 11px;
+  margin-top: 18px;
 }
 
 .network-diagnostics__table--dns > * {
@@ -974,18 +1113,20 @@
     padding-inline: 6px;
   }
 
-  .network-diagnostics__ai-grid {
+  .network-diagnostics__ai-dashboard {
     grid-template-columns: 1fr;
-    padding: 10px;
   }
 
-  .network-diagnostics__ai-row {
-    grid-template-columns: minmax(96px, 0.85fr) minmax(0, 1fr);
+  .network-diagnostics__ai-device-card {
+    grid-column: auto;
   }
 
-  .network-diagnostics__ai-row > .network-diagnostics__status {
-    grid-column: 2;
-    justify-self: start;
+  .network-diagnostics__ai-metric {
+    align-items: flex-start;
+  }
+
+  .network-diagnostics__ai-metric > strong {
+    max-width: 66%;
   }
 
   .network-diagnostics__connectivity-legend {

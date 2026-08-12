@@ -34,6 +34,7 @@ main.tsx
 | -------------------- | ------------------------ | -------------------------------------------------------- |
 | `/`                  | `pages/Server.tsx`       | 系统状态、实时上下行、节点状态、到期续费和资源概览       |
 | `/server/:serverKey` | `pages/ServerDetail.tsx` | 单服务器状态、系统信息、实时速度、速度历史、网络监控历史 |
+| `/network-diagnostics` | `pages/NetworkDiagnostics.tsx` | IP、网站分流、连通性、泄露与 AI 出口检测              |
 | `/error`             | `pages/ErrorPage.tsx`    | 通用错误展示                                             |
 | `*`                  | `pages/NotFound.tsx`     | 404 与返回首页                                           |
 
@@ -100,3 +101,4 @@ main.tsx
 - 新弹层、菜单、开关和分段选择应优先复用 `components/ui`，不要在业务组件中重新实现焦点或 Portal。
 - URL、主导航、`public_note` 格式和自定义代码全局变量属于兼容接口，修改前需要同步后端。
 - `custom_code` 会执行后端返回的脚本，只能连接可信的哪吒面板实例。
+- 网络诊断只在用户点击后执行分流、连通性、泄露和 AI 检测。AI 风险信息默认由 `whatismyip.ai` 查询，每个唯一出口 IP 在内存中缓存 24 小时；可通过 `window.NetworkDiagnosticsConfig.aiRiskEndpoint = "/api/ip-risk/{ip}"` 替换为自有同源接口。

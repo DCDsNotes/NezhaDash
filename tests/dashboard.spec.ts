@@ -496,6 +496,7 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   let googleDnsRequests = 0
   let dnsRequests = 0
   let geographyRequests = 0
+  let aiRiskRequests = 0
   let cloudflareTraceFailures = 0
 
   await page.route("https://my.ip.cn/", async (route) => {
@@ -571,7 +572,37 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
       status: 200,
       contentType: "application/json; charset=utf-8",
       headers: { "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({ success: true, ...location }),
+      body: JSON.stringify({
+        success: true,
+        ...location,
+        connection:
+          ip === "203.0.113.20"
+            ? { asn: 7018, org: "AT&T Internet", isp: "AT&T Internet" }
+            : { asn: 4134, org: "China Telecom", isp: "China Telecom" },
+        timezone:
+          ip === "203.0.113.20"
+            ? { id: "America/Los_Angeles", utc: "-07:00" }
+            : { id: "Asia/Shanghai", utc: "+08:00" },
+      }),
+    })
+  })
+
+  await page.route(/https:\/\/whatismyip\.ai\/api\/lookup\/.+/, async (route) => {
+    aiRiskRequests += 1
+    const ip = new URL(route.request().url()).pathname.split("/").pop()
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json; charset=utf-8",
+      headers: { "Access-Control-Allow-Origin": "*" },
+      body: JSON.stringify({
+        success: true,
+        data: {
+          ip,
+          location: { country: "United States", countryCode: "US", region: "California", city: "Danville", timezone: "America/Los_Angeles" },
+          network: { isp: "AT&T Internet", org: "AT&T Internet", asn: "AS7018", connectionType: "residential" },
+          security: { score: 0, isVpn: false, isProxy: false, isTor: false, isHosting: false, isBlacklisted: false },
+        },
+      }),
     })
   })
 
@@ -651,7 +682,7 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
 
   await page.getByRole("tab", { name: "AI 检测" }).click()
   await expect(page.getByRole("heading", { name: "Claude 与 ChatGPT 检测" })).toBeVisible()
-  await expect(page.locator(".network-diagnostics__ai-card--skeleton")).toHaveCount(2)
+  await expect(page.locator(".network-diagnostics__ai-dashboard--skeleton .network-diagnostics__ai-panel-card")).toHaveCount(7)
   await page.getByRole("tab", { name: "网站分流" }).click()
 
   await page.getByRole("button", { name: "核心检测" }).evaluate((button) => {
@@ -679,8 +710,18 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   await page.getByRole("tab", { name: "AI 检测" }).click()
   await page.getByRole("button", { name: "开始检测" }).click()
   await expect(page.getByRole("button", { name: "重新检测" })).toBeEnabled()
-  await expect(page.locator(".network-diagnostics__ai-card .network-diagnostics__ai-row")).toHaveCount(4)
-  await expect(page.getByText("United States California Danville AT&T Internet", { exact: true }).first()).toBeVisible()
+  await expect(page.getByRole("tab", { name: "Claude", exact: true })).toHaveAttribute("aria-selected", "true")
+  await expect(page.locator(".network-diagnostics__ai-panel-card")).toHaveCount(7)
+  await expect(page.getByText("极度纯净", { exact: true })).toBeVisible()
+  await expect(page.getByText("AT&T Internet", { exact: true })).toBeVisible()
+  await expect(page.getByText("住宅网络", { exact: true })).toBeVisible()
+  await expect(page.getByText("未检测到", { exact: true })).toHaveCount(3)
+  await page.getByRole("tab", { name: "ChatGPT", exact: true }).click()
+  await expect(page.getByRole("tab", { name: "ChatGPT", exact: true })).toHaveAttribute("aria-selected", "true")
+  await expect(page.getByText("ChatGPT AI 信任评分", { exact: true })).toBeVisible()
+  expect(aiRiskRequests).toBe(1)
+  await assertNoHorizontalOverflow(page)
+  await screenshot(page, testInfo, "network-ai-desktop.png")
   await page.getByRole("tab", { name: "网站分流" }).click()
   expect(traceRequests).toBe(9)
   expect(headerRequests).toBe(2)
@@ -771,6 +812,10 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   expect(Math.max(...mobileHeadingCenters) - Math.min(...mobileHeadingCenters)).toBeLessThanOrEqual(1)
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "network-diagnostics-mobile.png")
+
+  await page.getByRole("tab", { name: "AI 检测" }).click()
+  await assertNoHorizontalOverflow(page)
+  await screenshot(page, testInfo, "network-ai-mobile.png")
 
   await page.getByRole("tab", { name: "网络连通性" }).click()
   await assertNoHorizontalOverflow(page)

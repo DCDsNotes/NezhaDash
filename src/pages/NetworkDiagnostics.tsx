@@ -1,5 +1,7 @@
 import ServerFlag from "@/components/ServerFlag"
+import AiDiagnosticsPanel from "@/components/network/AiDiagnosticsPanel"
 import { Switch } from "@/components/ui/switch"
+import { AI_SERVICE_PROFILES, type AiDeviceInfo, getAiDeviceInfo } from "@/lib/ai-diagnostics"
 import {
   CONNECTIVITY_PROBE_ROUNDS,
   CONNECTIVITY_REGIONS,
@@ -14,6 +16,8 @@ import {
 import {
   type DiagnosticState,
   type DnsLeakResult,
+  type AiRiskResult,
+  type AiServiceId,
   type PublicIpResult,
   type SplitMode,
   type SplitTarget,
@@ -21,6 +25,7 @@ import {
   type WebRtcCandidate,
   type WebRtcResult,
   checkDnsLeak,
+  checkAiRisk,
   checkPublicIp,
   checkSplitTargets,
   checkWebRtcLeak,
@@ -64,7 +69,7 @@ const WEBRTC_TYPE_LABELS: Record<string, string> = {
   prflx: "对端反射候选",
 }
 
-const AI_TARGET_IDS = new Set(["claude", "anthropic", "chatgpt", "openai"])
+const AI_TARGET_IDS = new Set(Object.values(AI_SERVICE_PROFILES).flatMap((profile) => profile.targetIds))
 
 function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof DOMException && error.name === "AbortError") return "请求已取消"
@@ -256,66 +261,14 @@ function SplitTableSkeleton({ targets }: { targets: SplitTarget[] }) {
   )
 }
 
-function AiDetectionCard({
-  title,
-  icon,
-  targets,
-  results,
-  maskIp,
-}: {
-  title: string
-  icon: string
-  targets: SplitTarget[]
-  results: SplitResult[]
-  maskIp: boolean
-}) {
-  const resultById = new Map(results.map((result) => [result.id, result]))
-  return (
-    <article className="network-diagnostics__ai-card">
-      <header className="network-diagnostics__ai-card-header">
-        <i className={icon} aria-hidden="true" />
-        <h3>{title}</h3>
-      </header>
-      <div className="network-diagnostics__ai-rows">
-        {targets.map((target) => {
-          const result = resultById.get(target.id)
-          return (
-            <div className="network-diagnostics__ai-row" key={target.id}>
-              <div className="network-diagnostics__site">
-                <SiteLogo label={target.label} logoUrl={target.logoUrl} ready={result?.state === "success"} />
-                <strong>{target.label}</strong>
-              </div>
-              <div className="network-diagnostics__ai-detail">
-                <span>
-                  <CountryFlag countryCode={result?.countryCode} />
-                  <code>{result ? formatSplitAddress(result, maskIp) : "-"}</code>
-                </span>
-                <span>{formatGeolocation(result?.location, result?.countryCode) || "-"}</span>
-              </div>
-              {result ? <SplitResultStatus result={result} /> : <StatusLabel state="idle">未检测</StatusLabel>}
-            </div>
-          )
-        })}
-      </div>
-    </article>
-  )
-}
-
 function AiDetectionSkeleton() {
   return (
-    <div className="network-diagnostics__ai-grid" aria-hidden="true">
-      {["Claude", "ChatGPT"].map((title) => (
-        <article className="network-diagnostics__ai-card network-diagnostics__ai-card--skeleton" key={title}>
-          <header className="network-diagnostics__ai-card-header">
-            <span className="network-diagnostics__skeleton network-diagnostics__skeleton--ai-icon" />
-            <span className="network-diagnostics__skeleton network-diagnostics__skeleton--ai-title" />
-          </header>
-          {[0, 1].map((index) => (
-            <div className="network-diagnostics__ai-row" key={index}>
-              <span className="network-diagnostics__skeleton network-diagnostics__skeleton--ai-site" />
-              <span className="network-diagnostics__skeleton network-diagnostics__skeleton--ai-detail" />
-              <span className="network-diagnostics__skeleton network-diagnostics__skeleton--ai-status" />
-            </div>
+    <div className="network-diagnostics__ai-dashboard network-diagnostics__ai-dashboard--skeleton" aria-hidden="true">
+      {Array.from({ length: 7 }, (_, index) => (
+        <article className={`network-diagnostics__ai-panel-card${index === 6 ? " network-diagnostics__ai-device-card" : ""}`} key={index}>
+          <span className="network-diagnostics__skeleton network-diagnostics__skeleton--ai-title" />
+          {Array.from({ length: index === 6 ? 10 : index === 1 ? 6 : index < 3 ? 5 : 3 }, (__, row) => (
+            <span className="network-diagnostics__skeleton network-diagnostics__skeleton--ai-row" key={row} />
           ))}
         </article>
       ))}
@@ -430,6 +383,7 @@ export default function NetworkDiagnostics() {
   const publicIpTask = useRef<Promise<PublicIpResult | null> | null>(null)
   const splitTask = useRef<Promise<SplitResult[]> | null>(null)
   const aiTask = useRef<Promise<SplitResult[]> | null>(null)
+  const aiRiskTask = useRef<Promise<void> | null>(null)
   const connectivityTask = useRef<Promise<ConnectivityResult[]> | null>(null)
   const dnsTask = useRef<Promise<DnsLeakResult | null> | null>(null)
   const webRtcTask = useRef<Promise<WebRtcResult | null> | null>(null)
@@ -443,6 +397,10 @@ export default function NetworkDiagnostics() {
   const [splitRunning, setSplitRunning] = useState(false)
   const [aiResults, setAiResults] = useState<SplitResult[]>(cachedSplitResults.filter((result) => AI_TARGET_IDS.has(result.id)))
   const [aiRunning, setAiRunning] = useState(false)
+  const [aiService, setAiService] = useState<AiServiceId>("claude")
+  const [aiRisks, setAiRisks] = useState<Partial<Record<AiServiceId, AiRiskResult>>>({})
+  const [aiRiskStates, setAiRiskStates] = useState<Partial<Record<AiServiceId, DiagnosticState>>>({})
+  const [aiDevice, setAiDevice] = useState<AiDeviceInfo | null>(null)
   const [connectivityResults, setConnectivityResults] = useState(createConnectivityResults)
   const [connectivityRunning, setConnectivityRunning] = useState(false)
   const [dns, setDns] = useState<CheckState<DnsLeakResult>>({ state: "idle" })
@@ -459,6 +417,10 @@ export default function NetworkDiagnostics() {
     }
   }, [])
 
+  useEffect(() => {
+    if (activeTab === "ai" && !aiDevice) setAiDevice(getAiDeviceInfo())
+  }, [activeTab, aiDevice])
+
   function runAi(force = false) {
     if (aiTask.current || aiTargets.length === 0) return aiTask.current || Promise.resolve([])
 
@@ -470,7 +432,7 @@ export default function NetworkDiagnostics() {
     const targets = force ? aiTargets : aiTargets.filter((target) => !cachedById.has(target.id))
     if (targets.length === 0) {
       setAiResults(cachedResults)
-      return Promise.resolve(cachedResults)
+      return runAiRisks(cachedResults, force).then(() => cachedResults)
     }
 
     const task = (async () => {
@@ -484,7 +446,9 @@ export default function NetworkDiagnostics() {
             setAiResults((current) => current.map((item) => (item.id === result.id ? result : item)))
           }),
         )
-        return [...cachedResults, ...freshResults]
+        const combinedResults = [...cachedResults, ...freshResults]
+        await runAiRisks(combinedResults, force)
+        return combinedResults
       } catch (error) {
         setAiResults((current) =>
           current.map((result) => (result.state === "running" ? { ...result, state: "error", message: getErrorMessage(error, "AI 检测失败") } : result)),
@@ -497,6 +461,38 @@ export default function NetworkDiagnostics() {
     })()
 
     aiTask.current = task
+    return task
+  }
+
+  function runAiRisks(results: SplitResult[], force = false) {
+    if (aiRiskTask.current) return aiRiskTask.current
+    const task = (async () => {
+      const serviceEntries = (Object.entries(AI_SERVICE_PROFILES) as Array<[AiServiceId, (typeof AI_SERVICE_PROFILES)[AiServiceId]]>).flatMap(
+        ([serviceId, profile]) => {
+          const result = results.find((item) => item.id === profile.primaryTargetId && item.state === "success" && item.ip)
+          return result?.ip ? [{ serviceId, ip: result.ip }] : []
+        },
+      )
+      if (serviceEntries.length === 0) return
+      setAiRiskStates((current) => Object.assign({}, current, ...serviceEntries.map(({ serviceId }) => ({ [serviceId]: "running" as const }))))
+      const settled = await Promise.allSettled(
+        serviceEntries.map(async ({ serviceId, ip }) => ({ serviceId, result: await runAbortable((signal) => checkAiRisk(ip, signal, force)) })),
+      )
+      const successful = settled.flatMap((entry) => (entry.status === "fulfilled" ? [entry.value] : []))
+      setAiRisks((current) => Object.assign({}, current, ...successful.map(({ serviceId, result }) => ({ [serviceId]: result }))))
+      setAiRiskStates((current) =>
+        Object.assign(
+          {},
+          current,
+          ...settled.map((entry, index) => ({
+            [serviceEntries[index].serviceId]: entry.status === "fulfilled" ? "success" : "error",
+          })),
+        ),
+      )
+    })().finally(() => {
+      aiRiskTask.current = null
+    })
+    aiRiskTask.current = task
     return task
   }
 
@@ -930,7 +926,7 @@ export default function NetworkDiagnostics() {
           <DiagnosticSection
             id="ai-test-title"
             title="Claude 与 ChatGPT 检测"
-            description="分别检查 Claude、Anthropic、ChatGPT 与 OpenAI 的出口 IP、Geolocation 和连接状态。"
+            description="检查 AI 出口的信任评分、网络属性、安全风险、服务可用性与本地环境。"
             status={
               <StatusLabel state={aiState}>
                 {aiRunning
@@ -948,21 +944,35 @@ export default function NetworkDiagnostics() {
               </ActionButton>
             }
           >
-            {aiResults.length > 0 ? (
-              <div className="network-diagnostics__ai-grid">
-                <AiDetectionCard
-                  title="Claude"
-                  icon="ri-claude-line"
-                  targets={aiTargets.filter((target) => target.id === "claude" || target.id === "anthropic")}
+            <div className="network-diagnostics__ai-service-tabs" role="tablist" aria-label="AI 服务">
+              {(Object.values(AI_SERVICE_PROFILES) as Array<(typeof AI_SERVICE_PROFILES)[AiServiceId]>).map((profile) => (
+                <button
+                  type="button"
+                  role="tab"
+                  id={`ai-service-tab-${profile.id}`}
+                  aria-controls={`ai-service-panel-${profile.id}`}
+                  aria-selected={aiService === profile.id}
+                  onClick={() => setAiService(profile.id)}
+                  key={profile.id}
+                >
+                  <i className={profile.icon} aria-hidden="true" />
+                  {profile.label}
+                </button>
+              ))}
+            </div>
+            {aiResults.length > 0 && aiDevice ? (
+              <div id={`ai-service-panel-${aiService}`} role="tabpanel" aria-labelledby={`ai-service-tab-${aiService}`}>
+                <AiDiagnosticsPanel
+                  profile={AI_SERVICE_PROFILES[aiService]}
                   results={aiResults}
+                  risk={aiRisks[aiService]}
+                  riskState={aiRiskStates[aiService] || "idle"}
+                  dns={dns}
+                  webRtc={webRtc}
+                  device={aiDevice}
                   maskIp={maskIp}
-                />
-                <AiDetectionCard
-                  title="ChatGPT"
-                  icon="ri-openai-line"
-                  targets={aiTargets.filter((target) => target.id === "chatgpt" || target.id === "openai")}
-                  results={aiResults}
-                  maskIp={maskIp}
+                  onRunDns={() => void runDns(5)}
+                  onRunWebRtc={() => void runWebRtc()}
                 />
               </div>
             ) : (

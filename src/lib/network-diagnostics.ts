@@ -25,10 +25,40 @@ export interface SplitResult extends SplitTarget {
   state: Exclude<DiagnosticState, "warning">
   ip?: string
   countryCode?: string
+  country?: string
+  region?: string
+  city?: string
   location?: string
+  asn?: string
+  isp?: string
+  timezone?: string
+  utcOffset?: string
   ipPrefix?: number
   duration?: number
   message?: string
+}
+
+export type AiServiceId = "claude" | "chatgpt"
+
+export interface AiRiskResult {
+  ip: string
+  trustScore?: number
+  country?: string
+  countryCode?: string
+  region?: string
+  city?: string
+  timezone?: string
+  asn?: string
+  isp?: string
+  connectionType?: string
+  residential?: boolean
+  datacenter?: boolean
+  vpn?: boolean
+  proxy?: boolean
+  tor?: boolean
+  crawler?: boolean
+  abuser?: boolean
+  companyType?: string
 }
 
 export interface DnsResolver {
@@ -61,6 +91,7 @@ export interface NetworkDiagnosticsRuntimeConfig {
   splitTargets?: Array<Partial<SplitTarget> & Pick<SplitTarget, "label" | "url">>
   dnsLeakEndpoint?: string
   stunUrls?: string[]
+  aiRiskEndpoint?: string
 }
 
 declare global {
@@ -128,7 +159,7 @@ const DEFAULT_SPLIT_TARGETS: SplitTarget[] = [
   traceTarget("anthropic", "Anthropic", "AI", "anthropic.com"),
   traceTarget("claude", "Claude", "AI", "claude.ai"),
   traceTarget("chatgpt", "ChatGPT", "AI", "chatgpt.com", true),
-  traceTarget("openai", "OpenAI", "AI", "openai.com"),
+  traceTarget("openai", "OpenAI API", "AI", "api.openai.com", false, "openai.com"),
   traceTarget("sora", "Sora", "AI", "sora.com"),
   traceTarget("grok", "Grok", "AI", "grok.com"),
   traceTarget("pixpix", "PixPix", "AI", "pixpix.com"),
@@ -156,17 +187,23 @@ const DEFAULT_SPLIT_TARGETS: SplitTarget[] = [
 ]
 
 const REQUEST_TIMEOUT = 6_000
+const MAX_RESPONSE_BYTES = 64 * 1_024
 const PUBLIC_IP_CACHE_TTL = 5 * 60_000
 const SPLIT_CACHE_TTL = 5 * 60_000
 const IP_GEOGRAPHY_CACHE_TTL = 24 * 60 * 60_000
+const AI_RISK_CACHE_TTL = 24 * 60 * 60_000
 const MAX_CUSTOM_TARGETS = 40
 const MAX_DNS_ROUNDS = 8
 const DEFAULT_STUN_URLS = ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478", "stun:stun1.l.google.com:19302"]
 
 let publicIpCache: { result: PublicIpResult; expiresAt: number } | null = null
 const splitCache = new Map<string, { result: SplitResult; expiresAt: number }>()
-const ipGeographyCache = new Map<string, { result: Pick<SplitResult, "countryCode" | "location">; expiresAt: number }>()
-const ipGeographyTasks = new Map<string, Promise<Pick<SplitResult, "countryCode" | "location">>>()
+type SplitGeography = Pick<SplitResult, "countryCode" | "country" | "region" | "city" | "location" | "asn" | "isp" | "timezone" | "utcOffset">
+
+const ipGeographyCache = new Map<string, { result: SplitGeography; expiresAt: number }>()
+const ipGeographyTasks = new Map<string, Promise<SplitGeography>>()
+const aiRiskCache = new Map<string, { result: AiRiskResult; expiresAt: number }>()
+const aiRiskTasks = new Map<string, Promise<AiRiskResult>>()
 
 type RegionNames = { of: (countryCode: string) => string | undefined }
 type IntlWithDisplayNames = typeof Intl & {
@@ -317,6 +354,74 @@ export function getDnsEndpoint() {
   }
 }
 
+function getAiRiskEndpoint(ip: string) {
+  const configured = window.NetworkDiagnosticsConfig?.aiRiskEndpoint?.trim()
+  if (!configured) return `https://whatismyip.ai/api/lookup/${encodeURIComponent(ip)}`
+
+  try {
+    const endpoint = new URL(configured, window.location.href)
+    if (endpoint.origin !== window.location.origin || !["http:", "https:"].includes(endpoint.protocol)) return null
+    endpoint.pathname = endpoint.pathname.replace(/\{ip\}/g, encodeURIComponent(ip))
+    return endpoint.toString()
+  } catch {
+    return null
+  }
+}
+
+function optionalBoolean(value: unknown) {
+  return typeof value === "boolean" ? value : undefined
+}
+
+export async function checkAiRisk(ip: string, signal: AbortSignal, force = false): Promise<AiRiskResult> {
+  if (!isIpAddress(ip)) throw new Error("AI 出口 IP 无效")
+  const cached = aiRiskCache.get(ip)
+  if (!force && cached && cached.expiresAt > Date.now()) return cached.result
+  const running = aiRiskTasks.get(ip)
+  if (running) return running
+
+  const endpoint = getAiRiskEndpoint(ip)
+  if (!endpoint) throw new Error("AI 风控接口配置无效")
+  const task = (async () => {
+    const text = await fetchText(endpoint, signal, { headers: { Accept: "application/json" } })
+    const parsed = JSON.parse(text.slice(0, 8_192)) as Record<string, unknown>
+    const data = parsed.data && typeof parsed.data === "object" ? (parsed.data as Record<string, unknown>) : parsed
+    const location = data.location && typeof data.location === "object" ? (data.location as Record<string, unknown>) : data
+    const network = data.network && typeof data.network === "object" ? (data.network as Record<string, unknown>) : data
+    const security = data.security && typeof data.security === "object" ? (data.security as Record<string, unknown>) : data
+    const score = Number(security.score ?? data.riskScore ?? data.risk_score)
+    const trustScore = Number.isFinite(score) ? Math.round(Math.max(0, Math.min(100, score <= 1 ? (1 - score) * 100 : 100 - score))) : undefined
+    const connectionType = sanitiseText(network.connectionType ?? data.connection_type ?? data.companyType ?? data.company_type, 32)
+    const result: AiRiskResult = {
+      ip,
+      trustScore,
+      country: sanitiseText(location.country, 48),
+      countryCode: sanitiseText(location.countryCode ?? location.country_code, 2)?.toUpperCase(),
+      region: sanitiseText(location.region, 48),
+      city: sanitiseText(location.city, 48),
+      timezone: sanitiseText(location.timezone ?? data.timezone, 48),
+      asn: sanitiseText(network.asn ?? data.asn, 16),
+      isp: sanitiseText(network.isp ?? network.org ?? data.isp, 64),
+      connectionType,
+      residential: connectionType ? /residential|home|broadband/i.test(connectionType) : optionalBoolean(data.isResidential ?? data.is_residential),
+      datacenter: optionalBoolean(security.isHosting ?? security.hosting ?? data.isDatacenter ?? data.is_datacenter),
+      vpn: optionalBoolean(security.isVpn ?? security.vpn ?? data.isVpn ?? data.is_vpn),
+      proxy: optionalBoolean(security.isProxy ?? security.proxy ?? data.isProxy ?? data.is_proxy),
+      tor: optionalBoolean(security.isTor ?? security.tor ?? data.isTor ?? data.is_tor),
+      crawler: optionalBoolean(security.isCrawler ?? security.crawler ?? data.isCrawler ?? data.is_crawler),
+      abuser: optionalBoolean(security.isBlacklisted ?? security.blacklisted ?? data.isAbuser ?? data.is_abuser),
+      companyType: sanitiseText(data.companyType ?? data.company_type, 32),
+    }
+    aiRiskCache.set(ip, { result, expiresAt: Date.now() + AI_RISK_CACHE_TTL })
+    return result
+  })()
+  aiRiskTasks.set(ip, task)
+  try {
+    return await task
+  } finally {
+    if (aiRiskTasks.get(ip) === task) aiRiskTasks.delete(ip)
+  }
+}
+
 function getStunUrls() {
   const configured = window.NetworkDiagnosticsConfig?.stunUrls
     ?.map((url) => url.trim())
@@ -361,7 +466,33 @@ async function fetchText(url: string, parentSignal: AbortSignal, init?: RequestI
       signal: request.signal,
     })
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
-    return await response.text()
+    const declaredLength = Number(response.headers.get("content-length"))
+    if (Number.isFinite(declaredLength) && declaredLength > MAX_RESPONSE_BYTES) throw new Error("响应数据过大")
+    if (!response.body) {
+      const text = await response.text()
+      if (new TextEncoder().encode(text).byteLength > MAX_RESPONSE_BYTES) throw new Error("响应数据过大")
+      return text
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let bytesRead = 0
+    let text = ""
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        bytesRead += value.byteLength
+        if (bytesRead > MAX_RESPONSE_BYTES) {
+          await reader.cancel()
+          throw new Error("响应数据过大")
+        }
+        text += decoder.decode(value, { stream: true })
+      }
+      return text + decoder.decode()
+    } finally {
+      reader.releaseLock()
+    }
   } finally {
     request.dispose()
   }
@@ -455,7 +586,7 @@ function parseGoogleDnsSubnet(text: string) {
   return Number.isInteger(prefix) && prefix >= 0 && prefix <= maxPrefix ? { ip, ipPrefix: prefix } : {}
 }
 
-async function lookupIpGeography(ip: string, signal: AbortSignal): Promise<Pick<SplitResult, "countryCode" | "location">> {
+async function lookupIpGeography(ip: string, signal: AbortSignal): Promise<SplitGeography> {
   const cached = ipGeographyCache.get(ip)
   if (cached && cached.expiresAt > Date.now()) return cached.result
   const running = ipGeographyTasks.get(ip)
@@ -463,25 +594,40 @@ async function lookupIpGeography(ip: string, signal: AbortSignal): Promise<Pick<
 
   const task = (async () => {
     try {
-      const text = await fetchText(`https://ipwho.is/${encodeURIComponent(ip)}?fields=success,country,country_code,region,city,connection`, signal)
+      const text = await fetchText(
+        `https://ipwho.is/${encodeURIComponent(ip)}?fields=success,country,country_code,region,city,connection,timezone`,
+        signal,
+      )
       const data = JSON.parse(text.slice(0, 2_048)) as {
         success?: unknown
         country?: unknown
         country_code?: unknown
         region?: unknown
         city?: unknown
-        connection?: { isp?: unknown }
+        connection?: { asn?: unknown; org?: unknown; isp?: unknown }
+        timezone?: { id?: unknown; utc?: unknown }
       }
       if (data.success !== true) return {}
 
       const countryCode = sanitiseText(data.country_code, 2)?.toUpperCase()
-      const location = [data.country, data.region, data.city, data.connection?.isp]
+      const country = sanitiseText(data.country, 48)
+      const region = sanitiseText(data.region, 48)
+      const city = sanitiseText(data.city, 48)
+      const isp = sanitiseText(data.connection?.isp || data.connection?.org, 64)
+      const location = [country, region, city, isp]
         .map((value) => sanitiseText(value, 48))
         .filter((value, index, values): value is string => Boolean(value) && values.indexOf(value) === index)
         .join(" ")
       const result = {
         countryCode: countryCode && /^[A-Z]{2}$/.test(countryCode) ? countryCode : undefined,
+        country,
+        region,
+        city,
         location: sanitiseText(location, 120),
+        asn: Number.isFinite(Number(data.connection?.asn)) ? `AS${Number(data.connection?.asn)}` : undefined,
+        isp,
+        timezone: sanitiseText(data.timezone?.id, 48),
+        utcOffset: sanitiseText(data.timezone?.utc, 8),
       }
       ipGeographyCache.set(ip, { result, expiresAt: Date.now() + IP_GEOGRAPHY_CACHE_TTL })
       return result
