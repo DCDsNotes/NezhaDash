@@ -16,6 +16,7 @@ import {
   type DnsLeakResult,
   type PublicIpResult,
   type SplitMode,
+  type SplitTarget,
   type SplitResult,
   type WebRtcCandidate,
   type WebRtcResult,
@@ -39,12 +40,13 @@ type CheckState<T> = {
   message?: string
 }
 
-type DiagnosticTab = "split" | "connectivity" | "leaks"
+type DiagnosticTab = "split" | "connectivity" | "leaks" | "ai"
 
 const DIAGNOSTIC_TABS: Array<{ id: DiagnosticTab; label: string; icon: string }> = [
   { id: "split", label: "网站分流", icon: "ri-route-line" },
   { id: "connectivity", label: "网络连通性", icon: "ri-wifi-line" },
   { id: "leaks", label: "泄露检测", icon: "ri-shield-keyhole-line" },
+  { id: "ai", label: "AI 检测", icon: "ri-sparkling-2-line" },
 ]
 
 const STATUS_ICONS: Record<DiagnosticState, string> = {
@@ -62,8 +64,12 @@ const WEBRTC_TYPE_LABELS: Record<string, string> = {
   prflx: "对端反射候选",
 }
 
+const AI_TARGET_IDS = new Set(["claude", "anthropic", "chatgpt", "openai"])
+
 function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback
+  if (error instanceof DOMException && error.name === "AbortError") return "请求已取消"
+  if (error instanceof Error && /abort(?:ed)?(?: without reason)?/i.test(error.message)) return "请求已取消"
+  return error instanceof Error && error.message ? error.message : fallback
 }
 
 function isChinaLocation(value?: string) {
@@ -224,6 +230,99 @@ function SplitResultStatus({ result }: { result: SplitResult }) {
   return result.countryCode === "CN" ? <StatusLabel state="warning">定位中国</StatusLabel> : <StatusLabel state="success">非中国定位</StatusLabel>
 }
 
+function SplitTableSkeleton({ targets }: { targets: SplitTarget[] }) {
+  return (
+    <div className="network-diagnostics__table network-diagnostics__table--split network-diagnostics__split-skeleton" role="presentation" aria-hidden="true">
+      <div className="network-diagnostics__table-head" role="row">
+        <span>网站</span>
+        <span>类型</span>
+        <span>出口 IP</span>
+        <span>Geolocation</span>
+        <span>状态</span>
+      </div>
+      {targets.map((target) => (
+        <div className="network-diagnostics__table-row" role="row" key={target.id}>
+          <div className="network-diagnostics__site">
+            <span className="network-diagnostics__skeleton network-diagnostics__skeleton--logo" />
+            <span className="network-diagnostics__skeleton network-diagnostics__skeleton--site" />
+          </div>
+          <span className="network-diagnostics__skeleton network-diagnostics__skeleton--category" />
+          <span className="network-diagnostics__skeleton network-diagnostics__skeleton--address" />
+          <span className="network-diagnostics__skeleton network-diagnostics__skeleton--location" />
+          <span className="network-diagnostics__skeleton network-diagnostics__skeleton--status" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function AiDetectionCard({
+  title,
+  icon,
+  targets,
+  results,
+  maskIp,
+}: {
+  title: string
+  icon: string
+  targets: SplitTarget[]
+  results: SplitResult[]
+  maskIp: boolean
+}) {
+  const resultById = new Map(results.map((result) => [result.id, result]))
+  return (
+    <article className="network-diagnostics__ai-card">
+      <header className="network-diagnostics__ai-card-header">
+        <i className={icon} aria-hidden="true" />
+        <h3>{title}</h3>
+      </header>
+      <div className="network-diagnostics__ai-rows">
+        {targets.map((target) => {
+          const result = resultById.get(target.id)
+          return (
+            <div className="network-diagnostics__ai-row" key={target.id}>
+              <div className="network-diagnostics__site">
+                <SiteLogo label={target.label} logoUrl={target.logoUrl} ready={result?.state === "success"} />
+                <strong>{target.label}</strong>
+              </div>
+              <div className="network-diagnostics__ai-detail">
+                <span>
+                  <CountryFlag countryCode={result?.countryCode} />
+                  <code>{result ? formatSplitAddress(result, maskIp) : "-"}</code>
+                </span>
+                <span>{formatGeolocation(result?.location, result?.countryCode) || "-"}</span>
+              </div>
+              {result ? <SplitResultStatus result={result} /> : <StatusLabel state="idle">未检测</StatusLabel>}
+            </div>
+          )
+        })}
+      </div>
+    </article>
+  )
+}
+
+function AiDetectionSkeleton() {
+  return (
+    <div className="network-diagnostics__ai-grid" aria-hidden="true">
+      {["Claude", "ChatGPT"].map((title) => (
+        <article className="network-diagnostics__ai-card network-diagnostics__ai-card--skeleton" key={title}>
+          <header className="network-diagnostics__ai-card-header">
+            <span className="network-diagnostics__skeleton network-diagnostics__skeleton--ai-icon" />
+            <span className="network-diagnostics__skeleton network-diagnostics__skeleton--ai-title" />
+          </header>
+          {[0, 1].map((index) => (
+            <div className="network-diagnostics__ai-row" key={index}>
+              <span className="network-diagnostics__skeleton network-diagnostics__skeleton--ai-site" />
+              <span className="network-diagnostics__skeleton network-diagnostics__skeleton--ai-detail" />
+              <span className="network-diagnostics__skeleton network-diagnostics__skeleton--ai-status" />
+            </div>
+          ))}
+        </article>
+      ))}
+    </div>
+  )
+}
+
 function hasExactSplitIp(result: SplitResult): result is SplitResult & { ip: string; state: "success" } {
   return result.state === "success" && Boolean(result.ip) && result.ipPrefix === undefined
 }
@@ -323,12 +422,14 @@ function WebRtcStatus({ candidate, baseline }: { candidate: WebRtcCandidate; bas
 export default function NetworkDiagnostics() {
   const allTargets = useMemo(() => getSplitTargets("full"), [])
   const coreTargets = useMemo(() => getSplitTargets("core"), [])
+  const aiTargets = useMemo(() => allTargets.filter((target) => AI_TARGET_IDS.has(target.id)), [allTargets])
   const dnsEndpoint = useMemo(getDnsEndpoint, [])
   const cachedPublicIp = useMemo(getCachedPublicIp, [])
   const cachedSplitResults = useMemo(getCachedSplitResults, [])
   const controllers = useRef(new Set<AbortController>())
   const publicIpTask = useRef<Promise<PublicIpResult | null> | null>(null)
   const splitTask = useRef<Promise<SplitResult[]> | null>(null)
+  const aiTask = useRef<Promise<SplitResult[]> | null>(null)
   const connectivityTask = useRef<Promise<ConnectivityResult[]> | null>(null)
   const dnsTask = useRef<Promise<DnsLeakResult | null> | null>(null)
   const webRtcTask = useRef<Promise<WebRtcResult | null> | null>(null)
@@ -340,6 +441,8 @@ export default function NetworkDiagnostics() {
   const [splitMode, setSplitMode] = useState<SplitMode>(cachedSplitResults.length > coreTargets.length ? "full" : "core")
   const [splitResults, setSplitResults] = useState<SplitResult[]>(cachedSplitResults)
   const [splitRunning, setSplitRunning] = useState(false)
+  const [aiResults, setAiResults] = useState<SplitResult[]>(cachedSplitResults.filter((result) => AI_TARGET_IDS.has(result.id)))
+  const [aiRunning, setAiRunning] = useState(false)
   const [connectivityResults, setConnectivityResults] = useState(createConnectivityResults)
   const [connectivityRunning, setConnectivityRunning] = useState(false)
   const [dns, setDns] = useState<CheckState<DnsLeakResult>>({ state: "idle" })
@@ -347,11 +450,55 @@ export default function NetworkDiagnostics() {
 
   useEffect(() => {
     if (!cachedPublicIp) void runPublicIp(false)
+  }, [cachedPublicIp])
+
+  useEffect(() => {
     return () => {
       controllers.current.forEach((controller) => controller.abort())
       controllers.current.clear()
     }
-  }, [cachedPublicIp])
+  }, [])
+
+  function runAi(force = false) {
+    if (aiTask.current || aiTargets.length === 0) return aiTask.current || Promise.resolve([])
+
+    const cachedById = new Map(getCachedSplitResults().filter((result) => AI_TARGET_IDS.has(result.id)).map((result) => [result.id, result]))
+    const cachedResults = aiTargets.flatMap((target) => {
+      const result = cachedById.get(target.id)
+      return result && !force ? [result] : []
+    })
+    const targets = force ? aiTargets : aiTargets.filter((target) => !cachedById.has(target.id))
+    if (targets.length === 0) {
+      setAiResults(cachedResults)
+      return Promise.resolve(cachedResults)
+    }
+
+    const task = (async () => {
+      setAiRunning(true)
+      setAiResults(
+        aiTargets.map((target) => cachedById.get(target.id) ?? { ...target, state: "running" }),
+      )
+      try {
+        const freshResults = await runAbortable((signal) =>
+          checkSplitTargets(targets, signal, (result) => {
+            setAiResults((current) => current.map((item) => (item.id === result.id ? result : item)))
+          }),
+        )
+        return [...cachedResults, ...freshResults]
+      } catch (error) {
+        setAiResults((current) =>
+          current.map((result) => (result.state === "running" ? { ...result, state: "error", message: getErrorMessage(error, "AI 检测失败") } : result)),
+        )
+        return []
+      } finally {
+        setAiRunning(false)
+        aiTask.current = null
+      }
+    })()
+
+    aiTask.current = task
+    return task
+  }
 
   async function runAbortable<T>(task: (signal: AbortSignal) => Promise<T>) {
     const controller = new AbortController()
@@ -530,6 +677,17 @@ export default function NetworkDiagnostics() {
           : `检测到 ${uniqueSplitIps.length} 个出口 IP`
   const completedConnectivityResults = connectivityResults.filter((result) => result.state === "success" || result.state === "error")
   const reachableConnectivityResults = connectivityResults.filter((result) => result.state === "success")
+  const completedAiResults = aiResults.filter((result) => result.state === "success" || result.state === "error")
+  const aiComplete = aiResults.length === aiTargets.length && completedAiResults.length === aiTargets.length
+  const aiState: DiagnosticState = aiRunning
+    ? "running"
+    : aiResults.length === 0
+      ? "idle"
+      : completedAiResults.length < aiTargets.length
+        ? "warning"
+        : completedAiResults.some((result) => result.state === "success")
+          ? "success"
+          : "error"
   const connectivityState: DiagnosticState = connectivityRunning
     ? "running"
     : completedConnectivityResults.length === 0
@@ -700,7 +858,7 @@ export default function NetworkDiagnostics() {
                         label={result.label}
                         logoUrl={result.logoUrl}
                         fallbackUrl={getOriginFavicon(result.url)}
-                        ready={result.state !== "running"}
+                        ready={result.state === "success"}
                       />
                       <strong>{result.label}</strong>
                     </div>
@@ -723,7 +881,7 @@ export default function NetworkDiagnostics() {
                 ))}
               </div>
             ) : (
-              <EmptyResult>选择核心检测或完整检测后显示网站、出口 IP、Geolocation 和连接状态。</EmptyResult>
+              <SplitTableSkeleton targets={splitMode === "full" ? allTargets : coreTargets} />
             )}
           </DiagnosticSection>
         ) : activeTab === "connectivity" ? (
@@ -767,6 +925,49 @@ export default function NetworkDiagnostics() {
                 />
               ))}
             </div>
+          </DiagnosticSection>
+        ) : activeTab === "ai" ? (
+          <DiagnosticSection
+            id="ai-test-title"
+            title="Claude 与 ChatGPT 检测"
+            description="分别检查 Claude、Anthropic、ChatGPT 与 OpenAI 的出口 IP、Geolocation 和连接状态。"
+            status={
+              <StatusLabel state={aiState}>
+                {aiRunning
+                  ? `已完成 ${aiResults.filter((result) => result.state !== "running").length}/${aiTargets.length}`
+                  : aiResults.length > 0
+                    ? aiComplete
+                      ? "检测完成"
+                      : `已缓存 ${completedAiResults.length}/${aiTargets.length}`
+                    : "按需检测，不自动发起请求"}
+              </StatusLabel>
+            }
+            actions={
+              <ActionButton onClick={() => void runAi(aiComplete)} disabled={aiRunning || aiTargets.length === 0} primary>
+                {aiComplete ? "重新检测" : "开始检测"}
+              </ActionButton>
+            }
+          >
+            {aiResults.length > 0 ? (
+              <div className="network-diagnostics__ai-grid">
+                <AiDetectionCard
+                  title="Claude"
+                  icon="ri-claude-line"
+                  targets={aiTargets.filter((target) => target.id === "claude" || target.id === "anthropic")}
+                  results={aiResults}
+                  maskIp={maskIp}
+                />
+                <AiDetectionCard
+                  title="ChatGPT"
+                  icon="ri-openai-line"
+                  targets={aiTargets.filter((target) => target.id === "chatgpt" || target.id === "openai")}
+                  results={aiResults}
+                  maskIp={maskIp}
+                />
+              </div>
+            ) : (
+              <AiDetectionSkeleton />
+            )}
           </DiagnosticSection>
         ) : (
           <section className="network-diagnostics__card" aria-label="DNS 与 WebRTC 泄露检测">

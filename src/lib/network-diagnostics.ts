@@ -343,6 +343,13 @@ function withTimeout(parentSignal: AbortSignal, timeout = REQUEST_TIMEOUT) {
   }
 }
 
+function getSplitRequestMessage(error: unknown) {
+  if (error instanceof DOMException && error.name === "AbortError") return "请求超时"
+  if (error instanceof Error && /abort(?:ed)?(?: without reason)?/i.test(error.message)) return "请求超时"
+  if (error instanceof Error && /^Failed to fetch$/i.test(error.message)) return "网络不可达或被浏览器拦截"
+  return error instanceof Error ? error.message : "请求失败"
+}
+
 async function fetchText(url: string, parentSignal: AbortSignal, init?: RequestInit) {
   const request = withTimeout(parentSignal)
   try {
@@ -555,7 +562,7 @@ export async function checkSplitTarget(target: SplitTarget, parentSignal: AbortS
       ...target,
       state: "error",
       duration: Math.round(performance.now() - startedAt),
-      message: error instanceof Error ? error.message : "请求失败",
+      message: getSplitRequestMessage(error),
     }
   }
 }

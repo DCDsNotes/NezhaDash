@@ -97,6 +97,15 @@
 .ri-server-line {
   --ri-icon: url("../../node_modules/remixicon/icons/Device/server-line.svg?inline");
 }
+.ri-sparkling-2-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/Weather/sparkling-2-line.svg?inline");
+}
+.ri-claude-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/Logos/claude-line.svg?inline");
+}
+.ri-openai-line {
+  --ri-icon: url("../../node_modules/remixicon/icons/Logos/openai-line.svg?inline");
+}
 .ri-shield-check-line {
   --ri-icon: url("../../node_modules/remixicon/icons/System/shield-check-line.svg?inline");
 }
