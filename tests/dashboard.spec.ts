@@ -593,6 +593,7 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   await page.route(/https:\/\/whatismyip\.ai\/api\/lookup\/.+/, async (route) => {
     aiRiskRequests += 1
     const ip = new URL(route.request().url()).pathname.split("/").pop()
+    await new Promise((resolve) => setTimeout(resolve, 250))
     await route.fulfill({
       status: 200,
       contentType: "application/json; charset=utf-8",
@@ -648,7 +649,8 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   await expect(page.getByRole("tab", { name: "网络连通性" }).locator(".ri-wifi-line")).toBeVisible()
   await expect(page.getByRole("tab", { name: "泄露检测" }).locator(".ri-shield-keyhole-line")).toBeVisible()
   await expect(page.getByRole("tab", { name: "AI 检测" }).locator(".ri-sparkling-2-line")).toBeVisible()
-  await expect(page.locator(".network-diagnostics__split-skeleton")).toHaveCount(0)
+  await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__table-row")).toHaveCount(36)
+  await expect(page.getByText("未检测", { exact: true })).toHaveCount(36)
   await expect(page.locator(".network-diagnostics__card:visible")).toHaveCount(2)
   await expect(page.locator(".network-diagnostics__section-footer")).toHaveCount(0)
   await expect(page.getByText(/完整检测包含参考站的/)).toHaveCount(0)
@@ -675,7 +677,8 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   await expect(maskIpToggle).not.toBeChecked()
   await expect(page.getByText("查询服务")).toHaveCount(0)
   await expect(page.getByText(/数据来源/)).toHaveCount(0)
-  await expect(page.getByText("核心检测 9 个站点，完整检测 36 个站点")).toBeVisible()
+  await expect(page.getByText("共 36 个站点，点击开始检测")).toBeVisible()
+  await expect(page.getByRole("button", { name: "核心检测" })).toHaveCount(0)
   expect(publicIpRequests).toBe(1)
   expect(fallbackIpRequests).toBe(0)
   expect(traceRequests).toBe(0)
@@ -685,21 +688,22 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
 
   await page.getByRole("tab", { name: "AI 检测" }).click()
   await expect(page.getByRole("heading", { name: "Claude 与 ChatGPT 检测" })).toBeVisible()
-  await expect(page.locator(".network-diagnostics__ai-dashboard--skeleton")).toHaveCount(0)
+  await expect(page.locator(".network-diagnostics__ai-panel-card")).toHaveCount(7)
+  await expect(page.getByText("尚未检测", { exact: true })).toHaveCount(3)
+  await expect(page.getByText("未检测", { exact: true }).first()).toBeVisible()
   await page.getByRole("tab", { name: "网站分流" }).click()
 
-  await page.getByRole("button", { name: "核心检测" }).evaluate((button) => {
+  await page.getByRole("button", { name: "开始检测" }).evaluate((button) => {
     button.click()
     button.click()
   })
-  await expect(page.locator(".network-diagnostics__split-skeleton .network-diagnostics__table-row")).toHaveCount(9)
+  await expect(page.getByText("连接中", { exact: true }).first()).toBeVisible()
   await expect(page.getByText("检测到 2 个出口 IP")).toBeVisible()
-  await expect(page.locator(".network-diagnostics__split-skeleton")).toHaveCount(0)
-  await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__table-row")).toHaveCount(9)
+  await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__table-row")).toHaveCount(36)
   await expect(page.getByRole("columnheader", { name: "Geolocation" })).toBeVisible()
-  await expect(page.locator(".network-diagnostics__table--split [data-label='Geolocation']")).toHaveCount(9)
-  await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__site-logo img")).toHaveCount(9)
-  await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__country-flag")).toHaveCount(9)
+  await expect(page.locator(".network-diagnostics__table--split [data-label='Geolocation']")).toHaveCount(36)
+  await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__site-logo img")).toHaveCount(36)
+  await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__country-flag")).toHaveCount(36)
   await expect(page.getByText("United States California Danville AT&T Internet", { exact: true }).first()).toBeVisible()
   await expect(page.getByText("China Sichuan Chengdu China Telecom", { exact: true }).first()).toBeVisible()
   const cloudflareResult = page
@@ -714,9 +718,9 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   await maskIpToggle.click()
   await page.getByRole("tab", { name: "AI 检测" }).click()
   await page.getByRole("button", { name: "开始检测" }).click()
-  await expect(page.locator(".network-diagnostics__ai-dashboard--skeleton .network-diagnostics__ai-panel-card")).toHaveCount(7)
+  await expect(page.locator(".network-diagnostics__ai-panel-card")).toHaveCount(7)
+  await expect(page.getByText("正在查询出口风险", { exact: true })).toBeVisible()
   await expect(page.getByRole("button", { name: "重新检测" })).toBeEnabled()
-  await expect(page.locator(".network-diagnostics__ai-dashboard--skeleton")).toHaveCount(0)
   await expect(page.getByRole("tab", { name: "Claude", exact: true })).toHaveAttribute("aria-selected", "true")
   await expect(page.locator(".network-diagnostics__ai-panel-card")).toHaveCount(7)
   await expect(page.getByText("极度纯净", { exact: true })).toBeVisible()
@@ -730,11 +734,11 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "network-ai-desktop.png")
   await page.getByRole("tab", { name: "网站分流" }).click()
-  expect(traceRequests).toBe(9)
+  expect(traceRequests).toBe(33)
   expect(headerRequests).toBe(2)
   expect(googleDnsRequests).toBe(1)
   expect(geographyRequests).toBe(3)
-  expect(cloudflareTraceFailures).toBe(1)
+  expect(cloudflareTraceFailures).toBe(2)
 
   await page.evaluate(() => {
     const nativeFetch = window.fetch.bind(window)
@@ -829,15 +833,15 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   await screenshot(page, testInfo, "network-connectivity-mobile.png")
 
   await page.getByRole("tab", { name: "网站分流" }).click()
-  await page.getByRole("button", { name: "完整检测" }).click()
-  await expect(page.getByRole("button", { name: "完整检测" })).toBeEnabled()
+  await page.getByRole("button", { name: "重新检测" }).click()
+  await expect(page.getByRole("button", { name: "重新检测" })).toBeEnabled()
   await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__table-row")).toHaveCount(36)
   const cdnjsResult = page
     .locator(".network-diagnostics__table--split .network-diagnostics__table-row")
     .filter({ has: page.getByText("cdnjs", { exact: true }) })
   await expect(cdnjsResult.getByText("United States California Danville AT&T Internet", { exact: true })).toBeVisible()
-  expect(cloudflareTraceFailures).toBe(3)
-  expect(traceRequests).toBe(42)
+  expect(cloudflareTraceFailures).toBe(4)
+  expect(traceRequests).toBe(66)
   expect(headerRequests).toBe(4)
   expect(googleDnsRequests).toBe(2)
 })

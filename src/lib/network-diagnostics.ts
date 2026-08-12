@@ -1,5 +1,4 @@
 export type DiagnosticState = "idle" | "running" | "success" | "warning" | "error"
-export type SplitMode = "core" | "full"
 
 type SplitMethod = "trace" | "header" | "google-dns"
 
@@ -15,7 +14,6 @@ export interface SplitTarget {
   category: string
   url: string
   logoUrl: string
-  core: boolean
   method: SplitMethod
   headerNames?: string[]
   fallbackUrl?: string
@@ -107,7 +105,6 @@ const traceTarget = (
   label: string,
   category: string,
   domain: string,
-  core = false,
   logoDomain = domain,
   fallbackDomain?: string,
 ): SplitTarget => ({
@@ -116,7 +113,6 @@ const traceTarget = (
   category,
   url: `https://${domain}/cdn-cgi/trace`,
   logoUrl: getSiteLogoUrl(logoDomain),
-  core,
   method: "trace",
   fallbackUrl: fallbackDomain ? `https://${fallbackDomain}/cdn-cgi/trace` : undefined,
 })
@@ -128,7 +124,6 @@ const DEFAULT_SPLIT_TARGETS: SplitTarget[] = [
     category: "国内",
     url: "https://necaptcha.nosdn.127.net/ab7f4275c1744aa28e0a8f3a1c58c532.png",
     logoUrl: getSiteLogoUrl("www.163.com"),
-    core: true,
     method: "header",
     headerNames: ["cdn-user-ip"],
   },
@@ -138,7 +133,6 @@ const DEFAULT_SPLIT_TARGETS: SplitTarget[] = [
     category: "国内",
     url: "https://perfops.byte-test.com/500b-bench.jpg",
     logoUrl: getSiteLogoUrl("www.bytedance.com"),
-    core: true,
     method: "header",
     headerNames: ["x-request-ip", "x-response-cinfo"],
   },
@@ -148,18 +142,17 @@ const DEFAULT_SPLIT_TARGETS: SplitTarget[] = [
     category: "搜索与定位",
     url: "https://dns.google/resolve?name=o-o.myaddr.l.google.com&type=TXT",
     logoUrl: getSiteLogoUrl("www.google.com"),
-    core: true,
     method: "google-dns",
   },
-  traceTarget("cloudflare-cn", "Cloudflare 中国", "国内", "www.cloudflare-cn.com", true),
-  traceTarget("qualcomm-cn", "高通中国", "国内", "www.qualcomm.cn", true),
-  traceTarget("discord", "Discord", "社交与通讯", "gateway.discord.gg", true, "discord.com"),
+  traceTarget("cloudflare-cn", "Cloudflare 中国", "国内", "www.cloudflare-cn.com"),
+  traceTarget("qualcomm-cn", "高通中国", "国内", "www.qualcomm.cn"),
+  traceTarget("discord", "Discord", "社交与通讯", "gateway.discord.gg", "discord.com"),
   traceTarget("x", "X", "社交与通讯", "x.com"),
   traceTarget("medium", "Medium", "社交与通讯", "medium.com"),
   traceTarget("anthropic", "Anthropic", "AI", "anthropic.com"),
   traceTarget("claude", "Claude", "AI", "claude.ai"),
-  traceTarget("chatgpt", "ChatGPT", "AI", "chatgpt.com", true),
-  traceTarget("openai", "OpenAI API", "AI", "api.openai.com", false, "openai.com"),
+  traceTarget("chatgpt", "ChatGPT", "AI", "chatgpt.com"),
+  traceTarget("openai", "OpenAI API", "AI", "api.openai.com", "openai.com"),
   traceTarget("sora", "Sora", "AI", "sora.com"),
   traceTarget("grok", "Grok", "AI", "grok.com"),
   traceTarget("pixpix", "PixPix", "AI", "pixpix.com"),
@@ -176,9 +169,9 @@ const DEFAULT_SPLIT_TARGETS: SplitTarget[] = [
   traceTarget("shopify", "Shopify", "办公与工具", "shopify.com"),
   traceTarget("godaddy", "GoDaddy", "办公与工具", "godaddy.com"),
   traceTarget("product-hunt", "Product Hunt", "办公与工具", "producthunt.com"),
-  traceTarget("cloudflare", "Cloudflare", "网络", "www.cloudflare.com", true, "www.cloudflare.com", "speed.cloudflare.com"),
-  traceTarget("cdnjs", "cdnjs", "开发与 CDN", "cdnjs.cloudflare.com", false, "cdnjs.com", "speed.cloudflare.com"),
-  traceTarget("npm", "npm Registry", "开发与 CDN", "registry.npmjs.org", true, "www.npmjs.com"),
+  traceTarget("cloudflare", "Cloudflare", "网络", "www.cloudflare.com", "www.cloudflare.com", "speed.cloudflare.com"),
+  traceTarget("cdnjs", "cdnjs", "开发与 CDN", "cdnjs.cloudflare.com", "cdnjs.com", "speed.cloudflare.com"),
+  traceTarget("npm", "npm Registry", "开发与 CDN", "registry.npmjs.org", "www.npmjs.com"),
   traceTarget("kali", "Kali Download", "开发与 CDN", "kali.download"),
   traceTarget("unpkg", "unpkg", "开发与 CDN", "unpkg.com"),
   traceTarget("nodejs", "Node.js", "开发与 CDN", "nodejs.org"),
@@ -320,17 +313,15 @@ function sanitiseSplitTargets(targets: NetworkDiagnosticsRuntimeConfig["splitTar
         category: sanitiseText(target.category, 20) || "自定义站点",
         url,
         logoUrl: getSiteLogoUrl(new URL(url).hostname),
-        core: target.core !== false,
         method: "trace" as const,
       },
     ]
   })
 }
 
-export function getSplitTargets(mode: SplitMode = "full") {
+export function getSplitTargets() {
   const configured = sanitiseSplitTargets(window.NetworkDiagnosticsConfig?.splitTargets)
-  const targets = configured.length > 0 ? configured : DEFAULT_SPLIT_TARGETS
-  return mode === "core" ? targets.filter((target) => target.core) : targets
+  return configured.length > 0 ? configured : DEFAULT_SPLIT_TARGETS
 }
 
 export function getCachedSplitResults() {

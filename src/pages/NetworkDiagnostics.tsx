@@ -19,8 +19,6 @@ import {
   type AiRiskResult,
   type AiServiceId,
   type PublicIpResult,
-  type SplitMode,
-  type SplitTarget,
   type SplitResult,
   type WebRtcCandidate,
   type WebRtcResult,
@@ -106,18 +104,16 @@ function StatusLabel({ state, children }: { state: DiagnosticState; children: Re
 function ActionButton({
   children,
   disabled,
-  primary,
   onClick,
 }: {
   children: React.ReactNode
   disabled?: boolean
-  primary?: boolean
   onClick: () => void
 }) {
   return (
     <button
       type="button"
-      className={`network-diagnostics__button${primary ? " network-diagnostics__button--primary" : ""}`}
+      className="network-diagnostics__button network-diagnostics__button--primary"
       onClick={onClick}
       disabled={disabled}
     >
@@ -228,52 +224,12 @@ function formatSplitAddress(result: SplitResult, masked: boolean) {
 }
 
 function SplitResultStatus({ result }: { result: SplitResult }) {
+  if (result.state === "idle") return <StatusLabel state="idle">未检测</StatusLabel>
   if (result.state === "running") return <StatusLabel state="running">连接中</StatusLabel>
   if (result.state === "error") return <StatusLabel state="error">{result.message || "失败"}</StatusLabel>
   if (result.method !== "google-dns") return <StatusLabel state="success">{result.duration} ms</StatusLabel>
   if (!result.countryCode) return <StatusLabel state="warning">无法判断</StatusLabel>
   return result.countryCode === "CN" ? <StatusLabel state="warning">定位中国</StatusLabel> : <StatusLabel state="success">非中国定位</StatusLabel>
-}
-
-function SplitTableSkeleton({ targets }: { targets: SplitTarget[] }) {
-  return (
-    <div className="network-diagnostics__table network-diagnostics__table--split network-diagnostics__split-skeleton" role="presentation" aria-hidden="true">
-      <div className="network-diagnostics__table-head" role="row">
-        <span>网站</span>
-        <span>类型</span>
-        <span>出口 IP</span>
-        <span>Geolocation</span>
-        <span>状态</span>
-      </div>
-      {targets.map((target) => (
-        <div className="network-diagnostics__table-row" role="row" key={target.id}>
-          <div className="network-diagnostics__site">
-            <span className="network-diagnostics__skeleton network-diagnostics__skeleton--logo" />
-            <span className="network-diagnostics__skeleton network-diagnostics__skeleton--site" />
-          </div>
-          <span className="network-diagnostics__skeleton network-diagnostics__skeleton--category" />
-          <span className="network-diagnostics__skeleton network-diagnostics__skeleton--address" />
-          <span className="network-diagnostics__skeleton network-diagnostics__skeleton--location" />
-          <span className="network-diagnostics__skeleton network-diagnostics__skeleton--status" />
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function AiDetectionSkeleton() {
-  return (
-    <div className="network-diagnostics__ai-dashboard network-diagnostics__ai-dashboard--skeleton" aria-hidden="true">
-      {Array.from({ length: 7 }, (_, index) => (
-        <article className={`network-diagnostics__ai-panel-card${index === 6 ? " network-diagnostics__ai-device-card" : ""}`} key={index}>
-          <span className="network-diagnostics__skeleton network-diagnostics__skeleton--ai-title" />
-          {Array.from({ length: index === 6 ? 10 : index === 1 ? 6 : index < 3 ? 5 : 3 }, (__, row) => (
-            <span className="network-diagnostics__skeleton network-diagnostics__skeleton--ai-row" key={row} />
-          ))}
-        </article>
-      ))}
-    </div>
-  )
 }
 
 function hasExactSplitIp(result: SplitResult): result is SplitResult & { ip: string; state: "success" } {
@@ -373,12 +329,10 @@ function WebRtcStatus({ candidate, baseline }: { candidate: WebRtcCandidate; bas
 }
 
 export default function NetworkDiagnostics() {
-  const allTargets = useMemo(() => getSplitTargets("full"), [])
-  const coreTargets = useMemo(() => getSplitTargets("core"), [])
+  const allTargets = useMemo(getSplitTargets, [])
   const aiTargets = useMemo(() => allTargets.filter((target) => AI_TARGET_IDS.has(target.id)), [allTargets])
   const dnsEndpoint = useMemo(getDnsEndpoint, [])
   const cachedPublicIp = useMemo(getCachedPublicIp, [])
-  const cachedSplitResults = useMemo(getCachedSplitResults, [])
   const controllers = useRef(new Set<AbortController>())
   const publicIpTask = useRef<Promise<PublicIpResult | null> | null>(null)
   const splitTask = useRef<Promise<SplitResult[]> | null>(null)
@@ -392,10 +346,9 @@ export default function NetworkDiagnostics() {
   )
   const [maskIp, setMaskIp] = useState(false)
   const [activeTab, setActiveTab] = useState<DiagnosticTab>("split")
-  const [splitMode, setSplitMode] = useState<SplitMode>(cachedSplitResults.length > coreTargets.length ? "full" : "core")
-  const [splitResults, setSplitResults] = useState<SplitResult[]>(cachedSplitResults)
+  const [splitResults, setSplitResults] = useState<SplitResult[]>(() => allTargets.map((target) => ({ ...target, state: "idle" })))
   const [splitRunning, setSplitRunning] = useState(false)
-  const [aiResults, setAiResults] = useState<SplitResult[]>(cachedSplitResults.filter((result) => AI_TARGET_IDS.has(result.id)))
+  const [aiResults, setAiResults] = useState<SplitResult[]>(() => aiTargets.map((target) => ({ ...target, state: "idle" })))
   const [aiRunning, setAiRunning] = useState(false)
   const [aiService, setAiService] = useState<AiServiceId>("claude")
   const [aiRisks, setAiRisks] = useState<Partial<Record<AiServiceId, AiRiskResult>>>({})
@@ -417,12 +370,13 @@ export default function NetworkDiagnostics() {
     }
   }, [])
 
-  useEffect(() => {
-    if (activeTab === "ai" && !aiDevice) setAiDevice(getAiDeviceInfo())
-  }, [activeTab, aiDevice])
-
   function runAi(force = false) {
     if (aiTask.current || aiTargets.length === 0) return aiTask.current || Promise.resolve([])
+    if (!aiDevice) setAiDevice(getAiDeviceInfo())
+    if (force) {
+      setAiRisks({})
+      setAiRiskStates({})
+    }
 
     const cachedById = new Map(getCachedSplitResults().filter((result) => AI_TARGET_IDS.has(result.id)).map((result) => [result.id, result]))
     const cachedResults = aiTargets.flatMap((target) => {
@@ -538,12 +492,11 @@ export default function NetworkDiagnostics() {
     return task
   }
 
-  function runSplit(mode: SplitMode) {
+  function runSplit() {
     if (splitTask.current) return splitTask.current
-    const targets = mode === "full" ? allTargets : coreTargets
+    const targets = allTargets
 
     const task = (async () => {
-      setSplitMode(mode)
       setSplitRunning(true)
       setSplitResults(targets.map((target) => ({ ...target, state: "running" })))
       try {
@@ -652,6 +605,7 @@ export default function NetworkDiagnostics() {
 
   const completedSplitResults = splitResults.filter((result) => result.state === "success" || result.state === "error")
   const successfulSplitResults = splitResults.filter((result) => result.state === "success")
+  const splitStarted = splitResults.some((result) => result.state !== "idle")
   const exactSplitResults = splitResults.filter(hasExactSplitIp)
   const splitExits = [
     ...exactSplitResults
@@ -667,7 +621,7 @@ export default function NetworkDiagnostics() {
   const uniqueSplitIps = splitExits.map((exit) => exit.ip)
   const splitState: DiagnosticState = splitRunning
     ? "running"
-    : splitResults.length === 0
+    : !splitStarted
       ? "idle"
       : successfulSplitResults.length === 0
         ? "error"
@@ -676,7 +630,7 @@ export default function NetworkDiagnostics() {
           : "success"
   const splitMessage =
     splitState === "idle"
-      ? `核心检测 ${coreTargets.length} 个站点，完整检测 ${allTargets.length} 个站点`
+      ? `共 ${allTargets.length} 个站点，点击开始检测`
       : splitState === "running"
         ? `已完成 ${completedSplitResults.length}/${splitResults.length}`
         : splitState === "error"
@@ -685,10 +639,11 @@ export default function NetworkDiagnostics() {
   const completedConnectivityResults = connectivityResults.filter((result) => result.state === "success" || result.state === "error")
   const reachableConnectivityResults = connectivityResults.filter((result) => result.state === "success")
   const completedAiResults = aiResults.filter((result) => result.state === "success" || result.state === "error")
+  const aiStarted = aiResults.some((result) => result.state !== "idle")
   const aiComplete = aiResults.length === aiTargets.length && completedAiResults.length === aiTargets.length
   const aiState: DiagnosticState = aiRunning
     ? "running"
-    : aiResults.length === 0
+    : !aiStarted
       ? "idle"
       : completedAiResults.length < aiTargets.length
         ? "warning"
@@ -766,7 +721,7 @@ export default function NetworkDiagnostics() {
           <StatusLabel state={publicIp.state}>{publicIp.state === "running" ? "正在查询" : publicIp.message || "进入页面后自动查询一次"}</StatusLabel>
         }
         actions={
-          <ActionButton onClick={() => void runPublicIp()} disabled={publicIp.state === "running"} primary>
+          <ActionButton onClick={() => void runPublicIp()} disabled={publicIp.state === "running"}>
             {publicIp.result ? "重新查询" : "查询 IP"}
           </ActionButton>
         }
@@ -826,14 +781,9 @@ export default function NetworkDiagnostics() {
             description="连接国内与国际网站的轻量探测端点，核对每个网站实际使用的出口 IP。"
             status={<StatusLabel state={splitState}>{splitMessage}</StatusLabel>}
             actions={
-              <>
-                <ActionButton onClick={() => void runSplit("core")} disabled={splitRunning} primary={splitMode === "core" && splitRunning}>
-                  核心检测
-                </ActionButton>
-                <ActionButton onClick={() => void runSplit("full")} disabled={splitRunning} primary={splitMode === "full" && splitRunning}>
-                  完整检测
-                </ActionButton>
-              </>
+              <ActionButton onClick={() => void runSplit()} disabled={splitRunning}>
+                {splitResults.some((result) => result.state === "success" || result.state === "error") ? "重新检测" : "开始检测"}
+              </ActionButton>
             }
           >
             {uniqueSplitIps.length > 0 ? (
@@ -849,10 +799,7 @@ export default function NetworkDiagnostics() {
                 </div>
               </div>
             ) : null}
-            {splitRunning ? (
-              <SplitTableSkeleton targets={splitMode === "full" ? allTargets : coreTargets} />
-            ) : splitResults.length > 0 ? (
-              <div className="network-diagnostics__table network-diagnostics__table--split" role="table" aria-label="网站分流检测结果">
+            <div className="network-diagnostics__table network-diagnostics__table--split" role="table" aria-label="网站分流检测结果">
                 <div className="network-diagnostics__table-head" role="row">
                   <span role="columnheader">网站</span>
                   <span role="columnheader">类型</span>
@@ -889,7 +836,6 @@ export default function NetworkDiagnostics() {
                   </div>
                 ))}
               </div>
-            ) : null}
           </DiagnosticSection>
         ) : activeTab === "connectivity" ? (
           <DiagnosticSection
@@ -898,7 +844,7 @@ export default function NetworkDiagnostics() {
             description="从当前浏览器直接测试日本、美国和全球常用站点的实时连通性与延迟。"
             status={<StatusLabel state={connectivityState}>{connectivityMessage}</StatusLabel>}
             actions={
-              <ActionButton onClick={() => void runConnectivity()} disabled={connectivityRunning} primary>
+              <ActionButton onClick={() => void runConnectivity()} disabled={connectivityRunning}>
                 {completedConnectivityResults.length > 0 ? "重新测试" : "开始测试"}
               </ActionButton>
             }
@@ -942,7 +888,7 @@ export default function NetworkDiagnostics() {
               <StatusLabel state={aiState}>
                 {aiRunning
                   ? `已完成 ${aiResults.filter((result) => result.state !== "running").length}/${aiTargets.length}`
-                  : aiResults.length > 0
+                  : aiStarted
                     ? aiComplete
                       ? "检测完成"
                       : `已缓存 ${completedAiResults.length}/${aiTargets.length}`
@@ -950,7 +896,7 @@ export default function NetworkDiagnostics() {
               </StatusLabel>
             }
             actions={
-              <ActionButton onClick={() => void runAi(aiComplete)} disabled={aiRunning || aiTargets.length === 0} primary>
+              <ActionButton onClick={() => void runAi(aiComplete)} disabled={aiRunning || aiTargets.length === 0}>
                 {aiComplete ? "重新检测" : "开始检测"}
               </ActionButton>
             }
@@ -971,24 +917,20 @@ export default function NetworkDiagnostics() {
                 </button>
               ))}
             </div>
-            {aiRunning ? (
-              <AiDetectionSkeleton />
-            ) : aiResults.length > 0 && aiDevice ? (
-              <div id={`ai-service-panel-${aiService}`} role="tabpanel" aria-labelledby={`ai-service-tab-${aiService}`}>
-                <AiDiagnosticsPanel
-                  profile={AI_SERVICE_PROFILES[aiService]}
-                  results={aiResults}
-                  risk={aiRisks[aiService]}
-                  riskState={aiRiskStates[aiService] || "idle"}
-                  dns={dns}
-                  webRtc={webRtc}
-                  device={aiDevice}
-                  maskIp={maskIp}
-                  onRunDns={() => void runDns(5)}
-                  onRunWebRtc={() => void runWebRtc()}
-                />
-              </div>
-            ) : null}
+            <div id={`ai-service-panel-${aiService}`} role="tabpanel" aria-labelledby={`ai-service-tab-${aiService}`}>
+              <AiDiagnosticsPanel
+                profile={AI_SERVICE_PROFILES[aiService]}
+                results={aiResults}
+                risk={aiRisks[aiService]}
+                riskState={aiRiskStates[aiService] || "idle"}
+                dns={dns}
+                webRtc={webRtc}
+                device={aiDevice || undefined}
+                maskIp={maskIp}
+                onRunDns={() => void runDns(5)}
+                onRunWebRtc={() => void runWebRtc()}
+              />
+            </div>
           </DiagnosticSection>
         ) : (
           <section className="network-diagnostics__card" aria-label="DNS 与 WebRTC 泄露检测">
@@ -999,7 +941,7 @@ export default function NetworkDiagnostics() {
               status={<StatusLabel state={dns.state}>{dns.message || "快速测试 5 次，深度测试 8 次"}</StatusLabel>}
               actions={
                 <>
-                  <ActionButton onClick={() => void runDns(5)} disabled={dns.state === "running"} primary>
+                  <ActionButton onClick={() => void runDns(5)} disabled={dns.state === "running"}>
                     快速测试
                   </ActionButton>
                   <ActionButton onClick={() => void runDns(8)} disabled={dns.state === "running"}>
@@ -1051,7 +993,7 @@ export default function NetworkDiagnostics() {
               description="通过 Google 与 Cloudflare 的多个 STUN 节点检查 UDP、IPv4 和 IPv6 出口。"
               status={<StatusLabel state={webRtc.state}>{webRtc.message || "检测不会请求摄像头或麦克风权限"}</StatusLabel>}
               actions={
-                <ActionButton onClick={() => void runWebRtc()} disabled={webRtc.state === "running"} primary>
+                <ActionButton onClick={() => void runWebRtc()} disabled={webRtc.state === "running"}>
                   {webRtc.result ? "重新检测" : "开始检测"}
                 </ActionButton>
               }
