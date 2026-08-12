@@ -46,8 +46,8 @@ type CheckState<T> = {
 type DiagnosticTab = "split" | "connectivity" | "leaks" | "ai"
 
 const DIAGNOSTIC_TABS: Array<{ id: DiagnosticTab; label: string; icon: string }> = [
-  { id: "split", label: "网站分流", icon: "ri-route-line" },
-  { id: "connectivity", label: "网络连通性", icon: "ri-wifi-line" },
+  { id: "split", label: "分流检测", icon: "ri-route-line" },
+  { id: "connectivity", label: "联通检测", icon: "ri-wifi-line" },
   { id: "leaks", label: "泄露检测", icon: "ri-shield-keyhole-line" },
   { id: "ai", label: "AI 检测", icon: "ri-sparkling-2-line" },
 ]

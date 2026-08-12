@@ -646,7 +646,7 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   await expect(page.getByRole("heading", { name: "DNS 泄露测试" })).toHaveCount(0)
   await expect(page.getByRole("heading", { name: "WebRTC 泄露测试" })).toHaveCount(0)
   await expect(page.getByRole("tab", { name: "网站分流" })).toHaveAttribute("aria-selected", "true")
-  await expect(page.getByRole("tab", { name: "网络连通性" }).locator(".ri-wifi-line")).toBeVisible()
+  await expect(page.getByRole("tab", { name: "网络联通" }).locator(".ri-wifi-line")).toBeVisible()
   await expect(page.getByRole("tab", { name: "泄露检测" }).locator(".ri-shield-keyhole-line")).toBeVisible()
   await expect(page.getByRole("tab", { name: "AI 检测" }).locator(".ri-sparkling-2-line")).toBeVisible()
   await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__table-row")).toHaveCount(36)
@@ -762,7 +762,7 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   })
   await page.getByRole("tab", { name: "网站分流" }).focus()
   await page.keyboard.press("ArrowRight")
-  await expect(page.getByRole("tab", { name: "网络连通性" })).toHaveAttribute("aria-selected", "true")
+  await expect(page.getByRole("tab", { name: "网络联通" })).toHaveAttribute("aria-selected", "true")
   await expect(page.getByRole("heading", { name: "我的 IP" })).toBeVisible()
   await expect(page.getByText("198.51.100.88", { exact: true })).toBeVisible()
   await expect(page.getByRole("heading", { name: "网络连通性测试" })).toBeVisible()
@@ -828,7 +828,7 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "network-ai-mobile.png")
 
-  await page.getByRole("tab", { name: "网络连通性" }).click()
+  await page.getByRole("tab", { name: "网络联通" }).click()
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "network-connectivity-mobile.png")
 
