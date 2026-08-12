@@ -431,8 +431,19 @@ export default function NetworkDiagnostics() {
     })
     const targets = force ? aiTargets : aiTargets.filter((target) => !cachedById.has(target.id))
     if (targets.length === 0) {
-      setAiResults(cachedResults)
-      return runAiRisks(cachedResults, force).then(() => cachedResults)
+      const task = (async () => {
+        setAiRunning(true)
+        setAiResults(cachedResults)
+        try {
+          await runAiRisks(cachedResults, force)
+          return cachedResults
+        } finally {
+          setAiRunning(false)
+          aiTask.current = null
+        }
+      })()
+      aiTask.current = task
+      return task
     }
 
     const task = (async () => {
@@ -838,7 +849,9 @@ export default function NetworkDiagnostics() {
                 </div>
               </div>
             ) : null}
-            {splitResults.length > 0 ? (
+            {splitRunning ? (
+              <SplitTableSkeleton targets={splitMode === "full" ? allTargets : coreTargets} />
+            ) : splitResults.length > 0 ? (
               <div className="network-diagnostics__table network-diagnostics__table--split" role="table" aria-label="网站分流检测结果">
                 <div className="network-diagnostics__table-head" role="row">
                   <span role="columnheader">网站</span>
@@ -876,9 +889,7 @@ export default function NetworkDiagnostics() {
                   </div>
                 ))}
               </div>
-            ) : (
-              <SplitTableSkeleton targets={splitMode === "full" ? allTargets : coreTargets} />
-            )}
+            ) : null}
           </DiagnosticSection>
         ) : activeTab === "connectivity" ? (
           <DiagnosticSection
@@ -960,7 +971,9 @@ export default function NetworkDiagnostics() {
                 </button>
               ))}
             </div>
-            {aiResults.length > 0 && aiDevice ? (
+            {aiRunning ? (
+              <AiDetectionSkeleton />
+            ) : aiResults.length > 0 && aiDevice ? (
               <div id={`ai-service-panel-${aiService}`} role="tabpanel" aria-labelledby={`ai-service-tab-${aiService}`}>
                 <AiDiagnosticsPanel
                   profile={AI_SERVICE_PROFILES[aiService]}
@@ -975,9 +988,7 @@ export default function NetworkDiagnostics() {
                   onRunWebRtc={() => void runWebRtc()}
                 />
               </div>
-            ) : (
-              <AiDetectionSkeleton />
-            )}
+            ) : null}
           </DiagnosticSection>
         ) : (
           <section className="network-diagnostics__card" aria-label="DNS 与 WebRTC 泄露检测">

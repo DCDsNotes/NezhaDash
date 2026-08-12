@@ -532,6 +532,9 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
     traceRequests += 1
     const hostname = new URL(route.request().url()).hostname
     const isChinaTarget = hostname.endsWith(".cn")
+    if (["claude.ai", "anthropic.com", "chatgpt.com", "api.openai.com"].includes(hostname)) {
+      await new Promise((resolve) => setTimeout(resolve, 30))
+    }
     await route.fulfill({
       status: 200,
       contentType: "text/plain; charset=utf-8",
@@ -645,7 +648,7 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   await expect(page.getByRole("tab", { name: "网络连通性" }).locator(".ri-wifi-line")).toBeVisible()
   await expect(page.getByRole("tab", { name: "泄露检测" }).locator(".ri-shield-keyhole-line")).toBeVisible()
   await expect(page.getByRole("tab", { name: "AI 检测" }).locator(".ri-sparkling-2-line")).toBeVisible()
-  await expect(page.locator(".network-diagnostics__split-skeleton .network-diagnostics__table-row")).toHaveCount(9)
+  await expect(page.locator(".network-diagnostics__split-skeleton")).toHaveCount(0)
   await expect(page.locator(".network-diagnostics__card:visible")).toHaveCount(2)
   await expect(page.locator(".network-diagnostics__section-footer")).toHaveCount(0)
   await expect(page.getByText(/完整检测包含参考站的/)).toHaveCount(0)
@@ -682,14 +685,16 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
 
   await page.getByRole("tab", { name: "AI 检测" }).click()
   await expect(page.getByRole("heading", { name: "Claude 与 ChatGPT 检测" })).toBeVisible()
-  await expect(page.locator(".network-diagnostics__ai-dashboard--skeleton .network-diagnostics__ai-panel-card")).toHaveCount(7)
+  await expect(page.locator(".network-diagnostics__ai-dashboard--skeleton")).toHaveCount(0)
   await page.getByRole("tab", { name: "网站分流" }).click()
 
   await page.getByRole("button", { name: "核心检测" }).evaluate((button) => {
     button.click()
     button.click()
   })
+  await expect(page.locator(".network-diagnostics__split-skeleton .network-diagnostics__table-row")).toHaveCount(9)
   await expect(page.getByText("检测到 2 个出口 IP")).toBeVisible()
+  await expect(page.locator(".network-diagnostics__split-skeleton")).toHaveCount(0)
   await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__table-row")).toHaveCount(9)
   await expect(page.getByRole("columnheader", { name: "Geolocation" })).toBeVisible()
   await expect(page.locator(".network-diagnostics__table--split [data-label='Geolocation']")).toHaveCount(9)
@@ -709,7 +714,9 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   await maskIpToggle.click()
   await page.getByRole("tab", { name: "AI 检测" }).click()
   await page.getByRole("button", { name: "开始检测" }).click()
+  await expect(page.locator(".network-diagnostics__ai-dashboard--skeleton .network-diagnostics__ai-panel-card")).toHaveCount(7)
   await expect(page.getByRole("button", { name: "重新检测" })).toBeEnabled()
+  await expect(page.locator(".network-diagnostics__ai-dashboard--skeleton")).toHaveCount(0)
   await expect(page.getByRole("tab", { name: "Claude", exact: true })).toHaveAttribute("aria-selected", "true")
   await expect(page.locator(".network-diagnostics__ai-panel-card")).toHaveCount(7)
   await expect(page.getByText("极度纯净", { exact: true })).toBeVisible()
