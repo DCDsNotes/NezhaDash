@@ -1164,7 +1164,7 @@ body {
 
 @media (min-width: 900px) {
   .probe-node-item {
-    grid-template-columns: 260px 150px minmax(0, 1fr) 80px 16px;
+    grid-template-columns: 260px 200px minmax(0, 1fr) 80px 16px;
   }
 }
 
