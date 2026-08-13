@@ -135,10 +135,12 @@ export function WebSocketProvider({ path, children }: { path: string; children: 
     }
 
     const handleVisibilityChange = () => (document.visibilityState === "hidden" ? pause() : resume())
+    const handlePageShow = () => resume()
     const handleOffline = () => pause()
     const handleOnline = () => resume()
 
     document.addEventListener("visibilitychange", handleVisibilityChange)
+    window.addEventListener("pageshow", handlePageShow)
     window.addEventListener("offline", handleOffline)
     window.addEventListener("online", handleOnline)
     connect()
@@ -146,6 +148,7 @@ export function WebSocketProvider({ path, children }: { path: string; children: 
     return () => {
       disposed = true
       document.removeEventListener("visibilitychange", handleVisibilityChange)
+      window.removeEventListener("pageshow", handlePageShow)
       window.removeEventListener("offline", handleOffline)
       window.removeEventListener("online", handleOnline)
       clearReconnectTimer()

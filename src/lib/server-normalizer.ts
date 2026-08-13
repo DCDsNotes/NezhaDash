@@ -5,8 +5,16 @@ const lastActiveTimeCache = new WeakMap<NezhaServer, { source: string; value: nu
 const publicNoteCache = new Map<string, PublicNoteData | null>()
 const resolvedPublicNotes = new Map<number, string>()
 const hydratedPublicNoteIds = new Set<number>()
+const persistedPublicNotes = new Map<number, { note: string; updatedAt: number }>()
 const PUBLIC_NOTE_CACHE_LIMIT = 256
 const PUBLIC_NOTE_LENGTH_LIMIT = 256 * 1024
+const PUBLIC_NOTE_STORAGE_KEY = "nezha_public_notes_v1"
+const PUBLIC_NOTE_STORAGE_LIMIT = 128
+const PUBLIC_NOTE_STORAGE_LENGTH_LIMIT = 16 * 1024
+const PUBLIC_NOTE_STORAGE_TOTAL_LIMIT = 512 * 1024
+const PUBLIC_NOTE_STORAGE_REFRESH_INTERVAL = 24 * 60 * 60 * 1000
+const PUBLIC_NOTE_STORAGE_TTL = 30 * PUBLIC_NOTE_STORAGE_REFRESH_INTERVAL
+let persistedPublicNotesHydrated = false
 
 export interface BillingData {
   startDate: string
@@ -71,31 +79,97 @@ export function isServerOnline(now: number, serverInfo: NezhaServer) {
   return now - getServerLastActiveTime(serverInfo) <= 30_000
 }
 
+function hydratePersistedPublicNotes() {
+  if (persistedPublicNotesHydrated) return
+  persistedPublicNotesHydrated = true
+
+  try {
+    const raw = localStorage.getItem(PUBLIC_NOTE_STORAGE_KEY)
+    if (!raw) return
+    if (raw.length > PUBLIC_NOTE_STORAGE_TOTAL_LIMIT) {
+      localStorage.removeItem(PUBLIC_NOTE_STORAGE_KEY)
+      return
+    }
+
+    const entries = JSON.parse(raw)
+    if (!Array.isArray(entries)) return
+
+    const now = Date.now()
+    entries.slice(-PUBLIC_NOTE_STORAGE_LIMIT).forEach((entry) => {
+      if (!Array.isArray(entry) || entry.length !== 3) return
+      const [serverId, note, updatedAt] = entry
+      if (!Number.isInteger(serverId) || typeof note !== "string" || !note || note.length > PUBLIC_NOTE_STORAGE_LENGTH_LIMIT) return
+      if (!Number.isFinite(updatedAt) || updatedAt > now || now - updatedAt > PUBLIC_NOTE_STORAGE_TTL) return
+      persistedPublicNotes.set(serverId, { note, updatedAt })
+    })
+  } catch {
+    // Storage can be unavailable in private or restricted browser contexts.
+  }
+}
+
+function savePersistedPublicNotes() {
+  try {
+    let payload = JSON.stringify(Array.from(persistedPublicNotes, ([id, item]) => [id, item.note, item.updatedAt]))
+    while (payload.length > PUBLIC_NOTE_STORAGE_TOTAL_LIMIT && persistedPublicNotes.size > 0) {
+      const oldestId = persistedPublicNotes.keys().next().value
+      if (oldestId === undefined) break
+      persistedPublicNotes.delete(oldestId)
+      payload = JSON.stringify(Array.from(persistedPublicNotes, ([id, item]) => [id, item.note, item.updatedAt]))
+    }
+    localStorage.setItem(PUBLIC_NOTE_STORAGE_KEY, payload)
+  } catch {
+    // The in-memory and session caches remain available when persistence fails.
+  }
+}
+
+function persistPublicNote(serverId: number, note: string) {
+  hydratePersistedPublicNotes()
+  persistedPublicNotes.delete(serverId)
+
+  if (note.length <= PUBLIC_NOTE_STORAGE_LENGTH_LIMIT) {
+    persistedPublicNotes.set(serverId, { note, updatedAt: Date.now() })
+    while (persistedPublicNotes.size > PUBLIC_NOTE_STORAGE_LIMIT) {
+      const oldestId = persistedPublicNotes.keys().next().value
+      if (oldestId === undefined) break
+      persistedPublicNotes.delete(oldestId)
+    }
+  }
+
+  savePersistedPublicNotes()
+}
+
 export function resolvePublicNote(serverId: number, publicNote: string): string {
   const storageKey = `server_${serverId}_public_note`
   let storedNote = resolvedPublicNotes.get(serverId) || ""
 
   if (!hydratedPublicNoteIds.has(serverId)) {
     hydratedPublicNoteIds.add(serverId)
+    hydratePersistedPublicNotes()
     try {
-      storedNote = sessionStorage.getItem(storageKey) || ""
+      storedNote = persistedPublicNotes.get(serverId)?.note || sessionStorage.getItem(storageKey) || storedNote
     } catch {
-      storedNote = ""
+      storedNote = persistedPublicNotes.get(serverId)?.note || storedNote
     }
     if (storedNote) resolvedPublicNotes.set(serverId, storedNote)
   }
 
-  if (publicNote && storedNote !== publicNote) {
+  if (publicNote) {
     resolvedPublicNotes.set(serverId, publicNote)
-    try {
-      sessionStorage.setItem(storageKey, publicNote)
-    } catch {
-      // In-memory fallback is sufficient when storage is unavailable.
+    if (storedNote !== publicNote) {
+      try {
+        sessionStorage.setItem(storageKey, publicNote)
+      } catch {
+        // In-memory fallback is sufficient when session storage is unavailable.
+      }
+    }
+    const persistedNote = persistedPublicNotes.get(serverId)
+    if (persistedNote?.note !== publicNote || Date.now() - persistedNote.updatedAt >= PUBLIC_NOTE_STORAGE_REFRESH_INTERVAL) {
+      persistPublicNote(serverId, publicNote)
     }
     return publicNote
   }
 
-  return publicNote || storedNote
+  return storedNote
 }
 
 export function normalizeServer(now: number, serverInfo: NezhaServer) {

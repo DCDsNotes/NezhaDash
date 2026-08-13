@@ -109,9 +109,9 @@ const servers = [
 
 const wsPayload = { now, servers }
 
-async function mockBackend(page: Page) {
+async function mockBackend(page: Page, getWebSocketPayload: () => unknown = () => wsPayload) {
   await page.routeWebSocket("**/api/v1/ws/server", (webSocket) => {
-    webSocket.send(JSON.stringify(wsPayload))
+    webSocket.send(JSON.stringify(getWebSocketPayload()))
   })
 
   await page.route("**/api/v1/**", async (route) => {
@@ -483,6 +483,28 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await expect(page).toHaveTitle("页面不存在 - 节点监控")
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "not-found-mobile.png")
+})
+
+test("server billing survives a restored mobile browser session with an incomplete websocket frame", async ({ page }) => {
+  let omitPublicNotes = false
+  await mockBackend(page, () => ({
+    ...wsPayload,
+    servers: omitPublicNotes ? servers.map((server) => ({ ...server, public_note: "" })) : servers,
+  }))
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto("/server/25ce76bd")
+
+  const priority = page.locator(".probe-detail-priority")
+  await expect(priority).toContainText("2027-01-01")
+  await expect
+    .poll(() => page.evaluate(() => Boolean(localStorage.getItem("nezha_public_notes_v1"))))
+    .toBe(true)
+
+  omitPublicNotes = true
+  await page.evaluate(() => sessionStorage.clear())
+  await page.reload()
+
+  await expect(priority).toContainText("2027-01-01")
 })
 
 test("network diagnostics keeps expensive checks manual and switches grouped test cards", async ({ page }, testInfo) => {
