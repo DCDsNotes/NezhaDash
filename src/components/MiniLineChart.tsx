@@ -591,7 +591,7 @@ export default function MiniLineChart({
                     d={seg.strokeD}
                     fill="none"
                     stroke={p.color}
-                    strokeWidth={p.isLoss ? 1.2 : 1.4}
+                    strokeWidth={1}
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     opacity={p.opacity ?? 1}

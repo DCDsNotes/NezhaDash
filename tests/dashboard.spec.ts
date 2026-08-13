@@ -228,7 +228,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await expect(page.locator(".probe-site-brand strong")).toHaveText("节点监控")
   await expect(page.locator(".probe-node-item")).toHaveCount(2)
   await expect(page.locator(".probe-node-item__identity").first()).toHaveCSS("width", "260px")
-  await expect(page.locator(".probe-node-item__speeds").first()).toHaveCSS("width", "150px")
+  await expect(page.locator(".probe-node-item__speeds").first()).toHaveCSS("width", "200px")
   await expect(page.locator(".status-hero > p")).toHaveText(/^最后更新：\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)
   const primaryNode = page.locator(".probe-node-item").filter({ hasText: "上海边缘节点" })
   await expect(primaryNode).toBeVisible()
