@@ -2,6 +2,7 @@ import { useWorldMapSize } from "@/hooks/use-world-map-size"
 import { countryCoordinates } from "@/lib/geo-limit"
 import { cn } from "@/lib/utils"
 import { count2size, findIntersectingGroups, lonLatToMapXY, worldMapImageUrl } from "@/lib/world-map"
+import "@/styles/map.css"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 
 import WorldMapPoint from "./WorldMapPoint"

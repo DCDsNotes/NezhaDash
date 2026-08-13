@@ -1,3 +1,4 @@
+import { createTimeoutSignal, delay, runConcurrent } from "@/lib/async"
 import { getSiteLogoUrl } from "@/lib/network-diagnostics"
 
 export type ConnectivityRegionId = "jp" | "us" | "global"
@@ -99,48 +100,24 @@ export function getConnectivityLatencyLevel(latency?: number | null): Connectivi
   return "slow"
 }
 
-function wait(duration: number, signal: AbortSignal) {
-  return new Promise<void>((resolve, reject) => {
-    if (signal.aborted) {
-      reject(signal.reason)
-      return
-    }
-
-    let timer = 0
-    const abort = () => {
-      window.clearTimeout(timer)
-      reject(signal.reason)
-    }
-    timer = window.setTimeout(() => {
-      signal.removeEventListener("abort", abort)
-      resolve()
-    }, duration)
-    signal.addEventListener("abort", abort, { once: true })
-  })
-}
-
 async function probeOnce(url: string, parentSignal: AbortSignal) {
-  const controller = new AbortController()
-  const abort = () => controller.abort()
-  const timer = window.setTimeout(abort, CONNECTIVITY_PROBE_TIMEOUT)
+  const request = createTimeoutSignal(parentSignal, CONNECTIVITY_PROBE_TIMEOUT)
   const startedAt = performance.now()
-
-  if (parentSignal.aborted) abort()
-  else parentSignal.addEventListener("abort", abort, { once: true })
 
   try {
     await fetch(url, {
       mode: "no-cors",
       cache: "no-store",
-      signal: controller.signal,
+      credentials: "omit",
+      referrerPolicy: "no-referrer",
+      signal: request.signal,
     })
     return Math.round(performance.now() - startedAt)
   } catch (error) {
     if (parentSignal.aborted) throw error
     return null
   } finally {
-    window.clearTimeout(timer)
-    parentSignal.removeEventListener("abort", abort)
+    request.dispose()
   }
 }
 
@@ -161,7 +138,7 @@ async function checkConnectivityTarget(item: ConnectivityTarget, signal: AbortSi
 
   for (let round = 0; round < CONNECTIVITY_PROBE_ROUNDS; round += 1) {
     samples.push(await probeOnce(probeUrl, signal))
-    if (round < CONNECTIVITY_PROBE_ROUNDS - 1) await wait(90 + Math.random() * 140, signal)
+    if (round < CONNECTIVITY_PROBE_ROUNDS - 1) await delay(90 + Math.random() * 140, signal)
   }
 
   const latency = median(samples.filter((sample): sample is number => sample !== null))
@@ -169,20 +146,5 @@ async function checkConnectivityTarget(item: ConnectivityTarget, signal: AbortSi
 }
 
 export async function checkConnectivityTargets(targets: ConnectivityTarget[], signal: AbortSignal, onResult: (result: ConnectivityResult) => void) {
-  const results = new Array<ConnectivityResult>(targets.length)
-  let nextIndex = 0
-
-  async function worker() {
-    while (!signal.aborted) {
-      const index = nextIndex++
-      const item = targets[index]
-      if (!item) return
-      const result = await checkConnectivityTarget(item, signal)
-      results[index] = result
-      onResult(result)
-    }
-  }
-
-  await Promise.all(Array.from({ length: Math.min(CONNECTIVITY_PROBE_CONCURRENCY, targets.length) }, () => worker()))
-  return results.filter(Boolean)
+  return runConcurrent(targets, CONNECTIVITY_PROBE_CONCURRENCY, signal, (item) => checkConnectivityTarget(item, signal), onResult)
 }

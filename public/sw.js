@@ -6,7 +6,7 @@
 
 const APP_BASE = new URL("./", self.location.href).pathname
 const APP_INDEX = `${APP_BASE}index.html`
-const CACHE_VERSION = "v7"
+const CACHE_VERSION = "v8"
 const CACHE_SCOPE = APP_BASE.replace(/[^a-z0-9]/gi, "_")
 const STATIC_CACHE = `static-${CACHE_SCOPE}-${CACHE_VERSION}`
 const ASSET_CACHE = `asset-${CACHE_SCOPE}-${CACHE_VERSION}`
@@ -20,9 +20,18 @@ function isApiPath(url) {
   return url.pathname.startsWith("/api/")
 }
 
+function hasExpectedContentType(request, response) {
+  const contentType = response.headers.get("content-type")?.toLowerCase() || ""
+  if (request.destination === "style") return contentType.includes("text/css")
+  if (request.destination === "script") return /javascript|ecmascript/.test(contentType)
+  if (request.destination === "font") return /font|woff|octet-stream/.test(contentType)
+  if (request.destination === "image") return contentType.startsWith("image/")
+  return true
+}
+
 async function cachePut(cacheName, request, response) {
   try {
-    if (!response || response.status !== 200) return
+    if (!response || response.status !== 200 || !hasExpectedContentType(request, response)) return
     const cache = await caches.open(cacheName)
     await cache.put(request, response)
   } catch {
@@ -70,6 +79,7 @@ async function cacheFirst(request) {
   if (cached) return cached
   const response = await safeFetch(request)
   if (!response) return offlineResponse()
+  if (!hasExpectedContentType(request, response)) return response
   await cachePut(ASSET_CACHE, request, response.clone())
   return response
 }
@@ -78,7 +88,7 @@ async function staleWhileRevalidate(request, event) {
   const cache = await caches.open(ASSET_CACHE)
   const cached = await cache.match(request, { ignoreSearch: false })
   const fetchPromise = safeFetch(request).then((response) => {
-    if (response) return cachePut(ASSET_CACHE, request, response.clone()).then(() => response)
+    if (response && hasExpectedContentType(request, response)) return cachePut(ASSET_CACHE, request, response.clone()).then(() => response)
     return response
   })
 

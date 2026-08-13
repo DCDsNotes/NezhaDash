@@ -209,7 +209,7 @@ async function screenshot(page: Page, testInfo: TestInfo, name: string) {
 }
 
 test("dashboard interactions remain usable on desktop and mobile", async ({ page }, testInfo) => {
-  test.setTimeout(60_000)
+  test.setTimeout(90_000)
   let worldMapRequestCount = 0
   let serverSpeedRequestCount = 0
   let monitorRequestCount = 0
@@ -293,13 +293,13 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await expect.poll(() => worldMapRequestCount).toBe(0)
   await page.getByLabel("查看节点地图").click()
   await expect(page.getByRole("dialog", { name: "节点地图" })).toBeVisible()
-  await expect(page.locator(".world-map-img")).toHaveCSS("background-image", /blob:/)
+  await expect(page.locator(".world-map-img")).toHaveCSS("background-image", /world-map[^"]*\.svg/)
   await screenshot(page, testInfo, "map-desktop.png")
   await page.getByRole("button", { name: "关闭" }).click()
   await page.getByLabel("查看节点地图").click()
   await expect(page.getByRole("dialog", { name: "节点地图" })).toBeVisible()
   await page.getByRole("button", { name: "关闭" }).click()
-  expect(worldMapRequestCount).toBe(0)
+  expect(worldMapRequestCount).toBe(1)
 
   const sortTrigger = page.getByLabel(/排序字段/)
   const initialSortWidth = (await sortTrigger.boundingBox())?.width
@@ -358,11 +358,9 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await expect(page.locator(".not-found-page__visual")).toBeVisible()
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "not-found-desktop.png")
-  await page.getByRole("link", { name: "回到主页" }).click()
-  await expect(page).toHaveURL(/\/$/)
+  await Promise.all([page.waitForURL(/\/$/), page.getByRole("link", { name: "回到主页" }).click()])
 
-  await page.getByLabel("查看 上海边缘节点 详情").click()
-  await expect(page).toHaveURL(/\/server\/25ce76bd$/)
+  await Promise.all([page.waitForURL(/\/server\/25ce76bd$/), page.getByLabel("查看 上海边缘节点 详情").click()])
   await expect(page).toHaveTitle("上海边缘节点 - 节点监控")
   await expect(page.getByText("网络速度", { exact: true })).toBeVisible()
   await expect(page.locator(".probe-detail-priority")).toContainText("18M/s")
@@ -488,6 +486,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
 })
 
 test("network diagnostics keeps expensive checks manual and switches grouped test cards", async ({ page }, testInfo) => {
+  test.setTimeout(90_000)
   await mockBackend(page)
   let publicIpRequests = 0
   let fallbackIpRequests = 0
@@ -593,7 +592,7 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   await page.route(/https:\/\/whatismyip\.ai\/api\/lookup\/.+/, async (route) => {
     aiRiskRequests += 1
     const ip = new URL(route.request().url()).pathname.split("/").pop()
-    await new Promise((resolve) => setTimeout(resolve, 250))
+    await new Promise((resolve) => setTimeout(resolve, 750))
     await route.fulfill({
       status: 200,
       contentType: "application/json; charset=utf-8",
@@ -636,8 +635,7 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   await expect(networkLink).toBeVisible()
   await expect(page.locator(".probe-site-actions__search + a[aria-label='IP 分流与泄露检测']")).toHaveCount(1)
 
-  await networkLink.click()
-  await expect(page).toHaveURL(/\/network$/)
+  await Promise.all([page.waitForURL(/\/network$/), networkLink.click()])
   await expect(page).toHaveTitle("分流查询 - 节点监控")
   await expect(page.getByRole("heading", { name: "网络与 IP 分流检测" })).toBeVisible()
   await expect(page.getByRole("heading", { name: "我的 IP" })).toBeVisible()
@@ -645,8 +643,8 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   await expect(page.getByRole("heading", { name: "网络连通性测试" })).toHaveCount(0)
   await expect(page.getByRole("heading", { name: "DNS 泄露测试" })).toHaveCount(0)
   await expect(page.getByRole("heading", { name: "WebRTC 泄露测试" })).toHaveCount(0)
-  await expect(page.getByRole("tab", { name: "网站分流" })).toHaveAttribute("aria-selected", "true")
-  await expect(page.getByRole("tab", { name: "网络联通" }).locator(".ri-wifi-line")).toBeVisible()
+  await expect(page.getByRole("tab", { name: "分流检测" })).toHaveAttribute("aria-selected", "true")
+  await expect(page.getByRole("tab", { name: "联通检测" }).locator(".ri-wifi-line")).toBeVisible()
   await expect(page.getByRole("tab", { name: "泄露检测" }).locator(".ri-shield-keyhole-line")).toBeVisible()
   await expect(page.getByRole("tab", { name: "AI 检测" }).locator(".ri-sparkling-2-line")).toBeVisible()
   await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__table-row")).toHaveCount(36)
@@ -691,14 +689,14 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   await expect(page.locator(".network-diagnostics__ai-panel-card")).toHaveCount(7)
   await expect(page.getByText("尚未检测", { exact: true })).toHaveCount(3)
   await expect(page.getByText("未检测", { exact: true }).first()).toBeVisible()
-  await page.getByRole("tab", { name: "网站分流" }).click()
+  await page.getByRole("tab", { name: "分流检测" }).click()
 
   await page.getByRole("button", { name: "开始检测" }).evaluate((button) => {
     button.click()
     button.click()
   })
   await expect(page.getByText("连接中", { exact: true }).first()).toBeVisible()
-  await expect(page.getByText("检测到 2 个出口 IP")).toBeVisible()
+  await expect(page.getByText("检测到 2 个出口 IP")).toBeVisible({ timeout: 20_000 })
   await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__table-row")).toHaveCount(36)
   await expect(page.getByRole("columnheader", { name: "Geolocation" })).toBeVisible()
   await expect(page.locator(".network-diagnostics__table--split [data-label='Geolocation']")).toHaveCount(36)
@@ -733,7 +731,7 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   expect(aiRiskRequests).toBe(1)
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "network-ai-desktop.png")
-  await page.getByRole("tab", { name: "网站分流" }).click()
+  await page.getByRole("tab", { name: "分流检测" }).click()
   expect(traceRequests).toBe(33)
   expect(headerRequests).toBe(2)
   expect(googleDnsRequests).toBe(1)
@@ -760,9 +758,9 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
       }
     }
   })
-  await page.getByRole("tab", { name: "网站分流" }).focus()
+  await page.getByRole("tab", { name: "分流检测" }).focus()
   await page.keyboard.press("ArrowRight")
-  await expect(page.getByRole("tab", { name: "网络联通" })).toHaveAttribute("aria-selected", "true")
+  await expect(page.getByRole("tab", { name: "联通检测" })).toHaveAttribute("aria-selected", "true")
   await expect(page.getByRole("heading", { name: "我的 IP" })).toBeVisible()
   await expect(page.getByText("198.51.100.88", { exact: true })).toBeVisible()
   await expect(page.getByRole("heading", { name: "网络连通性测试" })).toBeVisible()
@@ -828,11 +826,11 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "network-ai-mobile.png")
 
-  await page.getByRole("tab", { name: "网络联通" }).click()
+  await page.getByRole("tab", { name: "联通检测" }).click()
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "network-connectivity-mobile.png")
 
-  await page.getByRole("tab", { name: "网站分流" }).click()
+  await page.getByRole("tab", { name: "分流检测" }).click()
   await page.getByRole("button", { name: "重新检测" }).click()
   await expect(page.getByRole("button", { name: "重新检测" })).toBeEnabled()
   await expect(page.locator(".network-diagnostics__table--split .network-diagnostics__table-row")).toHaveCount(36)

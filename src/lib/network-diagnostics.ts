@@ -1,3 +1,5 @@
+import { createTimeoutSignal, delay, runConcurrent } from "@/lib/async"
+
 export type DiagnosticState = "idle" | "running" | "success" | "warning" | "error"
 
 type SplitMethod = "trace" | "header" | "google-dns"
@@ -422,32 +424,45 @@ function getStunUrls() {
   return configured?.length ? configured : DEFAULT_STUN_URLS
 }
 
-function withTimeout(parentSignal: AbortSignal, timeout = REQUEST_TIMEOUT) {
-  const controller = new AbortController()
-  const abort = () => controller.abort()
-  const timer = window.setTimeout(abort, timeout)
-
-  if (parentSignal.aborted) abort()
-  else parentSignal.addEventListener("abort", abort, { once: true })
-
-  return {
-    signal: controller.signal,
-    dispose() {
-      window.clearTimeout(timer)
-      parentSignal.removeEventListener("abort", abort)
-    },
-  }
-}
-
 function getSplitRequestMessage(error: unknown) {
-  if (error instanceof DOMException && error.name === "AbortError") return "请求超时"
+  if (error instanceof DOMException && (error.name === "AbortError" || error.name === "TimeoutError")) return "请求超时"
   if (error instanceof Error && /abort(?:ed)?(?: without reason)?/i.test(error.message)) return "请求超时"
   if (error instanceof Error && /^Failed to fetch$/i.test(error.message)) return "网络不可达或被浏览器拦截"
   return error instanceof Error ? error.message : "请求失败"
 }
 
+async function readLimitedText(response: Response) {
+  const declaredLength = Number(response.headers.get("content-length"))
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_RESPONSE_BYTES) throw new Error("响应数据过大")
+  if (!response.body) {
+    const text = await response.text()
+    if (new TextEncoder().encode(text).byteLength > MAX_RESPONSE_BYTES) throw new Error("响应数据过大")
+    return text
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let bytesRead = 0
+  let text = ""
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      bytesRead += value.byteLength
+      if (bytesRead > MAX_RESPONSE_BYTES) {
+        await reader.cancel()
+        throw new Error("响应数据过大")
+      }
+      text += decoder.decode(value, { stream: true })
+    }
+    return text + decoder.decode()
+  } finally {
+    reader.releaseLock()
+  }
+}
+
 async function fetchText(url: string, parentSignal: AbortSignal, init?: RequestInit) {
-  const request = withTimeout(parentSignal)
+  const request = createTimeoutSignal(parentSignal, REQUEST_TIMEOUT)
   try {
     const response = await fetch(url, {
       cache: "no-store",
@@ -457,33 +472,7 @@ async function fetchText(url: string, parentSignal: AbortSignal, init?: RequestI
       signal: request.signal,
     })
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
-    const declaredLength = Number(response.headers.get("content-length"))
-    if (Number.isFinite(declaredLength) && declaredLength > MAX_RESPONSE_BYTES) throw new Error("响应数据过大")
-    if (!response.body) {
-      const text = await response.text()
-      if (new TextEncoder().encode(text).byteLength > MAX_RESPONSE_BYTES) throw new Error("响应数据过大")
-      return text
-    }
-
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
-    let bytesRead = 0
-    let text = ""
-    try {
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        bytesRead += value.byteLength
-        if (bytesRead > MAX_RESPONSE_BYTES) {
-          await reader.cancel()
-          throw new Error("响应数据过大")
-        }
-        text += decoder.decode(value, { stream: true })
-      }
-      return text + decoder.decode()
-    } finally {
-      reader.releaseLock()
-    }
+    return readLimitedText(response)
   } finally {
     request.dispose()
   }
@@ -662,7 +651,7 @@ async function requestSplitTarget(target: SplitTarget, parentSignal: AbortSignal
     return subnet.ip ? { ...subnet, ...(await lookupIpGeography(subnet.ip, parentSignal)) } : subnet
   }
 
-  const request = withTimeout(parentSignal)
+  const request = createTimeoutSignal(parentSignal, REQUEST_TIMEOUT)
   try {
     const response = await fetch(target.url, {
       method: "HEAD",
@@ -705,27 +694,12 @@ export async function checkSplitTarget(target: SplitTarget, parentSignal: AbortS
 }
 
 export async function checkSplitTargets(targets: SplitTarget[], signal: AbortSignal, onResult: (result: SplitResult) => void) {
-  const results = new Array<SplitResult>(targets.length)
-  let nextIndex = 0
-
-  async function worker() {
-    while (!signal.aborted) {
-      const index = nextIndex++
-      const target = targets[index]
-      if (!target) return
-      const result = await checkSplitTarget(target, signal)
-      results[index] = result
-      onResult(result)
-    }
-  }
-
   const concurrency = targets.length > 12 ? 4 : 3
-  await Promise.all(Array.from({ length: Math.min(concurrency, targets.length) }, () => worker()))
-  return results.filter(Boolean)
+  return runConcurrent(targets, concurrency, signal, (target) => checkSplitTarget(target, signal), onResult)
 }
 
 async function postJson<T>(endpoint: string, body: unknown, parentSignal: AbortSignal): Promise<T> {
-  const request = withTimeout(parentSignal)
+  const request = createTimeoutSignal(parentSignal, REQUEST_TIMEOUT)
   try {
     const response = await fetch(endpoint, {
       method: "POST",
@@ -736,32 +710,10 @@ async function postJson<T>(endpoint: string, body: unknown, parentSignal: AbortS
       signal: request.signal,
     })
     if (!response.ok) throw new Error(`DNS 检测服务返回 HTTP ${response.status}`)
-    return (await response.json()) as T
+    return JSON.parse(await readLimitedText(response)) as T
   } finally {
     request.dispose()
   }
-}
-
-function wait(duration: number, signal: AbortSignal) {
-  return new Promise<void>((resolve, reject) => {
-    let timer = 0
-    const cleanup = () => signal.removeEventListener("abort", abort)
-    const finish = () => {
-      cleanup()
-      resolve()
-    }
-    const abort = () => {
-      window.clearTimeout(timer)
-      cleanup()
-      reject(new DOMException("检测已取消", "AbortError"))
-    }
-    if (signal.aborted) {
-      abort()
-      return
-    }
-    signal.addEventListener("abort", abort, { once: true })
-    timer = window.setTimeout(finish, duration)
-  })
 }
 
 type DnsStartResponse = { sessionId: string; probeUrls?: string[] }
@@ -773,7 +725,7 @@ async function checkSameOriginDnsLeak(endpoint: string, rounds: number, signal: 
   const probeUrls = (started.probeUrls || []).filter(isSafeHttpsUrl).slice(0, rounds)
   await Promise.allSettled(
     probeUrls.map(async (url) => {
-      const request = withTimeout(signal, 3_000)
+      const request = createTimeoutSignal(signal, 3_000)
       try {
         await fetch(url, { mode: "no-cors", cache: "no-store", credentials: "omit", referrerPolicy: "no-referrer", signal: request.signal })
       } finally {
@@ -783,7 +735,7 @@ async function checkSameOriginDnsLeak(endpoint: string, rounds: number, signal: 
   )
 
   for (let attempt = 0; attempt < 4; attempt += 1) {
-    if (attempt > 0) await wait(700, signal)
+    if (attempt > 0) await delay(700, signal)
     const result = await postJson<{ resolvers?: DnsResolver[]; complete?: boolean }>(
       endpoint,
       { action: "result", sessionId: started.sessionId },
@@ -812,18 +764,17 @@ async function checkSameOriginDnsLeak(endpoint: string, rounds: number, signal: 
 
 async function checkIpApiDnsLeak(rounds: number, signal: AbortSignal): Promise<DnsLeakResult> {
   const resolvers = new Map<string, DnsResolver>()
-  let nextIndex = 0
-
-  async function worker() {
-    while (!signal.aborted) {
-      const index = nextIndex++
-      if (index >= rounds) return
+  await runConcurrent(
+    Array.from({ length: rounds }, (_, index) => index),
+    2,
+    signal,
+    async () => {
       const token = crypto.randomUUID().replace(/-/g, "")
       try {
         const text = await fetchText(`https://${token}.edns.ip-api.com/json`, signal)
         const data = JSON.parse(text.slice(0, 8_192)) as { dns?: { ip?: unknown; geo?: unknown } }
         const ip = typeof data.dns?.ip === "string" ? normaliseAddress(data.dns.ip) : ""
-        if (!isIpAddress(ip)) continue
+        if (!isIpAddress(ip)) return
         const geo = sanitiseText(data.dns?.geo, 120)
         const parts = geo?.split(/\s+-\s+/) || []
         resolvers.set(ip, {
@@ -834,11 +785,18 @@ async function checkIpApiDnsLeak(rounds: number, signal: AbortSignal): Promise<D
       } catch (error) {
         if (signal.aborted) throw error
       }
-    }
-  }
-
-  await Promise.all(Array.from({ length: Math.min(2, rounds) }, () => worker()))
+    },
+  )
   return { resolvers: [...resolvers.values()].slice(0, 12), complete: true, source: "ip-api" }
+}
+
+export function maskIpAddress(value: string) {
+  if (value.includes(":")) {
+    const parts = value.split(":")
+    return `${parts.slice(0, 3).join(":")}:****:****`
+  }
+  const parts = value.split(".")
+  return parts.length === 4 ? `${parts[0]}.${parts[1]}.*.*` : value
 }
 
 export function checkDnsLeak(endpoint: string | null, rounds: number, signal: AbortSignal) {

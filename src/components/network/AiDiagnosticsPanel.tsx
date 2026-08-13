@@ -1,6 +1,6 @@
 import ServerFlag from "@/components/ServerFlag"
 import type { AiDeviceInfo } from "@/lib/ai-diagnostics"
-import type { AiRiskResult, AiServiceId, DiagnosticState, DnsLeakResult, SplitResult, WebRtcResult } from "@/lib/network-diagnostics"
+import { maskIpAddress, type AiRiskResult, type AiServiceId, type DiagnosticState, type DnsLeakResult, type SplitResult, type WebRtcResult } from "@/lib/network-diagnostics"
 
 type ServiceProfile = { id: AiServiceId; label: string; icon: string; targetIds: string[]; primaryTargetId: string }
 
@@ -84,12 +84,6 @@ function formatBoolean(value: boolean) {
   return value ? "是" : "否"
 }
 
-function maskAddress(value: string) {
-  if (value.includes(":")) return `${value.split(":").slice(0, 3).join(":")}:*`
-  const parts = value.split(".")
-  return parts.length === 4 ? `${parts[0]}.${parts[1]}.*.*` : value
-}
-
 export interface AiDiagnosticsPanelProps {
   profile: ServiceProfile
   results: SplitResult[]
@@ -141,7 +135,7 @@ export default function AiDiagnosticsPanel({ profile, results, risk, riskState, 
       </PanelCard>
 
       <PanelCard title={`${profile.label} AI 出口 IP 属性`}>
-        <MetricRow label="出口 IP">{primary?.ip ? (maskIp ? maskAddress(primary.ip) : primary.ip) : "-"}</MetricRow>
+        <MetricRow label="出口 IP">{primary?.ip ? (maskIp ? maskIpAddress(primary.ip) : primary.ip) : "-"}</MetricRow>
         <MetricRow label="地区"><span className="network-diagnostics__ai-inline">{countryCode ? <ServerFlag country_code={countryCode} className="network-diagnostics__country-flag" /> : null}{country}</span></MetricRow>
         <MetricRow label="城市">{city}</MetricRow>
         <MetricRow label="IP 属性"><ValueTag state={risk?.datacenter || risk?.vpn || risk?.proxy ? "warning" : risk?.residential ? "safe" : "neutral"}>{connectionType}</ValueTag></MetricRow>
@@ -170,13 +164,13 @@ export default function AiDiagnosticsPanel({ profile, results, risk, riskState, 
       <PanelCard title="DNS 泄露检测">
         <button type="button" className="network-diagnostics__button network-diagnostics__ai-card-action" onClick={onRunDns} disabled={dns.state === "running"}>查询 DNS 安全</button>
         <MetricRow label="状态"><ValueTag state={dnsStatus.state}>{dnsStatus.text}</ValueTag></MetricRow>
-        <MetricRow label="DNS 出口 IP">{dnsAddresses.length ? dnsAddresses.map((address) => maskIp ? maskAddress(address) : address).join(", ") : "-"}</MetricRow>
+        <MetricRow label="DNS 出口 IP">{dnsAddresses.length ? dnsAddresses.map((address) => maskIp ? maskIpAddress(address) : address).join(", ") : "-"}</MetricRow>
       </PanelCard>
 
       <PanelCard title="WebRTC UDP 泄露检测">
         <button type="button" className="network-diagnostics__button network-diagnostics__ai-card-action" onClick={onRunWebRtc} disabled={webRtc.state === "running"}>深度查询</button>
         <MetricRow label="状态"><ValueTag state={webRtcStatus.state}>{webRtcStatus.text}</ValueTag></MetricRow>
-        <MetricRow label="UDP 出口 IP">{rtcAddresses.length ? rtcAddresses.map((address) => maskIp ? maskAddress(address) : address).join(", ") : "-"}</MetricRow>
+        <MetricRow label="UDP 出口 IP">{rtcAddresses.length ? rtcAddresses.map((address) => maskIp ? maskIpAddress(address) : address).join(", ") : "-"}</MetricRow>
       </PanelCard>
 
       <PanelCard title={`${profile.label} AI 出口 IP 用户设备信息`} className="network-diagnostics__ai-device-card">

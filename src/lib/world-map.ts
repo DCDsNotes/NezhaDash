@@ -1,6 +1,6 @@
-import worldMapSvgSource from "@/assets/world-map.svg?raw"
+import worldMapImageUrl from "@/assets/world-map.svg?url"
 
-export const worldMapImageUrl = URL.createObjectURL(new Blob([worldMapSvgSource], { type: "image/svg+xml" }))
+export { worldMapImageUrl }
 
 let worldMapPreloadImage: HTMLImageElement | null = null
 let worldMapPreloadPromise: Promise<void> | null = null

@@ -34,7 +34,7 @@ main.tsx
 | -------------------- | ------------------------ | -------------------------------------------------------- |
 | `/`                  | `pages/Server.tsx`       | 系统状态、实时上下行、节点状态、到期续费和资源概览       |
 | `/server/:serverKey` | `pages/ServerDetail.tsx` | 单服务器状态、系统信息、实时速度、速度历史、网络监控历史 |
-| `/network-diagnostics` | `pages/NetworkDiagnostics.tsx` | IP、网站分流、连通性、泄露与 AI 出口检测              |
+| `/network`            | `pages/NetworkDiagnostics.tsx` | IP、网站分流、连通性、泄露与 AI 出口检测              |
 | `/error`             | `pages/ErrorPage.tsx`    | 通用错误展示                                             |
 | `*`                  | `pages/NotFound.tsx`     | 404 与返回首页                                           |
 

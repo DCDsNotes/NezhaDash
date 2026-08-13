@@ -32,9 +32,10 @@ import {
   getCachedSplitResults,
   getDnsEndpoint,
   getSplitTargets,
+  maskIpAddress,
 } from "@/lib/network-diagnostics"
 import "@/styles/network-diagnostics.css"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { memo, useEffect, useMemo, useRef, useState } from "react"
 import { Link } from "react-router-dom"
 
 type CheckState<T> = {
@@ -81,15 +82,6 @@ function isChinaLocation(value?: string) {
 
 function isPossibleDnsLeak(publicLocation?: string, resolverLocation?: string) {
   return Boolean(publicLocation) && !isChinaLocation(publicLocation) && isChinaLocation(resolverLocation)
-}
-
-function maskAddress(value: string) {
-  if (value.includes(":")) {
-    const parts = value.split(":")
-    return `${parts.slice(0, 3).join(":")}:****:****`
-  }
-  const parts = value.split(".")
-  return parts.length === 4 ? `${parts[0]}.${parts[1]}.*.*` : value
 }
 
 function StatusLabel({ state, children }: { state: DiagnosticState; children: React.ReactNode }) {
@@ -219,7 +211,7 @@ function CountryFlag({ countryCode }: { countryCode?: string }) {
 
 function formatSplitAddress(result: SplitResult, masked: boolean) {
   if (!result.ip) return result.state === "running" ? "检测中" : "-"
-  const address = masked ? maskAddress(result.ip) : result.ip
+  const address = masked ? maskIpAddress(result.ip) : result.ip
   return result.ipPrefix === undefined ? address : `${address}/${result.ipPrefix}`
 }
 
@@ -231,6 +223,32 @@ function SplitResultStatus({ result }: { result: SplitResult }) {
   if (!result.countryCode) return <StatusLabel state="warning">无法判断</StatusLabel>
   return result.countryCode === "CN" ? <StatusLabel state="warning">定位中国</StatusLabel> : <StatusLabel state="success">非中国定位</StatusLabel>
 }
+
+const SplitResultRow = memo(function SplitResultRow({ result, maskIp }: { result: SplitResult; maskIp: boolean }) {
+  return (
+    <div className="network-diagnostics__table-row" role="row">
+      <div className="network-diagnostics__site" role="cell">
+        <SiteLogo label={result.label} logoUrl={result.logoUrl} fallbackUrl={getOriginFavicon(result.url)} ready={result.state === "success"} />
+        <strong>{result.label}</strong>
+      </div>
+      <span role="cell" data-label="类型">
+        {result.category}
+      </span>
+      <div className="network-diagnostics__address" role="cell" data-label="出口 IP">
+        <span>
+          {result.ip ? <CountryFlag countryCode={result.countryCode} /> : null}
+          <code>{formatSplitAddress(result, maskIp)}</code>
+        </span>
+      </div>
+      <span role="cell" data-label="Geolocation">
+        {formatGeolocation(result.location, result.countryCode) || "-"}
+      </span>
+      <span role="cell" data-label="状态">
+        <SplitResultStatus result={result} />
+      </span>
+    </div>
+  )
+})
 
 function hasExactSplitIp(result: SplitResult): result is SplitResult & { ip: string; state: "success" } {
   return result.state === "success" && Boolean(result.ip) && result.ipPrefix === undefined
@@ -730,7 +748,7 @@ export default function NetworkDiagnostics() {
           <div className="network-diagnostics__ip-result">
             <div>
               <span>IPv4</span>
-              <code>{maskIp ? maskAddress(publicIp.result.ip) : publicIp.result.ip}</code>
+              <code>{maskIp ? maskIpAddress(publicIp.result.ip) : publicIp.result.ip}</code>
             </div>
             <dl>
               <div>
@@ -793,7 +811,7 @@ export default function NetworkDiagnostics() {
                   {splitExits.map((exit) => (
                     <span className="network-diagnostics__exit" key={exit.ip}>
                       <CountryFlag countryCode={exit.countryCode} />
-                      <code>{maskIp ? maskAddress(exit.ip) : exit.ip}</code>
+                      <code>{maskIp ? maskIpAddress(exit.ip) : exit.ip}</code>
                     </span>
                   ))}
                 </div>
@@ -807,34 +825,7 @@ export default function NetworkDiagnostics() {
                   <span role="columnheader">Geolocation</span>
                   <span role="columnheader">状态</span>
                 </div>
-                {splitResults.map((result) => (
-                  <div className="network-diagnostics__table-row" role="row" key={result.id}>
-                    <div className="network-diagnostics__site" role="cell">
-                      <SiteLogo
-                        label={result.label}
-                        logoUrl={result.logoUrl}
-                        fallbackUrl={getOriginFavicon(result.url)}
-                        ready={result.state === "success"}
-                      />
-                      <strong>{result.label}</strong>
-                    </div>
-                    <span role="cell" data-label="类型">
-                      {result.category}
-                    </span>
-                    <div className="network-diagnostics__address" role="cell" data-label="出口 IP">
-                      <span>
-                        {result.ip ? <CountryFlag countryCode={result.countryCode} /> : null}
-                        <code>{formatSplitAddress(result, maskIp)}</code>
-                      </span>
-                    </div>
-                    <span role="cell" data-label="Geolocation">
-                      {formatGeolocation(result.location, result.countryCode) || "-"}
-                    </span>
-                    <span role="cell" data-label="状态">
-                      <SplitResultStatus result={result} />
-                    </span>
-                  </div>
-                ))}
+                {splitResults.map((result) => <SplitResultRow result={result} maskIp={maskIp} key={result.id} />)}
               </div>
           </DiagnosticSection>
         ) : activeTab === "connectivity" ? (
@@ -965,7 +956,7 @@ export default function NetworkDiagnostics() {
                       <div className="network-diagnostics__table-row" role="row" key={resolver.ip}>
                         <span role="cell">{index + 1}</span>
                         <code role="cell" data-label="解析器 IP">
-                          {maskIp ? maskAddress(resolver.ip) : resolver.ip}
+                          {maskIp ? maskIpAddress(resolver.ip) : resolver.ip}
                         </code>
                         <span role="cell" data-label="归属地">
                           {resolver.location || "未知"}
@@ -1011,7 +1002,7 @@ export default function NetworkDiagnostics() {
                     <div className="network-diagnostics__table-row" role="row" key={`${candidate.address}-${candidate.protocol}-${candidate.type}`}>
                       <span role="cell">{index + 1}</span>
                       <code role="cell" data-label="IP 地址">
-                        {maskIp ? maskAddress(candidate.address) : candidate.address}
+                        {maskIp ? maskIpAddress(candidate.address) : candidate.address}
                       </code>
                       <span role="cell" data-label="类型">
                         {WEBRTC_TYPE_LABELS[candidate.type || ""] || candidate.type || "未知"}
