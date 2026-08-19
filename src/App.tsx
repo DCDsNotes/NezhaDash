@@ -14,8 +14,9 @@ import ErrorPage from "./pages/ErrorPage"
 export default function App() {
   const { data: settingData, error } = useQuery(settingQueryOptions())
   const [injectedCustomCode, setInjectedCustomCode] = useState<string | null>(null)
-  const customCode = settingData?.data?.config?.custom_code || ""
-  const configuredLanguage = settingData?.data?.config?.language
+  const config = settingData?.data?.config
+  const customCode = config?.custom_code || ""
+  const configuredLanguage = config?.language
   const { backgroundImage: customBackgroundImage } = useBackground(injectedCustomCode)
 
   useEffect(() => {
@@ -45,7 +46,7 @@ export default function App() {
   }, [configuredLanguage])
 
   if (error) {
-    return <ErrorPage code={500} />
+    return <ErrorPage code={500} standalone />
   }
 
   if (!settingData) {
@@ -72,7 +73,7 @@ export default function App() {
         )}
         <div className="nazha-layout-main">
           <RefreshToast />
-          <ProbeWorkspace />
+          <ProbeWorkspace configuredSiteName={config?.site_name} />
         </div>
       </div>
     </ErrorBoundary>

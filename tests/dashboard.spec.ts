@@ -206,6 +206,15 @@ async function assertCenteredStatusColumn(page: Page) {
   expect(Math.abs(layout.left - (layout.viewport - layout.width) / 2)).toBeLessThanOrEqual(1)
 }
 
+async function assertPageScrollControls(page: Page, bottomOffset: number) {
+  const controls = page.locator(".probe-page-scroll-controls")
+  await expect(controls).toBeVisible()
+  await expect(page.getByRole("button", { name: "滚动到底部" })).toBeVisible()
+  const controlsBox = await controls.boundingBox()
+  expect(controlsBox).not.toBeNull()
+  expect(Math.abs(page.viewportSize()!.height - controlsBox!.y - controlsBox!.height - bottomOffset)).toBeLessThanOrEqual(1)
+}
+
 async function screenshot(page: Page, testInfo: TestInfo, name: string) {
   await page.screenshot({ path: testInfo.outputPath(name), fullPage: true, animations: "disabled" })
 }
@@ -226,6 +235,14 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto("/")
 
+  await assertPageScrollControls(page, 56)
+  await expect(page.getByRole("button", { name: "滚动到顶部" })).toHaveCount(0)
+  await page.getByRole("button", { name: "滚动到底部" }).click()
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(240)
+  await expect(page.getByRole("button", { name: "滚动到顶部" })).toBeVisible()
+  await page.getByRole("button", { name: "滚动到顶部" }).click()
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(1)
+  await expect(page.getByRole("button", { name: "滚动到顶部" })).toHaveCount(0)
   await expect(page).toHaveTitle("节点监控")
   await expect(page.locator(".probe-site-brand strong")).toHaveText("节点监控")
   await expect(page.locator(".probe-node-item")).toHaveCount(2)
@@ -358,6 +375,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await expect(page).toHaveTitle("页面不存在 - 节点监控")
   await expect(page.locator(".not-found-page__path")).toContainText("/missing-node-page")
   await expect(page.locator(".not-found-page__visual")).toBeVisible()
+  await assertPageScrollControls(page, 56)
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "not-found-desktop.png")
   await Promise.all([page.waitForURL(/\/$/), page.getByRole("link", { name: "回到主页" }).click()])
@@ -411,12 +429,13 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   expect(await axisLabels.evaluateAll((labels) => labels.every((label) => label.getAttribute("font-size") === "10" && label.getAttribute("font-weight") === "600"))).toBe(true)
   const [detailPageBox, scrollControlsBox] = await Promise.all([
     page.locator(".server-detail-page").boundingBox(),
-    page.locator(".server-detail-scroll-controls").boundingBox(),
+    page.locator(".probe-page-scroll-controls").boundingBox(),
   ])
   expect(detailPageBox).not.toBeNull()
   expect(scrollControlsBox).not.toBeNull()
   expect(scrollControlsBox!.x - (detailPageBox!.x + detailPageBox!.width)).toBeGreaterThanOrEqual(9)
   expect(scrollControlsBox!.x - (detailPageBox!.x + detailPageBox!.width)).toBeLessThanOrEqual(11)
+  expect(Math.abs(page.viewportSize()!.height - scrollControlsBox!.y - scrollControlsBox!.height - 56)).toBeLessThanOrEqual(1)
   await page.getByRole("button", { name: "滚动到底部" }).click()
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100)
   await page.getByRole("button", { name: "滚动到顶部" }).click()
@@ -493,9 +512,11 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await page.goto("/server/25ce76bd")
   await expect(page.getByText("网络速度", { exact: true })).toBeVisible()
   await expect(page.getByRole("switch")).toHaveCount(3)
+  await assertPageScrollControls(page, 40)
+  await expect(page.getByRole("button", { name: "滚动到顶部" })).toHaveCount(0)
   const [mobileDetailPageBox, mobileScrollButtonBox] = await Promise.all([
     page.locator(".server-detail-page").boundingBox(),
-    page.getByRole("button", { name: "滚动到顶部" }).boundingBox(),
+    page.getByRole("button", { name: "滚动到底部" }).boundingBox(),
   ])
   expect(mobileDetailPageBox).not.toBeNull()
   expect(mobileScrollButtonBox).not.toBeNull()
@@ -515,6 +536,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await page.goto("/missing-node-page")
   await expect(page.getByRole("heading", { name: "页面不存在" })).toBeVisible()
   await expect(page).toHaveTitle("页面不存在 - 节点监控")
+  await assertPageScrollControls(page, 40)
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "not-found-mobile.png")
 })
@@ -692,6 +714,8 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   await expect(page.locator(".probe-site-actions__search + a[aria-label='IP 分流与泄露检测']")).toHaveCount(1)
 
   await Promise.all([page.waitForURL(/\/network$/), networkLink.click()])
+  await assertPageScrollControls(page, 56)
+  await expect(page.getByRole("button", { name: "滚动到顶部" })).toHaveCount(0)
   await expect(page).toHaveTitle("分流查询 - 节点监控")
   await expect(page.getByRole("heading", { name: "网络与 IP 分流检测" })).toBeVisible()
   await expect(page.getByRole("heading", { name: "我的 IP" })).toBeVisible()

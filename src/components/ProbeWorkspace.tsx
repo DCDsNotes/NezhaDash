@@ -1,8 +1,9 @@
+import PageScrollControls from "@/components/PageScrollControls"
 import SearchBox from "@/components/SearchBox"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { type ServerWorkspaceValue, useServerWorkspace } from "@/hooks/use-server-workspace"
 import { useWebSocketControls } from "@/hooks/use-websocket-context"
-import { loginUserQueryOptions, settingQueryOptions } from "@/lib/query-options"
+import { loginUserQueryOptions } from "@/lib/query-options"
 import { serverIdToServerKey } from "@/lib/server-key"
 import { getServerDailyTransferList } from "@/lib/server-view-model"
 import { formatPageTitle, resolveSiteName } from "@/lib/site-name"
@@ -20,6 +21,10 @@ function importMapDialog() {
 function loadMapDialog() {
   mapDialogPromise ||= importMapDialog()
   return mapDialogPromise
+}
+
+function preloadMapDialog() {
+  void loadMapDialog().then(({ preloadMapAssets }) => preloadMapAssets())
 }
 
 const MapDialog = lazy(loadMapDialog)
@@ -49,20 +54,19 @@ function useDashboardLinkState(): DashboardLinkState {
 
 function SiteHeader({
   dashboardLink,
+  siteName,
   servers,
   onOpenMap,
   onPreloadMap,
   onOpenTransfer,
 }: {
   dashboardLink: DashboardLinkState
+  siteName: string
   servers: ServerWorkspaceValue["servers"]
   onOpenMap: () => void
   onPreloadMap: () => void
   onOpenTransfer: () => void
 }) {
-  const { data: settingData } = useQuery(settingQueryOptions())
-  const siteName = resolveSiteName(settingData?.data?.config?.site_name)
-
   return (
     <header className="probe-site-header">
       <div className="probe-site-header__inner">
@@ -116,20 +120,15 @@ function SiteHeader({
 
 function TransferDialog({
   workspace,
-  open,
   onOpenChange,
 }: {
   workspace: ServerWorkspaceValue
-  open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const dailyTransferList = useMemo(
-    () => (open ? getServerDailyTransferList(workspace.now, workspace.servers) : []),
-    [open, workspace.now, workspace.servers],
-  )
+  const dailyTransferList = useMemo(() => getServerDailyTransferList(workspace.now, workspace.servers), [workspace.now, workspace.servers])
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open onOpenChange={onOpenChange}>
       <DialogContent className="dashboard-dialog probe-transfer-dialog">
         <DialogTitle className="dashboard-dialog__title">今日流量</DialogTitle>
         <DialogDescription className="dashboard-dialog__description">统计周期 00:00 至 23:59</DialogDescription>
@@ -174,26 +173,21 @@ function getWorkspacePageName(pathname: string, workspace: Pick<ServerWorkspaceV
   return serverName || (workspace.isLoading ? "" : "页面不存在")
 }
 
-export default function ProbeWorkspace() {
+export default function ProbeWorkspace({ configuredSiteName }: { configuredSiteName?: string }) {
   const workspace = useServerWorkspace()
   const dashboardLink = useDashboardLinkState()
-  const { data: settingData } = useQuery(settingQueryOptions())
   const { pathname } = useLocation()
   const [showTransfer, setShowTransfer] = useState(false)
   const [showMap, setShowMap] = useState(false)
-  const configuredSiteName = settingData?.data?.config?.site_name
+  const siteName = resolveSiteName(configuredSiteName)
   const pageTitle = formatPageTitle(getWorkspacePageName(pathname, workspace), configuredSiteName)
 
   useEffect(() => {
     document.title = pageTitle
   }, [pageTitle])
 
-  function preloadMap() {
-    void loadMapDialog().then(({ preloadMapAssets }) => preloadMapAssets())
-  }
-
   function openMap() {
-    preloadMap()
+    preloadMapDialog()
     setShowMap(true)
   }
 
@@ -201,15 +195,17 @@ export default function ProbeWorkspace() {
     <div className="probe-workspace">
       <SiteHeader
         dashboardLink={dashboardLink}
+        siteName={siteName}
         servers={workspace.servers}
         onOpenMap={openMap}
-        onPreloadMap={preloadMap}
+        onPreloadMap={preloadMapDialog}
         onOpenTransfer={() => setShowTransfer(true)}
       />
       <main className="probe-main">
         <Outlet context={workspace} />
       </main>
-      <TransferDialog workspace={workspace} open={showTransfer} onOpenChange={setShowTransfer} />
+      <PageScrollControls />
+      {showTransfer ? <TransferDialog workspace={workspace} onOpenChange={setShowTransfer} /> : null}
       {showMap ? (
         <Suspense fallback={null}>
           <MapDialog workspace={workspace} open onOpenChange={setShowMap} />
