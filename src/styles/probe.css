@@ -17,6 +17,9 @@
   --probe-radius: 5px;
   --probe-content-width: 760px;
   --probe-page-bottom-padding: 56px;
+  --probe-skeleton-base: #fbfcfd;
+  --probe-skeleton-border: #f0f3f5;
+  --probe-skeleton-duration: 1.8s;
 }
 
 html,
@@ -546,15 +549,35 @@ body {
 }
 
 .probe-node-skeleton {
-  background: linear-gradient(90deg, #f7f8f9 25%, #fcfcfd 50%, #f7f8f9 75%);
-  background-size: 200% 100%;
+  position: relative;
+  overflow: hidden;
+  background: var(--probe-skeleton-base);
   box-shadow: none;
-  animation: probe-skeleton 1.3s ease-in-out infinite;
 }
 
-@keyframes probe-skeleton {
+.probe-node-skeleton::before,
+.server-detail-skeleton::before,
+.server-monitor__placeholder-line::before,
+.server-monitor__placeholder-chart::before,
+.world-map-skeleton::before {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgb(255 255 255 / 20%) 34%,
+    rgb(255 255 255 / 88%) 50%,
+    rgb(255 255 255 / 20%) 66%,
+    transparent 100%
+  );
+  content: "";
+  transform: translateX(-100%);
+  animation: probe-skeleton-shimmer var(--probe-skeleton-duration) ease-in-out infinite;
+}
+
+@keyframes probe-skeleton-shimmer {
   to {
-    background-position: -200% 0;
+    transform: translateX(100%);
   }
 }
 

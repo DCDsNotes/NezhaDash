@@ -173,6 +173,15 @@ function getWorkspacePageName(pathname: string, workspace: Pick<ServerWorkspaceV
   return serverName || (workspace.isLoading ? "" : "页面不存在")
 }
 
+function shouldRenderPageScrollControls(pathname: string) {
+  return Boolean(
+    matchPath({ path: "/", end: true }, pathname) ||
+      matchPath({ path: "/server/:serverKey", end: true }, pathname) ||
+      matchPath({ path: "/network", end: true }, pathname) ||
+      matchPath({ path: "/error", end: true }, pathname),
+  )
+}
+
 export default function ProbeWorkspace({ configuredSiteName }: { configuredSiteName?: string }) {
   const workspace = useServerWorkspace()
   const dashboardLink = useDashboardLinkState()
@@ -204,7 +213,7 @@ export default function ProbeWorkspace({ configuredSiteName }: { configuredSiteN
       <main className="probe-main">
         <Outlet context={workspace} />
       </main>
-      <PageScrollControls />
+      {shouldRenderPageScrollControls(pathname) ? <PageScrollControls /> : null}
       {showTransfer ? <TransferDialog workspace={workspace} onOpenChange={setShowTransfer} /> : null}
       {showMap ? (
         <Suspense fallback={null}>

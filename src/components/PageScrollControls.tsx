@@ -5,7 +5,13 @@ function getScrollBehavior(): ScrollBehavior {
 }
 
 function scrollTo(top: number) {
-  window.scrollTo({ top, left: 0, behavior: getScrollBehavior() })
+  const scrollElement = document.scrollingElement ?? document.documentElement
+  scrollElement.scrollTo({ top, left: 0, behavior: getScrollBehavior() })
+}
+
+function getPageBottom() {
+  const scrollElement = document.scrollingElement ?? document.documentElement
+  return Math.max(0, scrollElement.scrollHeight - window.innerHeight)
 }
 
 export default function PageScrollControls() {
@@ -39,7 +45,7 @@ export default function PageScrollControls() {
         <button
           type="button"
           className="probe-page-scroll-controls__button"
-          onClick={() => scrollTo(document.scrollingElement?.scrollHeight ?? document.documentElement.scrollHeight)}
+          onClick={() => scrollTo(getPageBottom())}
           aria-label="滚动到底部"
           title="滚动到底部"
         >
