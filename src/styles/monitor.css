@@ -292,6 +292,27 @@
   color: #eee;
 }
 
+.server-monitor__title-area,
+.server-monitor__loading-indicator {
+  display: inline-flex;
+  align-items: center;
+}
+
+.server-monitor__title-area {
+  gap: 6px;
+}
+
+.server-monitor__loading-indicator {
+  justify-content: center;
+  color: var(--probe-accent, #0aa579);
+}
+
+.server-monitor__loading-indicator i {
+  width: 14px;
+  height: 14px;
+  font-size: 14px;
+}
+
 .server-monitor__controls {
   display: flex;
   flex-wrap: wrap;
@@ -645,6 +666,16 @@
     font-size: 14px;
   }
 
+  .server-monitor__title-area {
+    gap: 5px;
+  }
+
+  .server-monitor__loading-indicator i {
+    width: 13px;
+    height: 13px;
+    font-size: 13px;
+  }
+
   .server-monitor__controls {
     gap: 11px;
   }
@@ -738,5 +769,11 @@
   .line-box .chart-tooltip-row .dot {
     width: 7px;
     height: 7px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .server-monitor__loading-indicator i {
+    animation: none;
   }
 }

@@ -1,4 +1,5 @@
 import MiniLineChart, { type LineChartPoint, type LineChartSeries } from "@/components/MiniLineChart"
+import { LoadingSpinner } from "@/components/loading/loading-spinner"
 import { Switch } from "@/components/ui/switch"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useNearViewport } from "@/hooks/use-near-viewport"
@@ -363,6 +364,7 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
   const {
     data: monitorResp,
     isError,
+    isFetching,
     isLoading,
   } = useQuery({
     ...monitorQueryOptions(serverId),
@@ -464,6 +466,11 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
       <div className="server-monitor__header">
         <div className="server-monitor__title-area">
           <span className="server-monitor__title">网络监控</span>
+          {isFetching ? (
+            <span className="server-monitor__loading-indicator" role="status" aria-label="正在加载网络监控数据">
+              <LoadingSpinner />
+            </span>
+          ) : null}
         </div>
         <div className="server-monitor__controls">
           <label className="server-monitor__toggle server-monitor__toggle--chart-type" title="监控折线图是否聚合">

@@ -1,4 +1,5 @@
 import MiniLineChart, { type LineChartSeries } from "@/components/MiniLineChart"
+import { LoadingSpinner } from "@/components/loading/loading-spinner"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useNearViewport } from "@/hooks/use-near-viewport"
 import { serverSpeedQueryOptions } from "@/lib/query-options"
@@ -101,6 +102,7 @@ export default function ServerDetailSpeed({ now, server }: { now: number; server
   const {
     data: speedResp,
     isError,
+    isFetching,
     isLoading,
   } = useQuery({
     ...serverSpeedQueryOptions(server.id),
@@ -179,6 +181,11 @@ export default function ServerDetailSpeed({ now, server }: { now: number; server
       <div className="server-monitor__header">
         <div className="server-monitor__title-area">
           <span className="server-monitor__title">网络速度</span>
+          {isFetching ? (
+            <span className="server-monitor__loading-indicator" role="status" aria-label="正在加载网络速度数据">
+              <LoadingSpinner />
+            </span>
+          ) : null}
         </div>
         <div className="server-monitor__controls">
           <div className="server-monitor__range">

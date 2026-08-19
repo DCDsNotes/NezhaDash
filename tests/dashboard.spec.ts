@@ -109,7 +109,7 @@ const servers = [
 
 const wsPayload = { now, servers }
 
-async function mockBackend(page: Page, getWebSocketPayload: () => unknown = () => wsPayload) {
+async function mockBackend(page: Page, getWebSocketPayload: () => unknown = () => wsPayload, historyDelayMs = 0) {
   await page.routeWebSocket("**/api/v1/ws/server", (webSocket) => {
     webSocket.send(JSON.stringify(getWebSocketPayload()))
   })
@@ -146,6 +146,7 @@ async function mockBackend(page: Page, getWebSocketPayload: () => unknown = () =
     }
 
     if (pathname.endsWith("/server-speed/1")) {
+      if (historyDelayMs) await new Promise((resolve) => setTimeout(resolve, historyDelayMs))
       await json({
         success: true,
         data: {
@@ -160,6 +161,7 @@ async function mockBackend(page: Page, getWebSocketPayload: () => unknown = () =
     }
 
     if (pathname.endsWith("/service/1")) {
+      if (historyDelayMs) await new Promise((resolve) => setTimeout(resolve, historyDelayMs))
       await json({
         success: true,
         data: [
@@ -220,7 +222,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
     if (pathname.endsWith("/service/1")) monitorRequestCount += 1
   })
 
-  await mockBackend(page)
+  await mockBackend(page, () => wsPayload, 800)
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto("/")
 
@@ -361,6 +363,15 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await Promise.all([page.waitForURL(/\/$/), page.getByRole("link", { name: "回到主页" }).click()])
 
   await Promise.all([page.waitForURL(/\/server\/25ce76bd$/), page.getByLabel("查看 上海边缘节点 详情").click()])
+  const speedLoadingIndicator = page.locator(".server-speed .server-monitor__loading-indicator")
+  await expect(speedLoadingIndicator).toBeVisible()
+  const monitorPanel = page.locator(".server-monitor:not(.server-speed)")
+  await monitorPanel.scrollIntoViewIfNeeded()
+  await expect(monitorPanel.locator(".server-monitor__loading-indicator")).toBeVisible()
+  await expect(speedLoadingIndicator).toHaveCount(0)
+  await expect(monitorPanel.locator(".server-monitor__loading-indicator")).toHaveCount(0)
+  await page.getByRole("button", { name: "滚动到顶部" }).click()
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(1)
   await expect(page).toHaveTitle("上海边缘节点 - 节点监控")
   await expect(page.getByText("网络速度", { exact: true })).toBeVisible()
   await expect(page.locator(".probe-detail-priority")).toContainText("18M/s")
@@ -394,6 +405,22 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await expect(activeMinuteOptions).toHaveCount(2)
   await expect(activeMinuteOptions.first()).toHaveCSS("text-shadow", "none")
   await expect(activeMinuteOptions.last()).toHaveCSS("text-shadow", "none")
+  const axisLabels = page.locator(".server-detail-page .chart-axis-labels text")
+  await expect(axisLabels.first()).toHaveAttribute("font-size", "10")
+  await expect(axisLabels.first()).toHaveAttribute("font-weight", "600")
+  expect(await axisLabels.evaluateAll((labels) => labels.every((label) => label.getAttribute("font-size") === "10" && label.getAttribute("font-weight") === "600"))).toBe(true)
+  const [detailPageBox, scrollControlsBox] = await Promise.all([
+    page.locator(".server-detail-page").boundingBox(),
+    page.locator(".server-detail-scroll-controls").boundingBox(),
+  ])
+  expect(detailPageBox).not.toBeNull()
+  expect(scrollControlsBox).not.toBeNull()
+  expect(scrollControlsBox!.x - (detailPageBox!.x + detailPageBox!.width)).toBeGreaterThanOrEqual(9)
+  expect(scrollControlsBox!.x - (detailPageBox!.x + detailPageBox!.width)).toBeLessThanOrEqual(11)
+  await page.getByRole("button", { name: "滚动到底部" }).click()
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100)
+  await page.getByRole("button", { name: "滚动到顶部" }).click()
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(1)
   const speedChart = page.locator(".server-speed .line-box")
   await speedChart.hover()
   const speedTooltip = speedChart.locator(".chart-tooltip")
@@ -466,6 +493,13 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await page.goto("/server/25ce76bd")
   await expect(page.getByText("网络速度", { exact: true })).toBeVisible()
   await expect(page.getByRole("switch")).toHaveCount(3)
+  const [mobileDetailPageBox, mobileScrollButtonBox] = await Promise.all([
+    page.locator(".server-detail-page").boundingBox(),
+    page.getByRole("button", { name: "滚动到顶部" }).boundingBox(),
+  ])
+  expect(mobileDetailPageBox).not.toBeNull()
+  expect(mobileScrollButtonBox).not.toBeNull()
+  expect(Math.abs(mobileDetailPageBox!.x + mobileDetailPageBox!.width - (mobileScrollButtonBox!.x + mobileScrollButtonBox!.width))).toBeLessThanOrEqual(1)
   await page.locator(".probe-site-action:has(.ri-exchange-2-line)").click()
   const mobileTransferRows = page.locator(".dashboard-transfer-row")
   await expect(mobileTransferRows).toHaveCount(2)
