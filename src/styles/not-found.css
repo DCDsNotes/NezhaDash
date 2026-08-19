@@ -4,7 +4,7 @@
   min-height: calc(100dvh - 63px);
   align-items: center;
   margin: 0 auto;
-  padding: 48px 0;
+  padding: 48px 0 var(--probe-page-bottom-padding);
 }
 
 .not-found-page__layout {
@@ -130,7 +130,7 @@
 @media (max-width: 640px) {
   .not-found-page {
     min-height: calc(100dvh - 63px);
-    padding: 38px 0;
+    padding: 38px 0 var(--probe-page-bottom-padding);
   }
 
   .not-found-page__layout {

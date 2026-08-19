@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { preloadServerDetail } from "@/lib/route-preload"
 import { serverIdToServerKey } from "@/lib/server-key"
 import { getServerSearchViewModel, matchServerSearchWord } from "@/lib/server-view-model"
 import { type NezhaServer } from "@/types/nezha-api"
@@ -10,7 +11,13 @@ function SearchListItem({ server, onOpenDetail }: { server: NezhaServer; onOpenD
   const tagList = useMemo(() => getServerSearchViewModel(server).tagList, [server])
 
   return (
-    <button type="button" className="dashboard-search-result w-full text-left" onClick={() => onOpenDetail(server)}>
+    <button
+      type="button"
+      className="dashboard-search-result w-full text-left"
+      onPointerEnter={() => void preloadServerDetail()}
+      onFocus={() => void preloadServerDetail()}
+      onClick={() => onOpenDetail(server)}
+    >
       <span className="dashboard-search-result__name">{server.name}</span>
       {tagList.length > 0 ? (
         <span className="dashboard-search-result__tags">

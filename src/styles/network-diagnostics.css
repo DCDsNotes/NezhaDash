@@ -3,7 +3,7 @@
   width: min(var(--probe-content-width), calc(100% - 32px));
   gap: 12px;
   margin: 0 auto;
-  padding: 24px 0 48px;
+  padding: 24px 0 var(--probe-page-bottom-padding);
 }
 
 .network-diagnostics h1,
@@ -972,7 +972,7 @@
 @media (max-width: 640px) {
   .network-diagnostics {
     width: min(var(--probe-content-width), calc(100% - 24px));
-    padding: 18px 0 36px;
+    padding: 18px 0 var(--probe-page-bottom-padding);
   }
 
   .network-diagnostics__back {

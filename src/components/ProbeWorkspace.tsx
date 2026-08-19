@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { type ServerWorkspaceValue, useServerWorkspace } from "@/hooks/use-server-workspace"
 import { useWebSocketControls } from "@/hooks/use-websocket-context"
 import { loginUserQueryOptions } from "@/lib/query-options"
+import { preloadNetworkDiagnostics } from "@/lib/route-preload"
 import { serverIdToServerKey } from "@/lib/server-key"
 import { getServerDailyTransferList } from "@/lib/server-view-model"
 import { formatPageTitle, resolveSiteName } from "@/lib/site-name"
@@ -84,7 +85,14 @@ function SiteHeader({
           <div className="probe-site-actions__search">
             <SearchBox servers={servers} />
           </div>
-          <Link to="/network" className="probe-site-action" aria-label="IP 分流与泄露检测" title="IP 分流与泄露检测">
+          <Link
+            to="/network"
+            className="probe-site-action"
+            aria-label="IP 分流与泄露检测"
+            title="IP 分流与泄露检测"
+            onPointerEnter={() => void preloadNetworkDiagnostics()}
+            onFocus={() => void preloadNetworkDiagnostics()}
+          >
             <i className="ri-route-line" aria-hidden="true" />
           </Link>
           <button type="button" className="probe-site-action" onClick={onOpenTransfer} aria-label="查看今日流量" title="查看今日流量">

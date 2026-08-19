@@ -1001,7 +1001,7 @@ body {
 .status-page {
   width: min(var(--probe-content-width), calc(100% - 32px));
   gap: 16px;
-  padding: 36px 0 52px;
+  padding: 36px 0 var(--probe-page-bottom-padding);
 }
 
 .status-hero {
@@ -1508,7 +1508,7 @@ body {
 @media (max-width: 640px) {
   .status-page {
     gap: 14px;
-    padding: 26px 0 38px;
+    padding: 26px 0 var(--probe-page-bottom-padding);
   }
 
   .status-hero {

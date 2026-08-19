@@ -1,12 +1,38 @@
-import { useEffect, useRef, useState } from "react"
+import { memo, useEffect, useRef, useState } from "react"
 
-function getScrollBehavior(): ScrollBehavior {
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"
+let activeScrollFrame: number | null = null
+
+function cancelScrollAnimation() {
+  if (activeScrollFrame === null) return
+  window.cancelAnimationFrame(activeScrollFrame)
+  activeScrollFrame = null
 }
 
 function scrollTo(top: number) {
   const scrollElement = document.scrollingElement ?? document.documentElement
-  scrollElement.scrollTo({ top, left: 0, behavior: getScrollBehavior() })
+  const start = scrollElement.scrollTop
+  const distance = top - start
+  if (Math.abs(distance) < 1) return
+
+  cancelScrollAnimation()
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    scrollElement.scrollTop = top
+    return
+  }
+
+  const startedAt = performance.now()
+  const duration = Math.min(760, Math.max(360, Math.abs(distance) * 0.28))
+  const easeOut = (progress: number) => 1 - (1 - progress) ** 3
+  const frame = (now: number) => {
+    const progress = Math.min(1, (now - startedAt) / duration)
+    scrollElement.scrollTop = start + distance * easeOut(progress)
+    if (progress < 1) {
+      activeScrollFrame = window.requestAnimationFrame(frame)
+    } else {
+      activeScrollFrame = null
+    }
+  }
+  activeScrollFrame = window.requestAnimationFrame(frame)
 }
 
 function getPageBottom() {
@@ -14,7 +40,7 @@ function getPageBottom() {
   return Math.max(0, scrollElement.scrollHeight - window.innerHeight)
 }
 
-export default function PageScrollControls() {
+function PageScrollControls() {
   const topSentinelRef = useRef<HTMLSpanElement>(null)
   const [showScrollTop, setShowScrollTop] = useState(false)
 
@@ -24,7 +50,10 @@ export default function PageScrollControls() {
 
     const observer = new IntersectionObserver(([entry]) => setShowScrollTop(!entry.isIntersecting))
     observer.observe(sentinel)
-    return () => observer.disconnect()
+    return () => {
+      observer.disconnect()
+      cancelScrollAnimation()
+    }
   }, [])
 
   return (
@@ -55,3 +84,5 @@ export default function PageScrollControls() {
     </>
   )
 }
+
+export default memo(PageScrollControls)

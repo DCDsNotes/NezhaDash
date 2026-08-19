@@ -1,7 +1,7 @@
 import { nezhaWebSocketUrl } from "@/lib/nezha-endpoints"
 import { parseNezhaWsMessage } from "@/lib/nezha-websocket"
 import { type NezhaWebsocketResponse } from "@/types/nezha-api"
-import { type ReactNode, useEffect, useMemo, useState } from "react"
+import { startTransition, type ReactNode, useEffect, useMemo, useState } from "react"
 
 import { WebSocketControlsContext, WebSocketDataContext } from "./websocket-context"
 
@@ -55,8 +55,9 @@ export function WebSocketProvider({ path, children }: { path: string; children: 
       renderFrame = window.requestAnimationFrame(() => {
         renderFrame = 0
         if (!pendingData || disposed) return
-        setData(pendingData)
+        const nextData = pendingData
         pendingData = null
+        startTransition(() => setData(nextData))
       })
     }
 
