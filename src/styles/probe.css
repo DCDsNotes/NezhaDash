@@ -1025,6 +1025,50 @@ body {
   font-size: 20px;
 }
 
+.status-hero__mark--attention {
+  animation: status-alert-icon-background 850ms steps(1, end) infinite;
+}
+
+.status-hero__mark--attention > .ri-pulse-line {
+  animation: status-alert-icon-wave 850ms steps(4, end) infinite;
+  transform-origin: center;
+}
+
+@keyframes status-alert-icon-background {
+  0%,
+  49.9% {
+    background: #cf6844;
+  }
+
+  50%,
+  100% {
+    background: #e6a080;
+  }
+}
+
+@keyframes status-alert-icon-wave {
+  0%,
+  100% {
+    opacity: 0.78;
+    transform: scaleX(0.9);
+  }
+
+  25% {
+    opacity: 1;
+    transform: scaleX(1.08);
+  }
+
+  50% {
+    opacity: 0.9;
+    transform: scaleX(0.96) translateY(-1px);
+  }
+
+  75% {
+    opacity: 1;
+    transform: scaleX(1.03) translateY(1px);
+  }
+}
+
 .status-hero h1 {
   margin: 14px 0 10px;
   font-size: 26px;

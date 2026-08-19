@@ -2,6 +2,7 @@ import PageScrollControls from "@/components/PageScrollControls"
 import SearchBox from "@/components/SearchBox"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { type ServerWorkspaceValue, useServerWorkspace } from "@/hooks/use-server-workspace"
+import { useStatusFavicon } from "@/hooks/use-status-favicon"
 import { useWebSocketControls } from "@/hooks/use-websocket-context"
 import { loginUserQueryOptions } from "@/lib/query-options"
 import { preloadNetworkDiagnostics } from "@/lib/route-preload"
@@ -198,6 +199,7 @@ export default function ProbeWorkspace({ configuredSiteName }: { configuredSiteN
   const [showMap, setShowMap] = useState(false)
   const siteName = resolveSiteName(configuredSiteName)
   const pageTitle = formatPageTitle(getWorkspacePageName(pathname, workspace), configuredSiteName)
+  useStatusFavicon(!workspace.isLoading && workspace.totalCounts.offline > 0)
 
   useEffect(() => {
     document.title = pageTitle
