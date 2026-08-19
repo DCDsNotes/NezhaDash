@@ -119,6 +119,7 @@ export default function WorldMap({
   return (
     <div
       className={cn("world-map-group", className)}
+      onClick={() => setTipsShow(false)}
       style={
         {
           "--world-map-width": `${mapWidth}px`,

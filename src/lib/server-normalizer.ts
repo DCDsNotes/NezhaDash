@@ -61,22 +61,45 @@ function normalizeCountryCode(raw: unknown) {
   return code
 }
 
-export function parseISOTimestamp(isoString: string): number {
-  return new Date(isoString).getTime()
+function normalizeEpoch(value: number) {
+  if (!Number.isFinite(value)) return 0
+
+  const absolute = Math.abs(value)
+  if (absolute < 100_000_000_000) return value * 1000
+  if (absolute >= 100_000_000_000_000_000) return value / 1_000_000
+  if (absolute >= 100_000_000_000_000) return value / 1000
+  return value
+}
+
+export function parseISOTimestamp(value: unknown): number {
+  if (typeof value === "number") return normalizeEpoch(value)
+
+  const source = String(value || "").trim()
+  if (!source || source.startsWith("000")) return 0
+  if (/^-?\d+(?:\.\d+)?$/.test(source)) return normalizeEpoch(Number(source))
+
+  const timestamp = Date.parse(source)
+  return Number.isFinite(timestamp) ? timestamp : 0
 }
 
 export function getServerLastActiveTime(serverInfo: NezhaServer) {
-  const source = String(serverInfo.last_active || "")
+  const source = String(serverInfo.last_active ?? "")
   const cached = lastActiveTimeCache.get(serverInfo)
   if (cached?.source === source) return cached.value
 
-  const value = source.startsWith("000") ? 0 : parseISOTimestamp(source)
+  const value = parseISOTimestamp(serverInfo.last_active)
   lastActiveTimeCache.set(serverInfo, { source, value })
   return value
 }
 
 export function isServerOnline(now: number, serverInfo: NezhaServer) {
-  return now - getServerLastActiveTime(serverInfo) <= 30_000
+  if (typeof serverInfo.online === "boolean") return serverInfo.online
+  if (serverInfo.online === 0 || serverInfo.online === 1) return serverInfo.online === 1
+
+  const currentTime = normalizeEpoch(Number(now))
+  const lastActiveTime = getServerLastActiveTime(serverInfo)
+  if (!currentTime || !lastActiveTime) return false
+  return currentTime - lastActiveTime <= 30_000
 }
 
 function hydratePersistedPublicNotes() {

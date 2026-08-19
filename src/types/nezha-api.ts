@@ -7,7 +7,8 @@ export interface NezhaServer {
   id: number
   name: string
   public_note: string
-  last_active: string
+  last_active: string | number | null
+  online?: boolean | number
   country_code: string
   host: NezhaServerHost
   state: NezhaServerStatus

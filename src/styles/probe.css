@@ -56,6 +56,15 @@ body {
   pointer-events: none;
 }
 
+.probe-page-scroll-bottom-sentinel {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
 .probe-page-scroll-controls {
   position: fixed;
   right: 16px;
@@ -114,7 +123,8 @@ body {
 
 @media print {
   .probe-page-scroll-controls,
-  .probe-page-scroll-sentinel {
+  .probe-page-scroll-sentinel,
+  .probe-page-scroll-bottom-sentinel {
     display: none;
   }
 }
