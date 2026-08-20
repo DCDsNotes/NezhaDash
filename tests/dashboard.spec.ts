@@ -25,6 +25,7 @@ const servers = [
       },
       customData: {},
     }),
+    online: true,
     last_active: new Date(now - 5_000).toISOString(),
     country_code: "CN",
     host: {
@@ -67,6 +68,7 @@ const servers = [
     id: 2,
     name: "法兰克福备份节点",
     public_note: "",
+    online: false,
     last_active: new Date(now - 120_000).toISOString(),
     country_code: "DE",
     host: {
@@ -107,7 +109,7 @@ const servers = [
   },
 ]
 
-const wsPayload = { now, servers }
+const wsPayload = { now, online: 1, offline: 1, servers }
 
 type MockWebSocketFrame = { delayMs: number; payload: unknown }
 
@@ -581,7 +583,12 @@ test("server presence ignores a transient stale websocket frame", async ({ page 
   const freshLastActive = new Date(now - 5_000).toISOString().replace("Z", "123456Z")
   const freshPayload = {
     now,
-    servers: servers.map((server, index) => (index === 0 ? { ...server, last_active: freshLastActive } : server)),
+    servers: servers.map((server, index) => {
+      if (index !== 0) return server
+      const { online, ...legacyServer } = server
+      void online
+      return { ...legacyServer, last_active: freshLastActive }
+    }),
   }
   const stalePayload = { ...freshPayload, now: now + 70_000 }
   const recoveredPayload = {

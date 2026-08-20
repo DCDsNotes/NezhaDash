@@ -1,5 +1,7 @@
 export interface NezhaWebsocketResponse {
   now: number
+  online?: number
+  offline?: number
   servers: NezhaServer[]
 }
 
