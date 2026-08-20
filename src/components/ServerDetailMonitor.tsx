@@ -24,6 +24,7 @@ type CateItem = {
 
 type MonitorChartData = {
   dateList: number[]
+  dateListByCate: number[][]
   cateList: CateItem[]
   seriesList: LineChartSeries[]
   seriesByCate: LineChartSeries[][]
@@ -178,6 +179,7 @@ function buildMonitorChartData({
   showCates: Record<number, boolean>
 }): MonitorChartData {
   const cateList: CateItem[] = []
+  const dateListByCate: number[][] = []
   const seriesByCate: LineChartSeries[][] = []
   const seriesList: LineChartSeries[] = []
 
@@ -243,7 +245,8 @@ function buildMonitorChartData({
     let lossTotal = 0
     let lossCount = 0
 
-    dateList.forEach((time) => {
+    const monitorTimes = Array.from(new Set([...delayByTime.keys(), ...lossByTime.keys()])).sort((a, b) => a - b)
+    monitorTimes.forEach((time) => {
       const delayValRaw = delayByTime.get(time)
       const delayVal =
         typeof delayValRaw === "number" && Number.isFinite(delayValRaw) ? Number((Math.round(delayValRaw * 100) / 100).toFixed(2)) : null
@@ -291,6 +294,7 @@ function buildMonitorChartData({
     }
 
     cateList.push(cate)
+    dateListByCate.push(monitorTimes)
 
     const cateId = monitorId
     const delaySeries: LineChartSeries = {
@@ -319,6 +323,7 @@ function buildMonitorChartData({
   })
   return {
     dateList,
+    dateListByCate,
     cateList,
     seriesList,
     seriesByCate,
@@ -570,7 +575,7 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
                   </div>
                 </div>
               </div>
-              <MiniLineChart seriesList={chartData.seriesByCate[index] || []} dateList={chartData.dateList} />
+              <MiniLineChart seriesList={chartData.seriesByCate[index] || []} dateList={chartData.dateListByCate[index] || []} />
             </div>
           ))}
         </div>

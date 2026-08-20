@@ -3,6 +3,7 @@ import { type NezhaWebsocketResponse } from "@/types/nezha-api"
 
 const MAX_MESSAGE_LENGTH = 8 * 1024 * 1024
 const OFFLINE_CONFIRMATION_FRAMES = 3
+const EXPLICIT_OFFLINE_CONFIRMATION_FRAMES = 2
 
 type ServerPresence = {
   lastActive: NezhaWebsocketResponse["servers"][number]["last_active"]
@@ -32,11 +33,6 @@ export function createServerPresenceStabilizer() {
   const presenceByServer = new Map<number, ServerPresence>()
 
   return (data: NezhaWebsocketResponse): NezhaWebsocketResponse => {
-    if (data.servers.every((server) => typeof server.online === "boolean")) {
-      presenceByServer.clear()
-      return data
-    }
-
     const visibleServerIds = new Set<number>()
     let changed = false
 
@@ -55,7 +51,8 @@ export function createServerPresenceStabilizer() {
 
       let staleFrames = observedOnline ? 0 : (previous?.staleFrames || 0) + 1
       let online = observedOnline
-      if (explicitOnline === null && !observedOnline && previous?.online && staleFrames < OFFLINE_CONFIRMATION_FRAMES) online = true
+      const confirmationFrames = explicitOnline === false ? EXPLICIT_OFFLINE_CONFIRMATION_FRAMES : OFFLINE_CONFIRMATION_FRAMES
+      if (!observedOnline && previous?.online && staleFrames < confirmationFrames) online = true
       if (observedOnline) staleFrames = 0
 
       presenceByServer.set(serverId, { lastActive, lastActiveTime, staleFrames, online })

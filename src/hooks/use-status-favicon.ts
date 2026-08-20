@@ -1,11 +1,11 @@
 import { useEffect } from "react"
 
 const FAVICON_SELECTOR = 'link[rel~="icon"]'
-const ALERT_FAVICON_COLORS = ["#cf6844", "#e6a080"]
-const PULSE_PATH = '<path d="M9 7.53861L15 21.5386L18.6594 13H23V11H17.3406L15 16.4614L9 2.46143L5.3406 11H1V13H6.6594L9 7.53861Z" fill="#fff" transform="translate(24 24) scale(6)"/>'
+const ALERT_FAVICON_BACKGROUND = "#cf6844"
+const ALERT_PULSE_OPACITIES = [1, 0.32]
 
-const alertFavicons = ALERT_FAVICON_COLORS.map((background) =>
-  `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="${background}"/>${PULSE_PATH}</svg>`)}`,
+const alertFavicons = ALERT_PULSE_OPACITIES.map((opacity) =>
+  `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="${ALERT_FAVICON_BACKGROUND}"/><path d="M9 7.53861L15 21.5386L18.6594 13H23V11H17.3406L15 16.4614L9 2.46143L5.3406 11H1V13H6.6594L9 7.53861Z" fill="#fff" opacity="${opacity}" transform="translate(24 24) scale(6)"/></svg>`)}`,
 )
 
 function restoreFavicons(links: HTMLLinkElement[], originalHrefs: Array<string | null>) {
