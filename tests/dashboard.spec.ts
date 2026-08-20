@@ -387,6 +387,9 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await Promise.all([page.waitForURL(/\/$/), page.getByRole("link", { name: "回到主页" }).click()])
 
   await Promise.all([page.waitForURL(/\/server\/25ce76bd$/), page.getByLabel("查看 上海边缘节点 详情").click()])
+  const routeProgress = page.locator(".app-route-progress")
+  await expect(routeProgress).toHaveClass(/app-route-progress--loading/)
+  await expect(routeProgress.locator("> span")).toHaveCSS("animation-name", "none")
   const speedLoadingIndicator = page.locator(".server-speed .server-monitor__loading-indicator")
   await expect(speedLoadingIndicator).toBeVisible()
   const monitorPanel = page.locator(".server-monitor:not(.server-speed)")
@@ -394,6 +397,8 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await expect(monitorPanel.locator(".server-monitor__loading-indicator")).toBeVisible()
   await expect(speedLoadingIndicator).toHaveCount(0)
   await expect(monitorPanel.locator(".server-monitor__loading-indicator")).toHaveCount(0)
+  await expect(routeProgress).toHaveClass(/app-route-progress--idle/)
+  await expect(routeProgress).toHaveCSS("opacity", "0")
   await page.getByRole("button", { name: "滚动到顶部" }).click()
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(1)
   await expect(page).toHaveTitle("上海边缘节点 - 节点监控")

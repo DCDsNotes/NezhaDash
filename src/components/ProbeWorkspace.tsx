@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { type ServerWorkspaceValue, useServerWorkspace } from "@/hooks/use-server-workspace"
 import { useStatusFavicon } from "@/hooks/use-status-favicon"
 import { useWebSocketControls } from "@/hooks/use-websocket-context"
-import { loginUserQueryOptions } from "@/lib/query-options"
+import { loginUserQueryOptions, monitorQueryOptions, serverSpeedQueryOptions } from "@/lib/query-options"
 import { preloadNetworkDiagnostics } from "@/lib/route-preload"
 import { serverIdToServerKey } from "@/lib/server-key"
 import { getServerDailyTransferList } from "@/lib/server-view-model"
@@ -61,6 +61,7 @@ function SiteHeader({
   onOpenMap,
   onPreloadMap,
   onOpenTransfer,
+  workspaceLoading,
 }: {
   dashboardLink: DashboardLinkState
   siteName: string
@@ -68,24 +69,40 @@ function SiteHeader({
   onOpenMap: () => void
   onPreloadMap: () => void
   onOpenTransfer: () => void
+  workspaceLoading: boolean
 }) {
   const navigation = useNavigation()
-  const isNavigating = navigation.state !== "idle"
-  const [showProgress, setShowProgress] = useState(false)
+  const { pathname } = useLocation()
+  const serverMatch = matchPath({ path: "/server/:serverKey", end: true }, pathname)
+  const detailServerId = serverMatch
+    ? servers.find((server) => serverIdToServerKey(server.id) === serverMatch.params.serverKey)?.id
+    : undefined
+  const speedQuery = useQuery({
+    ...serverSpeedQueryOptions(detailServerId || 0),
+    enabled: Boolean(detailServerId),
+  })
+  const monitorQuery = useQuery({
+    ...monitorQueryOptions(detailServerId || 0),
+    enabled: Boolean(detailServerId),
+  })
+  const detailDataLoading = Boolean(detailServerId && (speedQuery.isPending || monitorQuery.isPending))
+  const isLoading = navigation.state !== "idle" || workspaceLoading || detailDataLoading
+  const [progressState, setProgressState] = useState<"idle" | "loading" | "finishing">("idle")
 
   useEffect(() => {
-    if (isNavigating) {
-      setShowProgress(true)
+    if (isLoading) {
+      setProgressState("loading")
       return
     }
 
-    const timeoutId = window.setTimeout(() => setShowProgress(false), 180)
+    setProgressState((current) => (current === "idle" ? current : "finishing"))
+    const timeoutId = window.setTimeout(() => setProgressState("idle"), 180)
     return () => window.clearTimeout(timeoutId)
-  }, [isNavigating])
+  }, [isLoading])
 
   return (
-    <header className="probe-site-header" aria-busy={isNavigating}>
-      <span className={cn("app-route-progress", { "app-route-progress--active": showProgress })} aria-hidden="true">
+    <header className="probe-site-header" aria-busy={isLoading}>
+      <span className={cn("app-route-progress", `app-route-progress--${progressState}`)} aria-hidden="true">
         <span />
       </span>
       <div className="probe-site-header__inner">
@@ -236,6 +253,7 @@ export default function ProbeWorkspace({ configuredSiteName }: { configuredSiteN
         onOpenMap={openMap}
         onPreloadMap={preloadMapDialog}
         onOpenTransfer={() => setShowTransfer(true)}
+        workspaceLoading={workspace.isLoading}
       />
       <main className="probe-main">
         <Outlet context={workspace} />
