@@ -13,6 +13,7 @@ on:
         required: false
 
 permissions:
+  actions: write
   contents: write
 
 jobs:
@@ -23,6 +24,23 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+
+      - name: Remove legacy workflow artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          mapfile -t artifact_ids < <(
+            gh api --paginate "repos/${GH_REPO}/actions/artifacts?per_page=100" \
+              --jq '.artifacts[].id'
+          )
+
+          for artifact_id in "${artifact_ids[@]}"; do
+            gh api --method DELETE "repos/${GH_REPO}/actions/artifacts/${artifact_id}"
+          done
+
+          echo "Removed ${#artifact_ids[@]} legacy Actions artifact(s)." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
