@@ -4,10 +4,10 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { type ServerWorkspaceValue, useServerWorkspace } from "@/hooks/use-server-workspace"
 import { useStatusFavicon } from "@/hooks/use-status-favicon"
 import { useWebSocketControls } from "@/hooks/use-websocket-context"
-import { loginUserQueryOptions, monitorQueryOptions, serverSpeedQueryOptions } from "@/lib/query-options"
+import { loginUserQueryOptions, monitorQueryOptions, serverMetricsQueryOptions } from "@/lib/query-options"
 import { preloadNetworkDiagnostics } from "@/lib/route-preload"
 import { serverIdToServerKey } from "@/lib/server-key"
-import { getServerDailyTransferList } from "@/lib/server-view-model"
+import { getServerTransferSummaryList } from "@/lib/server-view-model"
 import { formatPageTitle, resolveSiteName } from "@/lib/site-name"
 import { cn } from "@/lib/utils"
 import { useQuery } from "@tanstack/react-query"
@@ -74,11 +74,9 @@ function SiteHeader({
   const navigation = useNavigation()
   const { pathname } = useLocation()
   const serverMatch = matchPath({ path: "/server/:serverKey", end: true }, pathname)
-  const detailServerId = serverMatch
-    ? servers.find((server) => serverIdToServerKey(server.id) === serverMatch.params.serverKey)?.id
-    : undefined
+  const detailServerId = serverMatch ? servers.find((server) => serverIdToServerKey(server.id) === serverMatch.params.serverKey)?.id : undefined
   const speedQuery = useQuery({
-    ...serverSpeedQueryOptions(detailServerId || 0),
+    ...serverMetricsQueryOptions(detailServerId || 0),
     enabled: Boolean(detailServerId),
   })
   const monitorQuery = useQuery({
@@ -130,7 +128,7 @@ function SiteHeader({
           >
             <i className="ri-route-line" aria-hidden="true" />
           </Link>
-          <button type="button" className="probe-site-action" onClick={onOpenTransfer} aria-label="查看今日流量" title="查看今日流量">
+          <button type="button" className="probe-site-action" onClick={onOpenTransfer} aria-label="查看流量汇总" title="查看流量汇总">
             <i className="ri-exchange-2-line" aria-hidden="true" />
           </button>
           <button
@@ -161,23 +159,17 @@ function SiteHeader({
   )
 }
 
-function TransferDialog({
-  workspace,
-  onOpenChange,
-}: {
-  workspace: ServerWorkspaceValue
-  onOpenChange: (open: boolean) => void
-}) {
-  const dailyTransferList = useMemo(() => getServerDailyTransferList(workspace.now, workspace.servers), [workspace.now, workspace.servers])
+function TransferDialog({ workspace, onOpenChange }: { workspace: ServerWorkspaceValue; onOpenChange: (open: boolean) => void }) {
+  const transferList = useMemo(() => getServerTransferSummaryList(workspace.now, workspace.servers), [workspace.now, workspace.servers])
 
   return (
     <Dialog open onOpenChange={onOpenChange}>
       <DialogContent className="dashboard-dialog probe-transfer-dialog">
-        <DialogTitle className="dashboard-dialog__title">今日流量</DialogTitle>
-        <DialogDescription className="dashboard-dialog__description">统计周期 00:00 至 23:59</DialogDescription>
+        <DialogTitle className="dashboard-dialog__title">流量汇总</DialogTitle>
+        <DialogDescription className="dashboard-dialog__description">Agent 当前累计上报流量</DialogDescription>
         <div className="dashboard-transfer-list">
-          {dailyTransferList.length > 0 ? (
-            dailyTransferList.map((item) => (
+          {transferList.length > 0 ? (
+            transferList.map((item) => (
               <div key={item.id} className="dashboard-transfer-row">
                 <div className="dashboard-transfer-row__name">
                   <span className={cn("probe-status-dot", { "probe-status-dot--offline": !item.online })} />
@@ -219,9 +211,9 @@ function getWorkspacePageName(pathname: string, workspace: Pick<ServerWorkspaceV
 function shouldRenderPageScrollControls(pathname: string) {
   return Boolean(
     matchPath({ path: "/", end: true }, pathname) ||
-      matchPath({ path: "/server/:serverKey", end: true }, pathname) ||
-      matchPath({ path: "/network", end: true }, pathname) ||
-      matchPath({ path: "/error", end: true }, pathname),
+    matchPath({ path: "/server/:serverKey", end: true }, pathname) ||
+    matchPath({ path: "/network", end: true }, pathname) ||
+    matchPath({ path: "/error", end: true }, pathname),
   )
 }
 

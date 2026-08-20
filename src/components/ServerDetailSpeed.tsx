@@ -2,9 +2,9 @@ import MiniLineChart, { type LineChartSeries } from "@/components/MiniLineChart"
 import { LoadingSpinner } from "@/components/loading/loading-spinner"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useNearViewport } from "@/hooks/use-near-viewport"
-import { serverSpeedQueryOptions } from "@/lib/query-options"
+import { serverMetricsQueryOptions } from "@/lib/query-options"
 import { cn } from "@/lib/utils"
-import { type NezhaServer, type NezhaServerSpeedHistory } from "@/types/nezha-api"
+import { type NezhaServer, type ServerNetworkHistory } from "@/types/nezha-api"
 import { useQuery } from "@tanstack/react-query"
 import { type CSSProperties, useMemo, useState } from "react"
 
@@ -60,7 +60,7 @@ function speedCategoryStyle(color: string) {
   return { ["--cate-color" as `--${string}`]: color } as CSSProperties
 }
 
-function buildSpeedPoints(data: NezhaServerSpeedHistory | undefined) {
+function buildSpeedPoints(data: ServerNetworkHistory | undefined) {
   if (!data) return []
 
   const createdAt = Array.isArray(data.created_at) ? data.created_at : []
@@ -105,7 +105,7 @@ export default function ServerDetailSpeed({ now, server }: { now: number; server
     isFetching,
     isLoading,
   } = useQuery({
-    ...serverSpeedQueryOptions(server.id),
+    ...serverMetricsQueryOptions(server.id),
     enabled: shouldFetchHistory,
     refetchInterval: 60000,
   })

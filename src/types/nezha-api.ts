@@ -14,17 +14,6 @@ export interface NezhaServer {
   country_code: string
   host: NezhaServerHost
   state: NezhaServerStatus
-  transfer_stats?: NezhaServerTransferStats
-}
-
-export interface NezhaServerTransferUsage {
-  in: number
-  out: number
-}
-
-export interface NezhaServerTransferStats {
-  today?: NezhaServerTransferUsage
-  billing?: NezhaServerTransferUsage
 }
 
 export interface NezhaServerHost {
@@ -93,12 +82,22 @@ export interface MonitorResponse {
   data: NezhaMonitor[]
 }
 
-export interface ServerSpeedHistoryResponse {
+export interface ServerNetworkHistoryResponse {
   success: boolean
-  data: NezhaServerSpeedHistory
+  data: ServerNetworkHistory
 }
 
-export interface NezhaServerSpeedHistory {
+export interface ServerMetricsResponse {
+  success: boolean
+  data: {
+    server_id: number
+    server_name: string
+    metric: string
+    data_points: Array<{ ts: number; value: number }>
+  }
+}
+
+export interface ServerNetworkHistory {
   server_id: number
   server_name: string
   created_at: number[]

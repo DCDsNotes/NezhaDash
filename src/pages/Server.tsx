@@ -222,7 +222,7 @@ export default function Servers() {
               <small>{networkStats.netSpeed.inData.unit}/s</small>
             </strong>
             <p>
-              今日流量 {networkStats.transfer.inData.value} {networkStats.transfer.inData.unit}
+              累计流量 {networkStats.transfer.inData.value} {networkStats.transfer.inData.unit}
             </p>
           </div>
           <div className="status-network__metric status-network__metric--up">
@@ -234,7 +234,7 @@ export default function Servers() {
               <small>{networkStats.netSpeed.outData.unit}/s</small>
             </strong>
             <p>
-              今日流量 {networkStats.transfer.outData.value} {networkStats.transfer.outData.unit}
+              累计流量 {networkStats.transfer.outData.value} {networkStats.transfer.outData.unit}
             </p>
           </div>
         </div>

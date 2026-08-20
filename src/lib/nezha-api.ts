@@ -1,4 +1,11 @@
-import { LoginUserResponse, MonitorResponse, ServerGroupResponse, ServerSpeedHistoryResponse, SettingResponse } from "@/types/nezha-api"
+import {
+  LoginUserResponse,
+  MonitorResponse,
+  ServerGroupResponse,
+  ServerMetricsResponse,
+  ServerNetworkHistoryResponse,
+  SettingResponse,
+} from "@/types/nezha-api"
 
 import { nezhaApiUrl } from "./nezha-endpoints"
 
@@ -69,12 +76,35 @@ export const fetchLoginUser = async (signal?: AbortSignal): Promise<LoginUserRes
   }
 }
 
-export const fetchMonitor = async (serverId: number, signal?: AbortSignal): Promise<MonitorResponse> => {
-  return fetchApi<MonitorResponse>(`/service/${serverId}`, { signal })
+export const fetchServerMonitorHistory = async (serverId: number, signal?: AbortSignal): Promise<MonitorResponse> => {
+  return fetchApi<MonitorResponse>(`/server/${serverId}/service`, { signal })
 }
 
-export const fetchServerSpeedHistory = async (serverId: number, signal?: AbortSignal): Promise<ServerSpeedHistoryResponse> => {
-  return fetchApi<ServerSpeedHistoryResponse>(`/server-speed/${serverId}`, { signal })
+function fetchServerMetric(serverId: number, metric: "net_in_speed" | "net_out_speed", signal?: AbortSignal) {
+  return fetchApi<ServerMetricsResponse>(`/server/${serverId}/metrics?metric=${metric}`, { signal })
+}
+
+export const fetchServerNetworkMetrics = async (serverId: number, signal?: AbortSignal): Promise<ServerNetworkHistoryResponse> => {
+  const [inbound, outbound] = await Promise.all([
+    fetchServerMetric(serverId, "net_in_speed", signal),
+    fetchServerMetric(serverId, "net_out_speed", signal),
+  ])
+  const inboundByTime = new Map(inbound.data.data_points.map((point) => [Number(point.ts), Number(point.value) || 0]))
+  const outboundByTime = new Map(outbound.data.data_points.map((point) => [Number(point.ts), Number(point.value) || 0]))
+  const createdAt = Array.from(new Set([...inboundByTime.keys(), ...outboundByTime.keys()]))
+    .filter(Number.isFinite)
+    .sort((a, b) => a - b)
+
+  return {
+    success: inbound.success && outbound.success,
+    data: {
+      server_id: serverId,
+      server_name: inbound.data.server_name || outbound.data.server_name,
+      created_at: createdAt,
+      net_in_speed: createdAt.map((time) => inboundByTime.get(time) || 0),
+      net_out_speed: createdAt.map((time) => outboundByTime.get(time) || 0),
+    },
+  }
 }
 
 export const fetchSetting = async (signal?: AbortSignal): Promise<SettingResponse> => {

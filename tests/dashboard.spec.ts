@@ -59,10 +59,6 @@ const servers = [
       temperatures: [{ Name: "CPU", Temperature: 54.2 }],
       gpu: [],
     },
-    transfer_stats: {
-      today: { in: 12 * 1024 ** 3, out: 8 * 1024 ** 3 },
-      billing: { in: 320 * 1024 ** 3, out: 180 * 1024 ** 3 },
-    },
   },
   {
     id: 2,
@@ -102,26 +98,19 @@ const servers = [
       temperatures: [],
       gpu: [],
     },
-    transfer_stats: {
-      today: { in: 0, out: 0 },
-      billing: { in: 90 * 1024 ** 3, out: 45 * 1024 ** 3 },
-    },
   },
 ]
 
 const wsPayload = { now, online: 1, offline: 1, servers }
 
-async function mockBackend(
-  page: Page,
-  getWebSocketPayload: () => unknown = () => wsPayload,
-  historyDelayMs = 0,
-) {
+async function mockBackend(page: Page, getWebSocketPayload: () => unknown = () => wsPayload, historyDelayMs = 0) {
   await page.routeWebSocket("**/api/v1/ws/server", (webSocket) => {
     webSocket.send(JSON.stringify(getWebSocketPayload()))
   })
 
   await page.route("**/api/v1/**", async (route) => {
-    const pathname = new URL(route.request().url()).pathname
+    const requestUrl = new URL(route.request().url())
+    const pathname = requestUrl.pathname
     const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) })
 
     if (pathname.endsWith("/setting")) {
@@ -151,22 +140,23 @@ async function mockBackend(
       return
     }
 
-    if (pathname.endsWith("/server-speed/1")) {
+    if (pathname.endsWith("/server/1/metrics")) {
       if (historyDelayMs) await new Promise((resolve) => setTimeout(resolve, historyDelayMs))
+      const metric = requestUrl.searchParams.get("metric") || ""
+      const values = metric === "net_in_speed" ? [4 * 1024 ** 2, 9 * 1024 ** 2, 12 * 1024 ** 2] : [2 * 1024 ** 2, 5 * 1024 ** 2, 4 * 1024 ** 2]
       await json({
         success: true,
         data: {
           server_id: 1,
           server_name: servers[0].name,
-          created_at: [now / 1000 - 3600, now / 1000 - 1800, now / 1000 - 600],
-          net_in_speed: [4 * 1024 ** 2, 9 * 1024 ** 2, 12 * 1024 ** 2],
-          net_out_speed: [2 * 1024 ** 2, 5 * 1024 ** 2, 4 * 1024 ** 2],
+          metric,
+          data_points: [now - 3600_000, now - 1800_000, now - 600_000].map((ts, index) => ({ ts, value: values[index] })),
         },
       })
       return
     }
 
-    if (pathname.endsWith("/service/1")) {
+    if (pathname.endsWith("/server/1/service")) {
       if (historyDelayMs) await new Promise((resolve) => setTimeout(resolve, historyDelayMs))
       await json({
         success: true,
@@ -233,8 +223,8 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   page.on("request", (request) => {
     const pathname = new URL(request.url()).pathname
     if (request.resourceType() === "image" && pathname.endsWith("/world-map.svg")) worldMapRequestCount += 1
-    if (pathname.endsWith("/server-speed/1")) serverSpeedRequestCount += 1
-    if (pathname.endsWith("/service/1")) monitorRequestCount += 1
+    if (pathname.endsWith("/server/1/metrics")) serverSpeedRequestCount += 1
+    if (pathname.endsWith("/server/1/service")) monitorRequestCount += 1
   })
 
   await mockBackend(page, () => wsPayload, 800)
@@ -355,8 +345,8 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await expect(page.locator(".dashboard-search-result")).toHaveCount(1)
   await page.getByLabel("关闭搜索").click()
 
-  await page.getByTitle("查看今日流量").click()
-  await expect(page.getByRole("dialog", { name: "今日流量" })).toBeVisible()
+  await page.getByTitle("查看流量汇总").click()
+  await expect(page.getByRole("dialog", { name: "流量汇总" })).toBeVisible()
   await expect(page.locator(".dashboard-transfer-row")).toHaveCount(2)
   const transferValuePositions = await page.locator(".dashboard-transfer-row__values").evaluateAll((rows) =>
     rows.map((row) =>
@@ -437,7 +427,11 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   const axisLabels = page.locator(".server-detail-page .chart-axis-labels text")
   await expect(axisLabels.first()).toHaveAttribute("font-size", "10")
   await expect(axisLabels.first()).toHaveAttribute("font-weight", "600")
-  expect(await axisLabels.evaluateAll((labels) => labels.every((label) => label.getAttribute("font-size") === "10" && label.getAttribute("font-weight") === "600"))).toBe(true)
+  expect(
+    await axisLabels.evaluateAll((labels) =>
+      labels.every((label) => label.getAttribute("font-size") === "10" && label.getAttribute("font-weight") === "600"),
+    ),
+  ).toBe(true)
   const [detailPageBox, scrollControlsBox] = await Promise.all([
     page.locator(".server-detail-page").boundingBox(),
     page.locator(".probe-page-scroll-controls").boundingBox(),
@@ -466,7 +460,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "server-detail-desktop.png")
 
-  await expect.poll(() => serverSpeedRequestCount).toBe(1)
+  await expect.poll(() => serverSpeedRequestCount).toBe(2)
   await expect.poll(() => monitorRequestCount).toBe(1)
   await page.evaluate(() => {
     Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" })
@@ -480,7 +474,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   })
   await expect(page.locator(".server-detail-header")).toBeVisible()
   await expect(page.locator(".server-detail-skeleton")).toHaveCount(0)
-  await expect.poll(() => serverSpeedRequestCount).toBe(1)
+  await expect.poll(() => serverSpeedRequestCount).toBe(2)
   await expect.poll(() => monitorRequestCount).toBe(1)
 
   await page.reload()
@@ -531,7 +525,9 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   ])
   expect(mobileDetailPageBox).not.toBeNull()
   expect(mobileScrollButtonBox).not.toBeNull()
-  expect(Math.abs(mobileDetailPageBox!.x + mobileDetailPageBox!.width - (mobileScrollButtonBox!.x + mobileScrollButtonBox!.width))).toBeLessThanOrEqual(1)
+  expect(
+    Math.abs(mobileDetailPageBox!.x + mobileDetailPageBox!.width - (mobileScrollButtonBox!.x + mobileScrollButtonBox!.width)),
+  ).toBeLessThanOrEqual(1)
   await page.locator(".probe-site-action:has(.ri-exchange-2-line)").click()
   const mobileTransferRows = page.locator(".dashboard-transfer-row")
   await expect(mobileTransferRows).toHaveCount(2)
@@ -563,9 +559,7 @@ test("server billing survives a restored mobile browser session with an incomple
 
   const priority = page.locator(".probe-detail-priority")
   await expect(priority).toContainText("2027-01-01")
-  await expect
-    .poll(() => page.evaluate(() => Boolean(localStorage.getItem("nezha_public_notes_v1"))))
-    .toBe(true)
+  await expect.poll(() => page.evaluate(() => Boolean(localStorage.getItem("nezha_public_notes_v1")))).toBe(true)
 
   omitPublicNotes = true
   await page.evaluate(() => sessionStorage.clear())
@@ -670,10 +664,7 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
           ip === "203.0.113.20"
             ? { asn: 7018, org: "AT&T Internet", isp: "AT&T Internet" }
             : { asn: 4134, org: "China Telecom", isp: "China Telecom" },
-        timezone:
-          ip === "203.0.113.20"
-            ? { id: "America/Los_Angeles", utc: "-07:00" }
-            : { id: "Asia/Shanghai", utc: "+08:00" },
+        timezone: ip === "203.0.113.20" ? { id: "America/Los_Angeles", utc: "-07:00" } : { id: "Asia/Shanghai", utc: "+08:00" },
       }),
     })
   })
