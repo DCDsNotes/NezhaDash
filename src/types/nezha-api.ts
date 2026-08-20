@@ -1,7 +1,5 @@
 export interface NezhaWebsocketResponse {
   now: number
-  online?: number
-  offline?: number
   servers: NezhaServer[]
 }
 
@@ -9,8 +7,7 @@ export interface NezhaServer {
   id: number
   name: string
   public_note: string
-  last_active: string | number | null
-  online?: boolean | number | string
+  last_active: string
   country_code: string
   host: NezhaServerHost
   state: NezhaServerStatus

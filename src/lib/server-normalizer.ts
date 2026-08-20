@@ -14,7 +14,6 @@ const PUBLIC_NOTE_STORAGE_LENGTH_LIMIT = 16 * 1024
 const PUBLIC_NOTE_STORAGE_TOTAL_LIMIT = 512 * 1024
 const PUBLIC_NOTE_STORAGE_REFRESH_INTERVAL = 24 * 60 * 60 * 1000
 const PUBLIC_NOTE_STORAGE_TTL = 30 * PUBLIC_NOTE_STORAGE_REFRESH_INTERVAL
-const SERVER_ONLINE_GRACE_MS = 60_000
 let persistedPublicNotesHydrated = false
 
 export interface BillingData {
@@ -62,60 +61,22 @@ function normalizeCountryCode(raw: unknown) {
   return code
 }
 
-function normalizeEpoch(value: number) {
-  if (!Number.isFinite(value)) return 0
-
-  const absolute = Math.abs(value)
-  if (absolute < 100_000_000_000) return value * 1000
-  if (absolute >= 100_000_000_000_000_000) return value / 1_000_000
-  if (absolute >= 100_000_000_000_000) return value / 1000
-  return value
-}
-
-export function parseISOTimestamp(value: unknown): number {
-  if (typeof value === "number") return normalizeEpoch(value)
-
-  const source = String(value || "").trim()
-  if (!source || source.startsWith("000")) return 0
-  if (/^-?\d+(?:\.\d+)?$/.test(source)) return normalizeEpoch(Number(source))
-
-  // Go emits RFC3339Nano values. Trim sub-millisecond precision for browsers
-  // that only accept three fractional digits in ISO timestamps.
-  const normalizedSource = source.replace(/(\.\d{3})\d+(?=(?:Z|[+-]\d{2}:\d{2})$)/, "$1")
-  const timestamp = Date.parse(normalizedSource)
-  return Number.isFinite(timestamp) ? timestamp : 0
+export function parseISOTimestamp(isoString: string): number {
+  return new Date(isoString).getTime()
 }
 
 export function getServerLastActiveTime(serverInfo: NezhaServer) {
-  const source = String(serverInfo.last_active ?? "")
+  const source = String(serverInfo.last_active || "")
   const cached = lastActiveTimeCache.get(serverInfo)
   if (cached?.source === source) return cached.value
 
-  const value = parseISOTimestamp(serverInfo.last_active)
+  const value = source.startsWith("000") ? 0 : parseISOTimestamp(source)
   lastActiveTimeCache.set(serverInfo, { source, value })
   return value
 }
 
-export function getExplicitServerOnline(serverInfo: NezhaServer): boolean | null {
-  if (typeof serverInfo.online === "boolean") return serverInfo.online
-  if (serverInfo.online === 0 || serverInfo.online === 1) return serverInfo.online === 1
-  if (typeof serverInfo.online === "string") {
-    const value = serverInfo.online.trim().toLowerCase()
-    if (["1", "true", "online"].includes(value)) return true
-    if (["0", "false", "offline"].includes(value)) return false
-  }
-
-  return null
-}
-
 export function isServerOnline(now: number, serverInfo: NezhaServer) {
-  const explicitOnline = getExplicitServerOnline(serverInfo)
-  if (explicitOnline !== null) return explicitOnline
-
-  const currentTime = normalizeEpoch(Number(now))
-  const lastActiveTime = getServerLastActiveTime(serverInfo)
-  if (!currentTime || !lastActiveTime) return false
-  return currentTime - lastActiveTime <= SERVER_ONLINE_GRACE_MS
+  return now - getServerLastActiveTime(serverInfo) <= 30_000
 }
 
 function hydratePersistedPublicNotes() {
