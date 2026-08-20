@@ -97,13 +97,6 @@ jobs:
         shell: bash
         run: zip -r dist.zip dist
 
-      - name: Upload dist.zip (workflow artifact)
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist-${{ steps.version.outputs.tag }}
-          path: dist.zip
-          if-no-files-found: error
-
       - name: Create release and upload asset
         uses: softprops/action-gh-release@v2
         with:
