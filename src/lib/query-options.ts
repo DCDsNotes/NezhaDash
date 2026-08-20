@@ -1,13 +1,14 @@
 import { queryOptions } from "@tanstack/react-query"
 
-import { fetchLoginUser, fetchServerGroup, fetchServerMonitorHistory, fetchServerNetworkMetrics, fetchSetting } from "./nezha-api"
+import { fetchLoginUser, fetchServerGroup, fetchServerNetworkMetrics, fetchServiceHistories, fetchSetting, fetchTodayServerTraffic } from "./nezha-api"
 
 export const queryKeys = {
   setting: ["setting"] as const,
   loginUser: ["login-user"] as const,
   serverGroups: ["server-group"] as const,
-  monitor: (serverId: number) => ["monitor", serverId] as const,
+  monitorHistory: ["service-history"] as const,
   serverMetrics: (serverId: number) => ["server-metrics", serverId] as const,
+  todayTraffic: ["server-traffic", "today"] as const,
 }
 
 export function settingQueryOptions() {
@@ -41,13 +42,23 @@ export function serverGroupsQueryOptions() {
   })
 }
 
-export function monitorQueryOptions(serverId: number) {
+export function monitorQueryOptions() {
   return queryOptions({
-    queryKey: queryKeys.monitor(serverId),
-    queryFn: ({ signal }) => fetchServerMonitorHistory(serverId, signal),
+    queryKey: queryKeys.monitorHistory,
+    queryFn: ({ signal }) => fetchServiceHistories(signal),
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     staleTime: 15_000,
+  })
+}
+
+export function todayTrafficQueryOptions() {
+  return queryOptions({
+    queryKey: queryKeys.todayTraffic,
+    queryFn: ({ signal }) => fetchTodayServerTraffic(signal),
+    staleTime: 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   })
 }
 

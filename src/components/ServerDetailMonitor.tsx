@@ -4,6 +4,7 @@ import { Switch } from "@/components/ui/switch"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useNearViewport } from "@/hooks/use-near-viewport"
 import { monitorQueryOptions } from "@/lib/query-options"
+import { selectServerMonitorHistory } from "@/lib/nezha-api"
 import { cn } from "@/lib/utils"
 import { type NezhaMonitor } from "@/types/nezha-api"
 import { useQuery } from "@tanstack/react-query"
@@ -372,12 +373,12 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
     isFetching,
     isLoading,
   } = useQuery({
-    ...monitorQueryOptions(serverId),
+    ...monitorQueryOptions(),
     enabled: shouldFetchHistory,
     refetchInterval: shouldFetchHistory && refreshData ? 60000 : false,
   })
 
-  const monitorData = useMemo(() => (monitorResp?.success && Array.isArray(monitorResp.data) ? monitorResp.data : []), [monitorResp])
+  const monitorData = useMemo(() => selectServerMonitorHistory(monitorResp, serverId), [monitorResp, serverId])
 
   useEffect(() => {
     if (monitorData.length === 0) return

@@ -135,6 +135,21 @@ async function mockBackend(page: Page, getWebSocketPayload: () => unknown = () =
       return
     }
 
+    if (pathname.endsWith("/server/traffic")) {
+      await json({
+        success: true,
+        data: {
+          from: new Date(now).toISOString(),
+          to: new Date(now).toISOString(),
+          servers: {
+            "1": { server_id: 1, in: 70.7 * 1024 ** 2, out: 71 * 1024 ** 2 },
+            "2": { server_id: 2, in: 249.2 * 1024 ** 2, out: 35.5 * 1024 ** 2 },
+          },
+        },
+      })
+      return
+    }
+
     if (pathname.endsWith("/profile")) {
       await json({ error: "unauthorized" }, 401)
       return
@@ -156,30 +171,44 @@ async function mockBackend(page: Page, getWebSocketPayload: () => unknown = () =
       return
     }
 
-    if (pathname.endsWith("/server/1/service")) {
-      if (historyDelayMs) await new Promise((resolve) => setTimeout(resolve, historyDelayMs))
+    if (pathname.endsWith("/service")) {
       await json({
         success: true,
-        data: [
-          {
-            monitor_id: 11,
-            monitor_name: "上海 TCP",
+        data: {
+          services: {
+            "11": { service_name: "上海 TCP" },
+            "12": { service_name: "东京 ICMP" },
+          },
+        },
+      })
+      return
+    }
+
+    if (/\/service\/(11|12)\/history$/.test(pathname)) {
+      if (historyDelayMs) await new Promise((resolve) => setTimeout(resolve, historyDelayMs))
+      const serviceId = Number(pathname.split("/").at(-2))
+      const delays = serviceId === 11 ? [24, 29, 22] : [48, 51, 45]
+      await json({
+        success: true,
+        data: {
+          service_id: serviceId,
+          service_name: serviceId === 11 ? "上海 TCP" : "东京 ICMP",
+          servers: [{
             server_id: 1,
             server_name: servers[0].name,
-            created_at: [now / 1000 - 3600, now / 1000 - 1800, now / 1000 - 600],
-            avg_delay: [24, 29, 22],
-            packet_loss: [0, 0.5, 0],
-          },
-          {
-            monitor_id: 12,
-            monitor_name: "东京 ICMP",
-            server_id: 1,
-            server_name: servers[0].name,
-            created_at: [now / 1000 - 3600, now / 1000 - 1800, now / 1000 - 600],
-            avg_delay: [48, 51, 45],
-            packet_loss: [0, 1, 0],
-          },
-        ],
+            stats: {
+              avg_delay: delays.reduce((sum, value) => sum + value, 0) / delays.length,
+              up_percent: 100,
+              total_up: 3,
+              total_down: 0,
+              data_points: [now - 3600_000, now - 1800_000, now - 600_000].map((ts, index) => ({
+                ts,
+                delay: delays[index],
+                status: 1,
+              })),
+            },
+          }],
+        },
       })
       return
     }
@@ -224,7 +253,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
     const pathname = new URL(request.url()).pathname
     if (request.resourceType() === "image" && pathname.endsWith("/world-map.svg")) worldMapRequestCount += 1
     if (pathname.endsWith("/server/1/metrics")) serverSpeedRequestCount += 1
-    if (pathname.endsWith("/server/1/service")) monitorRequestCount += 1
+    if (/\/service\/(11|12)\/history$/.test(pathname)) monitorRequestCount += 1
   })
 
   await mockBackend(page, () => wsPayload, 800)
@@ -346,8 +375,12 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await page.getByLabel("关闭搜索").click()
 
   await page.getByTitle("查看流量汇总").click()
-  await expect(page.getByRole("dialog", { name: "流量汇总" })).toBeVisible()
+  await expect(page.getByRole("dialog", { name: "今日流量汇总" })).toBeVisible()
   await expect(page.locator(".dashboard-transfer-row")).toHaveCount(2)
+  await expect(page.locator(".dashboard-transfer-row").first().locator(".dashboard-transfer-row__values span").first()).toHaveAttribute(
+    "title",
+    "74.13 MB",
+  )
   const transferValuePositions = await page.locator(".dashboard-transfer-row__values").evaluateAll((rows) =>
     rows.map((row) =>
       Array.from(row.children).map((value) => {
@@ -461,7 +494,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await screenshot(page, testInfo, "server-detail-desktop.png")
 
   await expect.poll(() => serverSpeedRequestCount).toBe(2)
-  await expect.poll(() => monitorRequestCount).toBe(1)
+  await expect.poll(() => monitorRequestCount).toBe(2)
   await page.evaluate(() => {
     Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" })
     document.dispatchEvent(new Event("visibilitychange"))
@@ -475,7 +508,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await expect(page.locator(".server-detail-header")).toBeVisible()
   await expect(page.locator(".server-detail-skeleton")).toHaveCount(0)
   await expect.poll(() => serverSpeedRequestCount).toBe(2)
-  await expect.poll(() => monitorRequestCount).toBe(1)
+  await expect.poll(() => monitorRequestCount).toBe(2)
 
   await page.reload()
   await expect(page).toHaveURL(/\/server\/25ce76bd$/)

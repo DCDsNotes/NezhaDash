@@ -460,9 +460,17 @@ export function getServerOverviewStats(now: number, servers: NezhaServer[]) {
   }
 }
 
-export function getServerTransferSummaryList(now: number, servers: NezhaServer[]): ServerTransferSummaryViewModel[] {
+export function getServerTransferSummaryList(
+  now: number,
+  servers: NezhaServer[],
+  todayTraffic: Record<string, { in: number; out: number }>,
+): ServerTransferSummaryViewModel[] {
   return servers.map((server) => {
-    const transfer = getServerTransferCounter(server)
+    const traffic = todayTraffic[String(server.id)]
+    const transfer = {
+      in: Math.max(0, Number(traffic?.in) || 0),
+      out: Math.max(0, Number(traffic?.out) || 0),
+    }
     const total = transfer.in + transfer.out
     return {
       id: server.id,

@@ -77,9 +77,50 @@ export interface LoginUserResponse {
   }
 }
 
-export interface MonitorResponse {
+export interface ServiceHistoryCollectionResponse {
   success: boolean
-  data: NezhaMonitor[]
+  data: ServiceHistory[]
+}
+
+export interface ServiceOverviewResponse {
+  success: boolean
+  data: {
+    services?: Record<string, { service_name?: string }>
+  }
+}
+
+export interface ServiceHistoryResponse {
+  success: boolean
+  data: ServiceHistory
+}
+
+export interface ServiceHistory {
+  service_id: number
+  service_name: string
+  servers: Array<{
+    server_id: number
+    server_name: string
+    stats: {
+      avg_delay: number
+      up_percent: number
+      total_up: number
+      total_down: number
+      data_points?: Array<{
+        ts: number
+        delay: number
+        status: number
+      }>
+    }
+  }>
+}
+
+export interface ServerTrafficResponse {
+  success: boolean
+  data: {
+    from: string
+    to: string
+    servers: Record<string, { server_id: number; in: number; out: number }>
+  }
 }
 
 export interface ServerNetworkHistoryResponse {

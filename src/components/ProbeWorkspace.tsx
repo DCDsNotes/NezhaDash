@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { type ServerWorkspaceValue, useServerWorkspace } from "@/hooks/use-server-workspace"
 import { useStatusFavicon } from "@/hooks/use-status-favicon"
 import { useWebSocketControls } from "@/hooks/use-websocket-context"
-import { loginUserQueryOptions, monitorQueryOptions, serverMetricsQueryOptions } from "@/lib/query-options"
+import { loginUserQueryOptions, monitorQueryOptions, serverMetricsQueryOptions, todayTrafficQueryOptions } from "@/lib/query-options"
 import { preloadNetworkDiagnostics } from "@/lib/route-preload"
 import { serverIdToServerKey } from "@/lib/server-key"
 import { getServerTransferSummaryList } from "@/lib/server-view-model"
@@ -80,7 +80,7 @@ function SiteHeader({
     enabled: Boolean(detailServerId),
   })
   const monitorQuery = useQuery({
-    ...monitorQueryOptions(detailServerId || 0),
+    ...monitorQueryOptions(),
     enabled: Boolean(detailServerId),
   })
   const detailDataLoading = Boolean(detailServerId && (speedQuery.isPending || monitorQuery.isPending))
@@ -160,15 +160,24 @@ function SiteHeader({
 }
 
 function TransferDialog({ workspace, onOpenChange }: { workspace: ServerWorkspaceValue; onOpenChange: (open: boolean) => void }) {
-  const transferList = useMemo(() => getServerTransferSummaryList(workspace.now, workspace.servers), [workspace.now, workspace.servers])
+  const trafficQuery = useQuery(todayTrafficQueryOptions())
+  const todayTraffic = trafficQuery.data?.success ? trafficQuery.data.data.servers : {}
+  const transferList = useMemo(
+    () => getServerTransferSummaryList(workspace.now, workspace.servers, todayTraffic),
+    [todayTraffic, workspace.now, workspace.servers],
+  )
 
   return (
     <Dialog open onOpenChange={onOpenChange}>
       <DialogContent className="dashboard-dialog probe-transfer-dialog">
-        <DialogTitle className="dashboard-dialog__title">流量汇总</DialogTitle>
-        <DialogDescription className="dashboard-dialog__description">Agent 当前累计上报流量</DialogDescription>
+        <DialogTitle className="dashboard-dialog__title">今日流量汇总</DialogTitle>
+        <DialogDescription className="dashboard-dialog__description">统计周期：今日 00:00 至当前</DialogDescription>
         <div className="dashboard-transfer-list">
-          {transferList.length > 0 ? (
+          {trafficQuery.isPending ? (
+            <div className="dashboard-empty"><i className="ri-loader-4-line probe-spin" aria-hidden="true" /> 正在加载今日流量</div>
+          ) : trafficQuery.isError ? (
+            <div className="dashboard-empty">今日流量加载失败</div>
+          ) : transferList.length > 0 ? (
             transferList.map((item) => (
               <div key={item.id} className="dashboard-transfer-row">
                 <div className="dashboard-transfer-row__name">

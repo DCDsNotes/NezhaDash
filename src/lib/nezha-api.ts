@@ -1,9 +1,13 @@
 import {
   LoginUserResponse,
-  MonitorResponse,
+  NezhaMonitor,
   ServerGroupResponse,
   ServerMetricsResponse,
   ServerNetworkHistoryResponse,
+  ServerTrafficResponse,
+  ServiceHistoryCollectionResponse,
+  ServiceHistoryResponse,
+  ServiceOverviewResponse,
   SettingResponse,
 } from "@/types/nezha-api"
 
@@ -76,8 +80,54 @@ export const fetchLoginUser = async (signal?: AbortSignal): Promise<LoginUserRes
   }
 }
 
-export const fetchServerMonitorHistory = async (serverId: number, signal?: AbortSignal): Promise<MonitorResponse> => {
-  return fetchApi<MonitorResponse>(`/server/${serverId}/service`, { signal })
+const HISTORY_CONCURRENCY = 4
+
+export const fetchServiceHistories = async (signal?: AbortSignal): Promise<ServiceHistoryCollectionResponse> => {
+  const overview = await fetchApi<ServiceOverviewResponse>("/service", { signal })
+  const serviceIds = Object.keys(overview.data.services || {}).map(Number).filter(Number.isFinite)
+  const histories = new Array<ServiceHistoryResponse["data"] | undefined>(serviceIds.length)
+  const errors: unknown[] = []
+  let nextIndex = 0
+
+  async function worker() {
+    while (nextIndex < serviceIds.length) {
+      const index = nextIndex++
+      try {
+        const response = await fetchApi<ServiceHistoryResponse>(`/service/${serviceIds[index]}/history`, { signal })
+        histories[index] = response.data
+      } catch (error) {
+        if (signal?.aborted) throw error
+        errors.push(error)
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(HISTORY_CONCURRENCY, serviceIds.length) }, worker))
+  const data = histories.filter((history): history is ServiceHistoryResponse["data"] => Boolean(history))
+  if (serviceIds.length > 0 && data.length === 0 && errors.length > 0) throw errors[0]
+  return { success: overview.success, data }
+}
+
+export function selectServerMonitorHistory(histories: ServiceHistoryCollectionResponse | undefined, serverId: number): NezhaMonitor[] {
+  if (!histories?.success || !serverId) return []
+  return histories.data.flatMap((history) => {
+    const server = history.servers.find((item) => Number(item.server_id) === serverId)
+    if (!server) return []
+    const points = server.stats.data_points || []
+    return [{
+      monitor_id: Number(history.service_id),
+      monitor_name: history.service_name,
+      server_id: serverId,
+      server_name: server.server_name,
+      created_at: points.map((point) => Number(point.ts)),
+      avg_delay: points.map((point) => Number(point.delay) || 0),
+      packet_loss: points.map((point) => (Number(point.status) === 1 ? 0 : 100)),
+    }]
+  })
+}
+
+export const fetchTodayServerTraffic = async (signal?: AbortSignal): Promise<ServerTrafficResponse> => {
+  return fetchApi<ServerTrafficResponse>("/server/traffic", { signal })
 }
 
 function fetchServerMetric(serverId: number, metric: "net_in_speed" | "net_out_speed", signal?: AbortSignal) {
