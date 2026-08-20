@@ -458,7 +458,7 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
   return (
     <div
       ref={containerRef}
-      className={cn("server-monitor", "nazha-box", {
+      className={cn("server-monitor", "app-box", {
         "server-monitor--multi": chartType === "multi",
         "server-monitor--single": chartType === "single",
       })}

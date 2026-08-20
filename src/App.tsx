@@ -61,17 +61,17 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div className="nazha-layout">
+      <div className="app-layout">
         <div
-          className={cn("nazha-layout-bg", {
+          className={cn("app-layout-bg", {
             "hidden sm:block": customMobileBackgroundImage,
           })}
           style={customBackgroundImage ? { backgroundImage: `url(${customBackgroundImage})`, backgroundSize: "cover" } : undefined}
         />
         {customMobileBackgroundImage && (
-          <div className="nazha-layout-bg sm:hidden" style={{ backgroundImage: `url(${customMobileBackgroundImage})`, backgroundSize: "cover" }} />
+          <div className="app-layout-bg sm:hidden" style={{ backgroundImage: `url(${customMobileBackgroundImage})`, backgroundSize: "cover" }} />
         )}
-        <div className="nazha-layout-main">
+        <div className="app-layout-main">
           <RefreshToast />
           <ProbeWorkspace configuredSiteName={config?.site_name} />
         </div>

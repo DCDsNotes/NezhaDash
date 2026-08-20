@@ -8,7 +8,7 @@ export default function ServerDetailName({ server }: { server: NezhaServer }) {
   const { cpuInfo, slogan } = useMemo(() => getServerDetailNameViewModel(server), [server])
 
   return (
-    <div className="server-detail-header nazha-box">
+    <div className="server-detail-header app-box">
       <div className="server-detail-header__flag">
         <ServerFlag country_code={server.country_code} />
       </div>

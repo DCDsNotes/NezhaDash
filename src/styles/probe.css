@@ -17,6 +17,7 @@
   --probe-radius: 5px;
   --probe-content-width: 760px;
   --probe-page-bottom-padding: 56px;
+  --app-page-inline-gap: 16px;
   --probe-skeleton-base: #fbfcfd;
   --probe-skeleton-border: #f0f3f5;
   --probe-skeleton-duration: 1.8s;
@@ -25,8 +26,8 @@
 html,
 body,
 #root,
-.nazha-layout,
-.nazha-layout-main {
+.app-layout,
+.app-layout-main {
   min-height: 100dvh;
   background: var(--probe-canvas);
 }
@@ -67,7 +68,7 @@ body {
 
 .probe-page-scroll-controls {
   position: fixed;
-  right: 16px;
+  right: var(--app-page-inline-gap);
   bottom: calc(var(--probe-page-bottom-padding) + env(safe-area-inset-bottom, 0px));
   z-index: 20;
   display: grid;
@@ -115,10 +116,6 @@ body {
   :root {
     --probe-page-bottom-padding: 40px;
   }
-
-  .probe-page-scroll-controls {
-    right: 14px;
-  }
 }
 
 @media print {
@@ -139,9 +136,47 @@ body {
   backdrop-filter: blur(14px);
 }
 
+.app-route-progress {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 2px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.14s ease;
+}
+
+.app-route-progress > span {
+  display: block;
+  width: 42%;
+  height: 100%;
+  background: var(--probe-accent);
+  transform: translateX(-110%);
+}
+
+.app-route-progress--active {
+  opacity: 1;
+}
+
+.app-route-progress--active > span {
+  animation: app-route-progress 0.9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes app-route-progress {
+  0% {
+    transform: translateX(-110%);
+  }
+
+  100% {
+    transform: translateX(340%);
+  }
+}
+
 .probe-site-header__inner {
   display: flex;
-  width: min(var(--probe-content-width), calc(100% - 32px));
+  width: min(var(--probe-content-width), calc(100% - var(--app-page-inline-gap) - var(--app-page-inline-gap)));
   min-height: 62px;
   align-items: center;
   justify-content: space-between;
@@ -693,7 +728,7 @@ body {
 }
 
 .probe-main .server-detail-page {
-  width: min(var(--probe-content-width), calc(100% - 32px));
+  width: min(var(--probe-content-width), calc(100% - var(--app-page-inline-gap) - var(--app-page-inline-gap)));
   max-width: none;
   min-height: 0;
   gap: 14px;
@@ -716,7 +751,7 @@ body {
   font-weight: 600;
 }
 
-.probe-main .server-detail-page .nazha-box,
+.probe-main .server-detail-page .app-box,
 .probe-main .server-detail-page .server-detail-header,
 .probe-main .server-detail-page .server-detail-status,
 .probe-main .server-detail-page .server-detail-info,
@@ -837,8 +872,12 @@ body {
 }
 
 @media (max-width: 640px) {
+  :root {
+    --app-page-inline-gap: 14px;
+  }
+
   .probe-site-header__inner {
-    width: calc(100% - 28px);
+    width: calc(100% - var(--app-page-inline-gap) - var(--app-page-inline-gap));
     min-height: 58px;
     gap: 10px;
   }
@@ -880,7 +919,7 @@ body {
 
   .status-page,
   .probe-main .server-detail-page {
-    width: calc(100% - 28px);
+    width: calc(100% - var(--app-page-inline-gap) - var(--app-page-inline-gap));
   }
 
   .status-hero__mark {
@@ -1009,7 +1048,7 @@ body {
 
 /* Compact public status layout */
 .status-page {
-  width: min(var(--probe-content-width), calc(100% - 32px));
+  width: min(var(--probe-content-width), calc(100% - var(--app-page-inline-gap) - var(--app-page-inline-gap)));
   gap: 16px;
   padding: 36px 0 var(--probe-page-bottom-padding);
 }
@@ -1709,6 +1748,16 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .app-route-progress {
+    transition: none;
+  }
+
+  .app-route-progress--active > span {
+    width: 100%;
+    animation: none;
+    transform: none;
+  }
+
   .probe-node-item,
   .probe-node-skeleton {
     animation: none;

@@ -12,7 +12,7 @@ import { formatPageTitle, resolveSiteName } from "@/lib/site-name"
 import { cn } from "@/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react"
-import { Link, Outlet, matchPath, useLocation } from "react-router-dom"
+import { Link, Outlet, matchPath, useLocation, useNavigation } from "react-router-dom"
 
 let mapDialogPromise: ReturnType<typeof importMapDialog> | null = null
 
@@ -69,8 +69,25 @@ function SiteHeader({
   onPreloadMap: () => void
   onOpenTransfer: () => void
 }) {
+  const navigation = useNavigation()
+  const isNavigating = navigation.state !== "idle"
+  const [showProgress, setShowProgress] = useState(false)
+
+  useEffect(() => {
+    if (isNavigating) {
+      setShowProgress(true)
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => setShowProgress(false), 180)
+    return () => window.clearTimeout(timeoutId)
+  }, [isNavigating])
+
   return (
-    <header className="probe-site-header">
+    <header className="probe-site-header" aria-busy={isNavigating}>
+      <span className={cn("app-route-progress", { "app-route-progress--active": showProgress })} aria-hidden="true">
+        <span />
+      </span>
       <div className="probe-site-header__inner">
         <Link to="/" className="probe-site-brand" aria-label="返回系统状态">
           <span className="probe-site-brand__mark" aria-hidden="true">

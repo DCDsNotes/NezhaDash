@@ -1,19 +1,19 @@
-.nazha-layout,
-.nazha-layout-main {
+.app-layout,
+.app-layout-main {
   min-height: 100dvh;
   background: #f6f8fa;
 }
 
-.nazha-layout {
+.app-layout {
   position: relative;
   width: 100%;
 }
 
-.nazha-layout-bg {
+.app-layout-bg {
   display: none;
 }
 
-.nazha-layout-main {
+.app-layout-main {
   position: relative;
   z-index: 10;
 }
