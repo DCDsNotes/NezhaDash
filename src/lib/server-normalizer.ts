@@ -14,6 +14,7 @@ const PUBLIC_NOTE_STORAGE_LENGTH_LIMIT = 16 * 1024
 const PUBLIC_NOTE_STORAGE_TOTAL_LIMIT = 512 * 1024
 const PUBLIC_NOTE_STORAGE_REFRESH_INTERVAL = 24 * 60 * 60 * 1000
 const PUBLIC_NOTE_STORAGE_TTL = 30 * PUBLIC_NOTE_STORAGE_REFRESH_INTERVAL
+const SERVER_ONLINE_GRACE_MS = 60_000
 let persistedPublicNotesHydrated = false
 
 export interface BillingData {
@@ -78,7 +79,10 @@ export function parseISOTimestamp(value: unknown): number {
   if (!source || source.startsWith("000")) return 0
   if (/^-?\d+(?:\.\d+)?$/.test(source)) return normalizeEpoch(Number(source))
 
-  const timestamp = Date.parse(source)
+  // Go emits RFC3339Nano values. Trim sub-millisecond precision for browsers
+  // that only accept three fractional digits in ISO timestamps.
+  const normalizedSource = source.replace(/(\.\d{3})\d+(?=(?:Z|[+-]\d{2}:\d{2})$)/, "$1")
+  const timestamp = Date.parse(normalizedSource)
   return Number.isFinite(timestamp) ? timestamp : 0
 }
 
@@ -92,14 +96,26 @@ export function getServerLastActiveTime(serverInfo: NezhaServer) {
   return value
 }
 
-export function isServerOnline(now: number, serverInfo: NezhaServer) {
+export function getExplicitServerOnline(serverInfo: NezhaServer): boolean | null {
   if (typeof serverInfo.online === "boolean") return serverInfo.online
   if (serverInfo.online === 0 || serverInfo.online === 1) return serverInfo.online === 1
+  if (typeof serverInfo.online === "string") {
+    const value = serverInfo.online.trim().toLowerCase()
+    if (["1", "true", "online"].includes(value)) return true
+    if (["0", "false", "offline"].includes(value)) return false
+  }
+
+  return null
+}
+
+export function isServerOnline(now: number, serverInfo: NezhaServer) {
+  const explicitOnline = getExplicitServerOnline(serverInfo)
+  if (explicitOnline !== null) return explicitOnline
 
   const currentTime = normalizeEpoch(Number(now))
   const lastActiveTime = getServerLastActiveTime(serverInfo)
   if (!currentTime || !lastActiveTime) return false
-  return currentTime - lastActiveTime <= 30_000
+  return currentTime - lastActiveTime <= SERVER_ONLINE_GRACE_MS
 }
 
 function hydratePersistedPublicNotes() {

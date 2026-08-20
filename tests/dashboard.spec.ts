@@ -109,9 +109,23 @@ const servers = [
 
 const wsPayload = { now, servers }
 
-async function mockBackend(page: Page, getWebSocketPayload: () => unknown = () => wsPayload, historyDelayMs = 0) {
+type MockWebSocketFrame = { delayMs: number; payload: unknown }
+
+async function mockBackend(
+  page: Page,
+  getWebSocketPayload: () => unknown = () => wsPayload,
+  historyDelayMs = 0,
+  webSocketFrames?: MockWebSocketFrame[],
+) {
   await page.routeWebSocket("**/api/v1/ws/server", (webSocket) => {
-    webSocket.send(JSON.stringify(getWebSocketPayload()))
+    if (!webSocketFrames) {
+      webSocket.send(JSON.stringify(getWebSocketPayload()))
+      return
+    }
+
+    webSocketFrames.forEach(({ delayMs, payload }) => {
+      setTimeout(() => webSocket.send(JSON.stringify(payload)), delayMs)
+    })
   })
 
   await page.route("**/api/v1/**", async (route) => {
@@ -561,6 +575,37 @@ test("server billing survives a restored mobile browser session with an incomple
   await page.reload()
 
   await expect(priority).toContainText("2027-01-01")
+})
+
+test("server presence ignores a transient stale websocket frame", async ({ page }) => {
+  const freshLastActive = new Date(now - 5_000).toISOString().replace("Z", "123456Z")
+  const freshPayload = {
+    now,
+    servers: servers.map((server, index) => (index === 0 ? { ...server, last_active: freshLastActive } : server)),
+  }
+  const stalePayload = { ...freshPayload, now: now + 70_000 }
+  const recoveredPayload = {
+    ...freshPayload,
+    now: now + 71_000,
+    servers: freshPayload.servers.map((server, index) =>
+      index === 0 ? { ...server, last_active: new Date(now + 70_000).toISOString() } : server,
+    ),
+  }
+
+  await mockBackend(page, () => freshPayload, 0, [
+    { delayMs: 0, payload: freshPayload },
+    { delayMs: 200, payload: stalePayload },
+    { delayMs: 900, payload: recoveredPayload },
+  ])
+  await page.goto("/")
+
+  const primaryNode = page.locator(".probe-node-item").filter({ hasText: "上海边缘节点" })
+  await expect(primaryNode).toBeVisible()
+  await expect(primaryNode).not.toHaveClass(/probe-node-item--offline/)
+  await page.waitForTimeout(500)
+  await expect(primaryNode).not.toHaveClass(/probe-node-item--offline/)
+  await page.waitForTimeout(600)
+  await expect(primaryNode).not.toHaveClass(/probe-node-item--offline/)
 })
 
 test("network diagnostics keeps expensive checks manual and switches grouped test cards", async ({ page }, testInfo) => {
