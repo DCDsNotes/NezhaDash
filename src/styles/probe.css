@@ -161,7 +161,7 @@ body {
 }
 
 .app-route-progress--active > span {
-  animation: app-route-progress 0.9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation: app-route-progress 0.9s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 @keyframes app-route-progress {
@@ -1069,30 +1069,18 @@ body {
 }
 
 .status-hero__mark--attention > .ri-pulse-line {
-  animation: status-alert-icon-wave 850ms steps(4, end) infinite;
-  transform-origin: center;
+  animation: status-alert-icon-wave 1.7s steps(1, end) infinite;
 }
 
 @keyframes status-alert-icon-wave {
   0%,
+  49.99% {
+    opacity: 1;
+  }
+
+  50%,
   100% {
     opacity: 0.32;
-    transform: scaleX(0.9);
-  }
-
-  25% {
-    opacity: 1;
-    transform: scaleX(1.08);
-  }
-
-  50% {
-    opacity: 0.9;
-    transform: scaleX(0.96) translateY(-1px);
-  }
-
-  75% {
-    opacity: 1;
-    transform: scaleX(1.03) translateY(1px);
   }
 }
 

@@ -25,6 +25,7 @@ const servers = [
       },
       customData: {},
     }),
+    online: true,
     last_active: new Date(now - 5_000).toISOString(),
     country_code: "CN",
     host: {
@@ -67,7 +68,8 @@ const servers = [
     id: 2,
     name: "法兰克福备份节点",
     public_note: "",
-    last_active: new Date(now - 120_000).toISOString(),
+    online: false,
+    last_active: new Date(now - 5_000).toISOString(),
     country_code: "DE",
     host: {
       platform: "debian",
@@ -107,7 +109,7 @@ const servers = [
   },
 ]
 
-const wsPayload = { now, servers }
+const wsPayload = { now, online: 1, offline: 1, servers }
 
 async function mockBackend(
   page: Page,

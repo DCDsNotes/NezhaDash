@@ -11,10 +11,15 @@ on:
       version:
         description: "Version to release (e.g. 0.9.1 or v0.9.1)"
         required: false
+        default: "v1.0.0"
 
 permissions:
   actions: write
   contents: write
+
+concurrency:
+  group: frontend-release
+  cancel-in-progress: false
 
 jobs:
   build-and-release:
@@ -60,11 +65,13 @@ jobs:
             else
               tag="v${input_version}"
             fi
-          elif [[ "${{ github.ref_type }}" == "branch" ]]; then
-            build_ts="$(TZ=Asia/Shanghai date +%Y%m%d%H%M%S)"
-            tag="v${build_ts}"
           else
             tag="v${pkg_version}"
+          fi
+
+          if [[ ! "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid release version: ${tag}" >&2
+            exit 1
           fi
 
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
@@ -110,3 +117,24 @@ jobs:
               --notes-file release_notes.md \
               --latest
           fi
+
+      - name: Trigger backend release build
+        env:
+          BACKEND_ACTIONS_TOKEN: ${{ secrets.NEZHA_ACTIONS_TOKEN }}
+          BACKEND_REPOSITORY: ${{ github.repository_owner }}/Nezha
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        shell: bash
+        run: |
+          if [[ -z "${BACKEND_ACTIONS_TOKEN}" ]]; then
+            echo "Missing NEZHA_ACTIONS_TOKEN repository secret." >&2
+            exit 1
+          fi
+
+          payload="$(jq -n --arg version "${RELEASE_TAG}" '{ref:"main",inputs:{version:$version}}')"
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer ${BACKEND_ACTIONS_TOKEN}" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "${GITHUB_API_URL}/repos/${BACKEND_REPOSITORY}/actions/workflows/release.yml/dispatches" \
+            --data "${payload}"

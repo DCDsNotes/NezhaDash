@@ -76,6 +76,7 @@ export function getServerLastActiveTime(serverInfo: NezhaServer) {
 }
 
 export function isServerOnline(now: number, serverInfo: NezhaServer) {
+  if (typeof serverInfo.online === "boolean") return serverInfo.online
   return now - getServerLastActiveTime(serverInfo) <= 30_000
 }
 

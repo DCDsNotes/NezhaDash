@@ -8,7 +8,10 @@ export function parseNezhaWsMessage(data: string | undefined | null): NezhaWebso
   try {
     const parsed = JSON.parse(data) as Partial<NezhaWebsocketResponse> | null
     if (!parsed || !Number.isFinite(Number(parsed.now)) || !Array.isArray(parsed.servers)) return null
-    return { now: Number(parsed.now), servers: parsed.servers }
+    const response: NezhaWebsocketResponse = { now: Number(parsed.now), servers: parsed.servers }
+    if (Number.isFinite(Number(parsed.online))) response.online = Number(parsed.online)
+    if (Number.isFinite(Number(parsed.offline))) response.offline = Number(parsed.offline)
+    return response
   } catch {
     return null
   }
