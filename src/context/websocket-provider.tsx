@@ -79,6 +79,10 @@ export function WebSocketProvider({ path, children }: { path: string; children: 
       staleTimer = setTimeout(() => {
         staleTimer = null
         if (!socket || socket.readyState !== WebSocket.OPEN) return
+        if (document.visibilityState === "hidden") {
+          armStaleTimer()
+          return
+        }
         closeSocket()
         scheduleReconnect()
       }, MESSAGE_IDLE_TIMEOUT)
