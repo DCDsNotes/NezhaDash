@@ -36,6 +36,11 @@ async function cachePut(cacheName, request, response) {
     const cache = await caches.open(cacheName)
     const headers = new Headers(response.headers)
     headers.set("x-nezha-cached-at", String(Date.now()))
+    // The Fetch body is already decoded. Do not retain transport headers that
+    // would describe a different representation when replayed from Cache API.
+    headers.delete("content-encoding")
+    headers.delete("content-length")
+    headers.delete("content-range")
     const body = await response.clone().arrayBuffer()
     await cache.put(
       request,
