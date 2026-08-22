@@ -2,16 +2,8 @@ name: Build and Release
 
 on:
   push:
-    tags:
-      - "v*.*.*"
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
-    inputs:
-      version:
-        description: "Version to release (e.g. 0.9.1 or v0.9.1)"
-        required: false
-        default: "v1.0.0"
 
 permissions:
   actions: write
@@ -50,30 +42,11 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
 
-      - name: Resolve version/tag
+      - name: Resolve timestamp version
         id: version
         shell: bash
         run: |
-          pkg_version="$(bun -p "require('./package.json').version")"
-          input_version="${{ github.event.inputs.version }}"
-
-          if [[ "${{ github.ref_type }}" == "tag" && -n "${{ github.ref_name }}" ]]; then
-            tag="${{ github.ref_name }}"
-          elif [[ -n "${input_version}" ]]; then
-            if [[ "${input_version}" == v* ]]; then
-              tag="${input_version}"
-            else
-              tag="v${input_version}"
-            fi
-          else
-            tag="v${pkg_version}"
-          fi
-
-          if [[ ! "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
-            echo "Invalid release version: ${tag}" >&2
-            exit 1
-          fi
-
+          tag="v$(date -u +%Y%m%d%H%M%S)"
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
 
       - name: Generate release notes
@@ -117,6 +90,19 @@ jobs:
               --notes-file release_notes.md \
               --latest
           fi
+
+      - name: Keep only the five newest releases and tags
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          CURRENT_TAG: ${{ steps.version.outputs.tag }}
+        shell: bash
+        run: |
+          mapfile -t releases < <(gh release list --repo "$GH_REPO" --limit 100 --json tagName,createdAt --jq 'sort_by(.createdAt) | reverse | .[5:][] | .tagName')
+          for tag in "${releases[@]}"; do
+            gh release delete "$tag" --repo "$GH_REPO" --yes --cleanup-tag || true
+          done
+          echo "Retained the five newest frontend releases." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Trigger backend release build
         env:

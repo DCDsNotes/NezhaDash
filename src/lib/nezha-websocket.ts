@@ -1,7 +1,7 @@
 import { type NezhaWebsocketResponse } from "@/types/nezha-api"
 
 const MAX_MESSAGE_LENGTH = 8 * 1024 * 1024
-const PRESENCE_CONFIRMATION_FRAMES = 2
+const PRESENCE_CONFIRMATION_FRAMES = 3
 
 export type PresenceStabilizer = {
   stable: Map<number, boolean>
