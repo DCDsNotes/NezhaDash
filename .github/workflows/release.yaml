@@ -104,6 +104,17 @@ jobs:
             [[ -n "$tag" ]] || continue
             gh release delete "$tag" --repo "$GH_REPO" --yes --cleanup-tag || true
           done
+          mapfile -t tags < <(gh api "repos/${GH_REPO}/git/matching-refs/tags/v" --jq '.[].ref | select(test("^refs/tags/v[0-9]{14}$"))' | sort -r)
+          mapfile -t legacy_tags < <(gh api "repos/${GH_REPO}/git/matching-refs/tags/v" --jq '.[].ref | select(test("^refs/tags/v[0-9]{14}$") | not)')
+          for index in "${!tags[@]}"; do
+            if (( index >= 5 )); then
+              gh api --method DELETE "repos/${GH_REPO}/git/refs/${tags[$index]#refs/}"
+            fi
+          done
+          for ref in "${legacy_tags[@]}"; do
+            [[ -n "$ref" ]] || continue
+            gh api --method DELETE "repos/${GH_REPO}/git/refs/${ref#refs/}"
+          done
           echo "Retained the five newest frontend releases." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Trigger backend release build
