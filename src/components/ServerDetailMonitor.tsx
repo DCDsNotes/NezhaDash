@@ -344,11 +344,11 @@ function writeLocalBool(key: string, val: boolean) {
 }
 
 function readLocalChartType() {
-  if (typeof window === "undefined") return "multi" as const
+  if (typeof window === "undefined") return "single" as const
   try {
-    return window.localStorage.getItem("nazhua_monitor_chart_type") === "single" ? ("single" as const) : ("multi" as const)
+    return window.localStorage.getItem("nazhua_monitor_chart_type") === "multi" ? ("multi" as const) : ("single" as const)
   } catch {
-    return "multi" as const
+    return "single" as const
   }
 }
 

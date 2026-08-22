@@ -139,10 +139,15 @@ function hasTrafficPlan(parsedData: PublicNoteData | null) {
 
 function getServerTransferStatsCounter(server: NezhaServer, period: "today" | "billing"): TransferCounter {
   const transfer = server.transfer_stats?.[period]
-  return {
-    in: Number(transfer?.in || 0),
-    out: Number(transfer?.out || 0),
+  const inTransfer = Number(transfer?.in || 0)
+  const outTransfer = Number(transfer?.out || 0)
+
+  // Older dashboard streams do not include transfer_stats. Keep the detail
+  // page useful by falling back to the cumulative counters in the live state.
+  if (inTransfer > 0 || outTransfer > 0) {
+    return { in: inTransfer, out: outTransfer }
   }
+  return getTransferCounter(server)
 }
 
 function formatHeaderBinary(bytes: number, decimals = 1) {

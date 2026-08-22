@@ -428,7 +428,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   expect(Math.max(...priorityRows.map((row) => row.labelTop)) - Math.min(...priorityRows.map((row) => row.labelTop))).toBeLessThanOrEqual(1)
   expect(Math.max(...priorityRows.map((row) => row.valueTop)) - Math.min(...priorityRows.map((row) => row.valueTop))).toBeLessThanOrEqual(1)
   await expect(page.getByRole("switch")).toHaveCount(3)
-  await expect(page.getByRole("switch").nth(0)).toBeChecked()
+  await expect(page.getByRole("switch").nth(0)).not.toBeChecked()
   await expect(page.getByRole("switch").nth(1)).toBeChecked()
   await expect(page.getByRole("switch").nth(2)).not.toBeChecked()
   await expect(page.getByRole("switch").nth(2)).toHaveCSS("background-color", "rgb(227, 230, 232)")
