@@ -98,8 +98,10 @@ jobs:
           CURRENT_TAG: ${{ steps.version.outputs.tag }}
         shell: bash
         run: |
-          mapfile -t releases < <(gh release list --repo "$GH_REPO" --limit 100 --json tagName,createdAt --jq 'sort_by(.createdAt) | reverse | .[5:][] | .tagName')
-          for tag in "${releases[@]}"; do
+          mapfile -t releases < <(gh release list --repo "$GH_REPO" --limit 100 --json tagName,createdAt --jq '[.[] | select(.tagName | test("^v[0-9]{14}$"))] | sort_by(.createdAt) | reverse | .[5:][] | .tagName')
+          mapfile -t legacy < <(gh release list --repo "$GH_REPO" --limit 100 --json tagName --jq '.[] | select(.tagName | test("^v[0-9]{14}$") | not) | .tagName')
+          for tag in "${releases[@]}" "${legacy[@]}"; do
+            [[ -n "$tag" ]] || continue
             gh release delete "$tag" --repo "$GH_REPO" --yes --cleanup-tag || true
           done
           echo "Retained the five newest frontend releases." >> "$GITHUB_STEP_SUMMARY"
@@ -116,11 +118,11 @@ jobs:
             exit 1
           fi
 
-          payload="$(jq -n --arg version "${RELEASE_TAG}" '{ref:"main",inputs:{version:$version}}')"
+          payload="$(jq -n --arg version "${RELEASE_TAG}" '{event_type:"frontend_release",client_payload:{version:$version}}')"
           curl --fail-with-body --silent --show-error \
             --request POST \
             --header "Accept: application/vnd.github+json" \
             --header "Authorization: Bearer ${BACKEND_ACTIONS_TOKEN}" \
             --header "X-GitHub-Api-Version: 2022-11-28" \
-            "${GITHUB_API_URL}/repos/${BACKEND_REPOSITORY}/actions/workflows/release.yml/dispatches" \
+            "${GITHUB_API_URL}/repos/${BACKEND_REPOSITORY}/dispatches" \
             --data "${payload}"
