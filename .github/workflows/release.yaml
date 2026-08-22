@@ -1,116 +1,127 @@
-name: Build and Release
+name: Build and release static export
+run-name: Release ${{ inputs.tag || 'timestamp' }}
 
 on:
-  push:
-    tags:
-      - "v*.*.*"
-    branches:
-      - main
   workflow_dispatch:
     inputs:
-      version:
-        description: "Version to release (e.g. 0.9.1 or v0.9.1)"
+      tag:
+        description: "由主控传入的 v年月日时分秒 标签；直接手动运行时留空"
         required: false
+        type: string
+
+concurrency:
+  group: release-${{ github.repository }}
+  cancel-in-progress: false
 
 permissions:
+  actions: write
   contents: write
 
 jobs:
-  build-and-release:
+  release:
     runs-on: ubuntu-24.04
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Check out code
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
+      - name: Resolve timestamp tag
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_TAG: ${{ inputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="\${REQUESTED_TAG:-}"
+          if [[ -z "$tag" ]]; then
+            tag="v$(TZ=Asia/Shanghai date +%Y%m%d%H%M%S)"
+          fi
+          if [[ ! "$tag" =~ ^v[0-9]{14}$ ]]; then
+            echo "::error::Tag must match vYYYYMMDDhhmmss"
+            exit 1
+          fi
 
-      - name: Setup Bun
+          previous="$(gh release list --limit 100 --json tagName,createdAt \
+            --jq 'sort_by(.createdAt) | reverse | .[0].tagName // ""')"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "previous=$previous" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Bun
         uses: oven-sh/setup-bun@v2
-
-      - name: Resolve version/tag
-        id: version
-        shell: bash
-        run: |
-          pkg_version="$(node -p "require('./package.json').version")"
-          input_version="${{ github.event.inputs.version }}"
-
-          if [[ -n "${input_version}" ]]; then
-            if [[ "${input_version}" == v* ]]; then
-              tag="${input_version}"
-              version="${input_version#v}"
-            else
-              tag="v${input_version}"
-              version="${input_version}"
-            fi
-          else
-            # For push to default branch: publish an auto build with timestamp tag.
-            if [[ "${{ github.ref_type }}" == "branch" ]]; then
-              build_ts="$(TZ=Asia/Shanghai date +%Y%m%d%H%M%S)"
-              tag="v${build_ts}"
-              version="${build_ts}"
-              is_auto="true"
-            else
-              tag="v${pkg_version}"
-              version="${pkg_version}"
-              is_auto="false"
-            fi
-          fi
-
-          # When triggered by a tag push, prefer the actual ref tag.
-          if [[ "${{ github.ref_type }}" == "tag" && -n "${{ github.ref_name }}" ]]; then
-            tag="${{ github.ref_name }}"
-            version="${tag#v}"
-            is_auto="false"
-          fi
-
-           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
-           echo "version=${version}" >> "$GITHUB_OUTPUT"
-           echo "is_auto=${is_auto:-false}" >> "$GITHUB_OUTPUT"
-           # Publish as an official "Latest" release (not draft / not pre-release).
-           echo "draft=false" >> "$GITHUB_OUTPUT"
-           echo "prerelease=false" >> "$GITHUB_OUTPUT"
-
-      - name: Generate release notes
-        shell: bash
-        run: |
-          {
-            echo "#### Changes"
-            git log -20 --pretty=format:"%s"
-            echo
-            echo "-----------"
-            echo "Artifact:"
-            echo "- dist.zip"
-          } > release_notes.md
+        with:
+          bun-version: latest
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Build
+      - name: Build static export
         run: bun run build
 
       - name: Package dist.zip
+        run: zip -qr dist.zip dist
+
+      - name: Write release notes
+        env:
+          CURRENT_TAG: ${{ steps.release.outputs.tag }}
+          PREVIOUS_TAG: ${{ steps.release.outputs.previous }}
         shell: bash
-        run: zip -r dist.zip dist
+        run: |
+          if [[ -n "$PREVIOUS_TAG" ]]; then
+            printf 'Full Changelog: %s...%s\n' "$PREVIOUS_TAG" "$CURRENT_TAG" > release-notes.md
+          else
+            printf 'Full Changelog: %s\n' "$CURRENT_TAG" > release-notes.md
+          fi
 
-      - name: Upload dist.zip (workflow artifact)
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist-${{ steps.version.outputs.tag }}
-          path: dist.zip
-          if-no-files-found: error
-
-      - name: Create release and upload asset
+      - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: Release ${{ steps.version.outputs.tag }}
+          tag_name: ${{ steps.release.outputs.tag }}
+          name: ${{ steps.release.outputs.tag }}
           target_commitish: ${{ github.sha }}
-          draft: ${{ steps.version.outputs.draft }}
-          prerelease: ${{ steps.version.outputs.prerelease }}
-          body_path: release_notes.md
+          body_path: release-notes.md
           files: dist.zip
+
+      - name: Keep the five newest releases and tags
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t old_releases < <(gh release list --repo "$GH_REPO" --limit 1000 \
+            --json tagName,createdAt --jq 'sort_by(.createdAt) | reverse | .[5:][] | .tagName')
+          for tag in "\${old_releases[@]}"; do
+            [[ -n "$tag" ]] || continue
+            gh release delete "$tag" --repo "$GH_REPO" --yes --cleanup-tag
+          done
+
+          mapfile -t timestamp_tags < <(gh api --paginate "repos/$GH_REPO/git/matching-refs/tags/v" \
+            --jq '.[].ref | select(test("^refs/tags/v[0-9]{14}$"))' | sort -r)
+          for index in "\${!timestamp_tags[@]}"; do
+            (( index < 5 )) && continue
+            ref="\${timestamp_tags[$index]#refs/}"
+            gh api --method DELETE "repos/$GH_REPO/git/refs/$ref"
+          done
+
+      - name: Keep five workflow runs
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set +e
+          while true; do
+            mapfile -t run_ids < <(gh api "repos/$GH_REPO/actions/runs?per_page=100" \
+              --jq ".workflow_runs | map(select(.id != \${GITHUB_RUN_ID} and .status == \"completed\")) | sort_by(.created_at) | reverse | .[4:][] | .id")
+            (( \${#run_ids[@]} > 0 )) || break
+            deleted=0
+            for run_id in "\${run_ids[@]}"; do
+              if gh api --method DELETE "repos/$GH_REPO/actions/runs/$run_id"; then
+                ((deleted += 1))
+              fi
+            done
+            (( deleted > 0 )) || break
+          done

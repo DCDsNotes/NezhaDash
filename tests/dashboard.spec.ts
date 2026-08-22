@@ -26,6 +26,7 @@ const servers = [
       customData: {},
     }),
     last_active: new Date(now - 5_000).toISOString(),
+    online: true,
     country_code: "CN",
     host: {
       platform: "ubuntu",
@@ -68,6 +69,7 @@ const servers = [
     name: "法兰克福备份节点",
     public_note: "",
     last_active: new Date(now - 120_000).toISOString(),
+    online: false,
     country_code: "DE",
     host: {
       platform: "debian",
@@ -109,9 +111,18 @@ const servers = [
 
 const wsPayload = { now, servers }
 
-async function mockBackend(page: Page, getWebSocketPayload: () => unknown = () => wsPayload) {
+async function mockBackend(
+  page: Page,
+  getWebSocketPayload: () => unknown = () => wsPayload,
+  delays: { websocket?: number; setting?: number } = {},
+) {
   await page.routeWebSocket("**/api/v1/ws/server", (webSocket) => {
-    webSocket.send(JSON.stringify(getWebSocketPayload()))
+    const send = () => webSocket.send(JSON.stringify(getWebSocketPayload()))
+    if (delays.websocket) {
+      setTimeout(send, delays.websocket)
+    } else {
+      send()
+    }
   })
 
   await page.route("**/api/v1/**", async (route) => {
@@ -119,6 +130,7 @@ async function mockBackend(page: Page, getWebSocketPayload: () => unknown = () =
     const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) })
 
     if (pathname.endsWith("/setting")) {
+      if (delays.setting) await new Promise((resolve) => setTimeout(resolve, delays.setting))
       await json({
         success: true,
         data: {
@@ -189,6 +201,26 @@ async function mockBackend(page: Page, getWebSocketPayload: () => unknown = () =
     await json({ error: `unhandled mock: ${pathname}` }, 404)
   })
 }
+
+test("keeps the header visible through initial loading and completes progress once", async ({ page }) => {
+  await mockBackend(page, () => wsPayload, { websocket: 700, setting: 500 })
+  await page.goto("/")
+
+  await expect(page.locator(".probe-site-header")).toBeVisible()
+  await expect(page.locator("#app-progress")).toBeVisible()
+  await expect(page.locator(".probe-node-item")).toHaveCount(2)
+  await expect(page.locator("#app-progress")).toHaveCount(0)
+
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" })
+    document.dispatchEvent(new Event("visibilitychange"))
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" })
+    document.dispatchEvent(new Event("visibilitychange"))
+  })
+
+  await expect(page.locator(".probe-site-header")).toBeVisible()
+  await expect(page.locator("#app-progress")).toHaveCount(0)
+})
 
 async function assertNoHorizontalOverflow(page: Page) {
   const hasOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)

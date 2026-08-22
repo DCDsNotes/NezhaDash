@@ -177,12 +177,21 @@ function getWorkspacePageName(pathname: string, workspace: Pick<ServerWorkspaceV
 export default function ProbeWorkspace() {
   const workspace = useServerWorkspace()
   const dashboardLink = useDashboardLinkState()
-  const { data: settingData } = useQuery(settingQueryOptions())
+  const { data: settingData, isFetched: isSettingFetched } = useQuery(settingQueryOptions())
   const { pathname } = useLocation()
   const [showTransfer, setShowTransfer] = useState(false)
   const [showMap, setShowMap] = useState(false)
   const configuredSiteName = settingData?.data?.config?.site_name
   const pageTitle = formatPageTitle(getWorkspacePageName(pathname, workspace), configuredSiteName)
+
+  useEffect(() => {
+    if (workspace.isLoading || !isSettingFetched) return
+    const progress = document.getElementById("app-progress")
+    if (!progress) return
+    progress.classList.add("complete")
+    const timer = window.setTimeout(() => progress.remove(), 240)
+    return () => window.clearTimeout(timer)
+  }, [isSettingFetched, workspace.isLoading])
 
   useEffect(() => {
     document.title = pageTitle

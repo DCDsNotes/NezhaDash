@@ -8,6 +8,7 @@ export interface NezhaServer {
   name: string
   public_note: string
   last_active: string
+  online?: boolean
   country_code: string
   host: NezhaServerHost
   state: NezhaServerStatus

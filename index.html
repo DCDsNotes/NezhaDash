@@ -18,38 +18,76 @@
     <meta name="apple-mobile-web-app-title" content="Nezha Monitoring" />
 
     <style>
-      #app-loading {
+      #app-progress {
         position: fixed;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #f8fafc;
-        z-index: 99999;
-        transition: opacity 200ms ease;
+        inset: 0 0 auto;
+        z-index: 100000;
+        height: 3px;
+        overflow: hidden;
+        background: transparent;
+        opacity: 1;
+        transition: opacity 180ms ease 60ms;
       }
-      #app-loading .spinner {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        border: 3px solid #dce7e3;
-        border-top-color: #10b981;
-        animation: appSpin 900ms linear infinite;
+      #app-progress::after {
+        display: block;
+        width: 72%;
+        height: 100%;
+        background: #16a66a;
+        content: "";
+        transform: translateX(-100%);
+        animation: appProgress 8s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+        transition: width 160ms ease, transform 160ms ease;
       }
-      @keyframes appSpin {
+      #app-progress.complete {
+        opacity: 0;
+      }
+      #app-progress.complete::after {
+        width: 100%;
+        transform: translateX(0);
+        animation: none;
+      }
+      @keyframes appProgress {
         to {
-          transform: rotate(360deg);
+          transform: translateX(-8%);
         }
       }
-      #app-loading.hidden {
-        opacity: 0;
-        pointer-events: none;
+      .app-header-placeholder {
+        min-height: 62px;
+        border-bottom: 1px solid #e3e6e8;
+        background: rgba(255, 255, 255, 0.96);
+      }
+      .app-header-placeholder__inner {
+        display: flex;
+        width: min(760px, calc(100% - 32px));
+        min-height: 62px;
+        align-items: center;
+        gap: 10px;
+        margin: 0 auto;
+        color: #191b1f;
+        font: 700 14px/1.25 "PingFang SC", "Microsoft YaHei", sans-serif;
+      }
+      .app-header-placeholder__mark {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border-radius: 8px;
+        background: #16a66a;
+        color: #fff;
+        font-size: 18px;
       }
     </style>
   </head>
   <body>
-    <div id="root"></div>
-    <div id="app-loading" aria-hidden="true"><div class="spinner"></div></div>
+    <div id="app-progress" role="progressbar" aria-label="页面加载进度"></div>
+    <div id="root">
+      <header class="app-header-placeholder" aria-hidden="true">
+        <div class="app-header-placeholder__inner">
+          <span class="app-header-placeholder__mark">N</span>
+          <span>哪吒监控</span>
+        </div>
+      </header>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

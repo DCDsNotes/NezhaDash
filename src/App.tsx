@@ -9,10 +9,9 @@ import { hasStoredLanguage, setAppLanguage } from "./i18n"
 import { clearInjectedContext, injectContext } from "./lib/inject"
 import { settingQueryOptions } from "./lib/query-options"
 import { cn } from "./lib/utils"
-import ErrorPage from "./pages/ErrorPage"
 
 export default function App() {
-  const { data: settingData, error } = useQuery(settingQueryOptions())
+  const { data: settingData } = useQuery(settingQueryOptions())
   const [injectedCustomCode, setInjectedCustomCode] = useState<string | null>(null)
   const customCode = settingData?.data?.config?.custom_code || ""
   const configuredLanguage = settingData?.data?.config?.language
@@ -43,18 +42,6 @@ export default function App() {
       setAppLanguage(configuredLanguage)
     }
   }, [configuredLanguage])
-
-  if (error) {
-    return <ErrorPage code={500} />
-  }
-
-  if (!settingData) {
-    return null
-  }
-
-  if (customCode && injectedCustomCode !== customCode) {
-    return null
-  }
 
   const customMobileBackgroundImage = window.CustomMobileBackgroundImage || undefined
 

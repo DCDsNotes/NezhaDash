@@ -21,16 +21,6 @@ ReactDOM.createRoot(rootEl).render(
   </AppProviders>,
 )
 
-requestAnimationFrame(() => {
-  requestAnimationFrame(() => {
-    const loadingEl = document.getElementById("app-loading")
-    if (loadingEl) {
-      loadingEl.classList.add("hidden")
-      window.setTimeout(() => loadingEl.remove(), 250)
-    }
-  })
-})
-
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     const serviceWorkerUrl = new URL("sw.js", getApplicationBaseUrl())
