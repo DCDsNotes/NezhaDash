@@ -1,18 +1,15 @@
-import ErrorBoundary from "@/components/ErrorBoundary"
-import PageLoadProgress from "@/components/PageLoadProgress"
 import SearchBox from "@/components/SearchBox"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { type ServerWorkspaceValue, useServerWorkspace } from "@/hooks/use-server-workspace"
 import { useWebSocketControls } from "@/hooks/use-websocket-context"
-import { loginUserQueryOptions } from "@/lib/query-options"
+import { loginUserQueryOptions, settingQueryOptions } from "@/lib/query-options"
 import { serverIdToServerKey } from "@/lib/server-key"
 import { getServerDailyTransferList } from "@/lib/server-view-model"
 import { formatPageTitle, resolveSiteName } from "@/lib/site-name"
 import { cn } from "@/lib/utils"
-import ErrorPage from "@/pages/ErrorPage"
-import { useIsFetching, useQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react"
-import { Link, Outlet, matchPath, useLocation, useNavigation } from "react-router-dom"
+import { Link, Outlet, matchPath, useLocation } from "react-router-dom"
 
 let mapDialogPromise: ReturnType<typeof importMapDialog> | null = null
 
@@ -52,26 +49,22 @@ function useDashboardLinkState(): DashboardLinkState {
 
 function SiteHeader({
   dashboardLink,
-  siteName,
-  loading,
-  pageKey,
   servers,
   onOpenMap,
   onPreloadMap,
   onOpenTransfer,
 }: {
   dashboardLink: DashboardLinkState
-  siteName: string
-  loading: boolean
-  pageKey: string
   servers: ServerWorkspaceValue["servers"]
   onOpenMap: () => void
   onPreloadMap: () => void
   onOpenTransfer: () => void
 }) {
+  const { data: settingData } = useQuery(settingQueryOptions())
+  const siteName = resolveSiteName(settingData?.data?.config?.site_name)
+
   return (
     <header className="probe-site-header">
-      <PageLoadProgress loading={loading} pageKey={pageKey} />
       <div className="probe-site-header__inner">
         <Link to="/" className="probe-site-brand" aria-label="返回系统状态">
           <span className="probe-site-brand__mark" aria-hidden="true">
@@ -139,7 +132,7 @@ function TransferDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="dashboard-dialog probe-transfer-dialog">
         <DialogTitle className="dashboard-dialog__title">今日流量</DialogTitle>
-        <DialogDescription className="dashboard-dialog__description">统计周期 00:00 至 当前时间</DialogDescription>
+        <DialogDescription className="dashboard-dialog__description">统计周期 00:00 至 23:59</DialogDescription>
         <div className="dashboard-transfer-list">
           {dailyTransferList.length > 0 ? (
             dailyTransferList.map((item) => (
@@ -181,24 +174,15 @@ function getWorkspacePageName(pathname: string, workspace: Pick<ServerWorkspaceV
   return serverName || (workspace.isLoading ? "" : "页面不存在")
 }
 
-export default function ProbeWorkspace({
-  contentReady,
-  contentError,
-  configuredSiteName,
-}: {
-  contentReady: boolean
-  contentError: boolean
-  configuredSiteName?: string
-}) {
+export default function ProbeWorkspace() {
   const workspace = useServerWorkspace()
   const dashboardLink = useDashboardLinkState()
-  const { pathname, key: pageKey } = useLocation()
-  const navigation = useNavigation()
-  const initialFetches = useIsFetching({ predicate: (query) => query.state.data === undefined })
+  const { data: settingData } = useQuery(settingQueryOptions())
+  const { pathname } = useLocation()
   const [showTransfer, setShowTransfer] = useState(false)
   const [showMap, setShowMap] = useState(false)
+  const configuredSiteName = settingData?.data?.config?.site_name
   const pageTitle = formatPageTitle(getWorkspacePageName(pathname, workspace), configuredSiteName)
-  const pageLoading = !contentError && (!contentReady || workspace.isLoading || navigation.state !== "idle" || initialFetches > 0)
 
   useEffect(() => {
     document.title = pageTitle
@@ -217,16 +201,13 @@ export default function ProbeWorkspace({
     <div className="probe-workspace">
       <SiteHeader
         dashboardLink={dashboardLink}
-        siteName={resolveSiteName(configuredSiteName)}
-        loading={pageLoading}
-        pageKey={pageKey}
         servers={workspace.servers}
         onOpenMap={openMap}
         onPreloadMap={preloadMap}
         onOpenTransfer={() => setShowTransfer(true)}
       />
       <main className="probe-main">
-        <ErrorBoundary>{contentError ? <ErrorPage code={500} /> : contentReady ? <Outlet context={workspace} /> : null}</ErrorBoundary>
+        <Outlet context={workspace} />
       </main>
       <TransferDialog workspace={workspace} open={showTransfer} onOpenChange={setShowTransfer} />
       {showMap ? (

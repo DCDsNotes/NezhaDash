@@ -2,57 +2,78 @@ name: Build and Release
 
 on:
   push:
-    branches: [main]
+    tags:
+      - "v*.*.*"
+    branches:
+      - main
   workflow_dispatch:
     inputs:
-      admin_version:
-        description: "Admin frontend timestamp version (leave empty to use current main)"
+      version:
+        description: "Version to release (e.g. 0.9.1 or v0.9.1)"
         required: false
-        default: ""
 
 permissions:
-  actions: write
   contents: write
-
-concurrency:
-  group: frontend-release
-  cancel-in-progress: false
 
 jobs:
   build-and-release:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Remove legacy workflow artifacts
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        shell: bash
-        run: |
-          mapfile -t artifact_ids < <(
-            gh api --paginate "repos/${GH_REPO}/actions/artifacts?per_page=100" \
-              --jq '.artifacts[].id'
-          )
-
-          for artifact_id in "${artifact_ids[@]}"; do
-            gh api --method DELETE "repos/${GH_REPO}/actions/artifacts/${artifact_id}"
-          done
-
-          echo "Removed ${#artifact_ids[@]} legacy Actions artifact(s)." >> "$GITHUB_STEP_SUMMARY"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
 
-      - name: Resolve timestamp version
+      - name: Resolve version/tag
         id: version
         shell: bash
         run: |
-          tag="v$(date -u +%Y%m%d%H%M%S)"
-          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          pkg_version="$(node -p "require('./package.json').version")"
+          input_version="${{ github.event.inputs.version }}"
+
+          if [[ -n "${input_version}" ]]; then
+            if [[ "${input_version}" == v* ]]; then
+              tag="${input_version}"
+              version="${input_version#v}"
+            else
+              tag="v${input_version}"
+              version="${input_version}"
+            fi
+          else
+            # For push to default branch: publish an auto build with timestamp tag.
+            if [[ "${{ github.ref_type }}" == "branch" ]]; then
+              build_ts="$(TZ=Asia/Shanghai date +%Y%m%d%H%M%S)"
+              tag="v${build_ts}"
+              version="${build_ts}"
+              is_auto="true"
+            else
+              tag="v${pkg_version}"
+              version="${pkg_version}"
+              is_auto="false"
+            fi
+          fi
+
+          # When triggered by a tag push, prefer the actual ref tag.
+          if [[ "${{ github.ref_type }}" == "tag" && -n "${{ github.ref_name }}" ]]; then
+            tag="${{ github.ref_name }}"
+            version="${tag#v}"
+            is_auto="false"
+          fi
+
+           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+           echo "version=${version}" >> "$GITHUB_OUTPUT"
+           echo "is_auto=${is_auto:-false}" >> "$GITHUB_OUTPUT"
+           # Publish as an official "Latest" release (not draft / not pre-release).
+           echo "draft=false" >> "$GITHUB_OUTPUT"
+           echo "prerelease=false" >> "$GITHUB_OUTPUT"
 
       - name: Generate release notes
         shell: bash
@@ -76,121 +97,20 @@ jobs:
         shell: bash
         run: zip -r dist.zip dist
 
+      - name: Upload dist.zip (workflow artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ steps.version.outputs.tag }}
+          path: dist.zip
+          if-no-files-found: error
+
       - name: Create release and upload asset
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ steps.version.outputs.tag }}
-        shell: bash
-        run: |
-          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
-            gh release edit "${RELEASE_TAG}" \
-              --title "Release ${RELEASE_TAG}" \
-              --notes-file release_notes.md \
-              --latest
-            gh release upload "${RELEASE_TAG}" dist.zip --clobber
-          else
-            gh release create "${RELEASE_TAG}" dist.zip \
-              --target "${GITHUB_SHA}" \
-              --title "Release ${RELEASE_TAG}" \
-              --notes-file release_notes.md \
-              --latest
-          fi
-
-      - name: Keep only the five newest releases and tags
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          CURRENT_TAG: ${{ steps.version.outputs.tag }}
-        shell: bash
-        run: |
-          mapfile -t releases < <(gh release list --repo "$GH_REPO" --limit 1000 --json tagName,createdAt --jq '[.[] | select(.tagName | test("^v[0-9]{14}$"))] | sort_by(.createdAt) | reverse | .[5:][] | .tagName')
-          mapfile -t legacy < <(gh release list --repo "$GH_REPO" --limit 1000 --json tagName --jq '.[] | select(.tagName | test("^v[0-9]{14}$") | not) | .tagName')
-          for tag in "${releases[@]}" "${legacy[@]}"; do
-            [[ -n "$tag" ]] || continue
-            gh release delete "$tag" --repo "$GH_REPO" --yes --cleanup-tag || true
-          done
-          mapfile -t tags < <(gh api --paginate "repos/${GH_REPO}/git/matching-refs/tags" --jq '.[].ref | select(test("^refs/tags/v[0-9]{14}$"))' | sort -r)
-          mapfile -t legacy_tags < <(gh api --paginate "repos/${GH_REPO}/git/matching-refs/tags" --jq '.[].ref | select(test("^refs/tags/v[0-9]{14}$") | not)')
-          for index in "${!tags[@]}"; do
-            if (( index >= 5 )); then
-              gh api --method DELETE "repos/${GH_REPO}/git/refs/${tags[$index]#refs/}"
-            fi
-          done
-          for ref in "${legacy_tags[@]}"; do
-            [[ -n "$ref" ]] || continue
-            gh api --method DELETE "repos/${GH_REPO}/git/refs/${ref#refs/}"
-          done
-          echo "Retained the five newest frontend releases." >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Resolve admin frontend release
-        id: admin
-        env:
-          GH_TOKEN: ${{ github.token }}
-          ADMIN_REPOSITORY: ${{ github.repository_owner }}/NezhaAdmin
-          REQUESTED_ADMIN_VERSION: ${{ inputs.admin_version }}
-        shell: bash
-        run: |
-          if [[ -n "$REQUESTED_ADMIN_VERSION" && ! "$REQUESTED_ADMIN_VERSION" =~ ^v[0-9]{14}$ ]]; then
-            echo "Invalid admin frontend version: $REQUESTED_ADMIN_VERSION" >&2
-            exit 1
-          fi
-
-          for attempt in {1..60}; do
-            admin_tag="$REQUESTED_ADMIN_VERSION"
-            if [[ -z "$admin_tag" ]]; then
-              admin_sha="$(gh api "repos/${ADMIN_REPOSITORY}/commits/main" --jq '.sha')"
-              admin_tag="$(gh api "repos/${ADMIN_REPOSITORY}/git/matching-refs/tags/v" \
-                --jq ".[] | select(.object.type == \"commit\" and .object.sha == \"${admin_sha}\" and (.ref | test(\"^refs/tags/v[0-9]{14}$\"))) | .ref" \
-                | sed 's#refs/tags/##' | sort -r | head -n 1)"
-            fi
-
-            if [[ -n "$admin_tag" ]] && [[ "$(gh release view "$admin_tag" --repo "$ADMIN_REPOSITORY" --json assets --jq '.assets | any(.name == "dist.zip")' 2>/dev/null || true)" == "true" ]]; then
-              echo "tag=$admin_tag" >> "$GITHUB_OUTPUT"
-              echo "Using admin frontend ${admin_tag}." >> "$GITHUB_STEP_SUMMARY"
-              exit 0
-            fi
-            sleep 10
-          done
-
-          echo "Timed out waiting for the current NezhaAdmin main release." >&2
-          exit 1
-
-      - name: Trigger backend release build
-        env:
-          BACKEND_ACTIONS_TOKEN: ${{ secrets.NEZHA_ACTIONS_TOKEN }}
-          BACKEND_REPOSITORY: ${{ github.repository_owner }}/Nezha
-          RELEASE_TAG: ${{ steps.version.outputs.tag }}
-          ADMIN_TAG: ${{ steps.admin.outputs.tag }}
-        shell: bash
-        run: |
-          if [[ -z "${BACKEND_ACTIONS_TOKEN}" ]]; then
-            echo "Missing NEZHA_ACTIONS_TOKEN repository secret." >&2
-            exit 1
-          fi
-
-          payload="$(jq -n --arg frontend_version "${RELEASE_TAG}" --arg admin_version "${ADMIN_TAG}" '{ref:"main",inputs:{frontend_version:$frontend_version,admin_version:$admin_version}}')"
-          curl --fail-with-body --silent --show-error \
-            --request POST \
-            --header "Accept: application/vnd.github+json" \
-            --header "Authorization: Bearer ${BACKEND_ACTIONS_TOKEN}" \
-            --header "X-GitHub-Api-Version: 2022-11-28" \
-            "${GITHUB_API_URL}/repos/${BACKEND_REPOSITORY}/actions/workflows/release.yml/dispatches" \
-            --data "${payload}"
-
-      - name: Keep only five workflow runs
-        if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        shell: bash
-        run: |
-          while true; do
-            mapfile -t run_ids < <(gh api "repos/${GH_REPO}/actions/runs?per_page=100" \
-              --jq ".workflow_runs | map(select(.id != ${GITHUB_RUN_ID} and .status == \"completed\")) | sort_by(.created_at) | reverse | .[4:][] | .id")
-            if [[ "${#run_ids[@]}" -eq 0 ]]; then
-              break
-            fi
-            for run_id in "${run_ids[@]}"; do
-              gh api --method DELETE "repos/${GH_REPO}/actions/runs/${run_id}"
-            done
-          done
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          draft: ${{ steps.version.outputs.draft }}
+          prerelease: ${{ steps.version.outputs.prerelease }}
+          body_path: release_notes.md
+          files: dist.zip
