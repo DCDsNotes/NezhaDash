@@ -2,7 +2,7 @@ import SearchBox from "@/components/SearchBox"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { type ServerWorkspaceValue, useServerWorkspace } from "@/hooks/use-server-workspace"
 import { useWebSocketControls } from "@/hooks/use-websocket-context"
-import { loginUserQueryOptions, settingQueryOptions } from "@/lib/query-options"
+import { loginUserQueryOptions, serverTransferStatsQueryOptions, settingQueryOptions } from "@/lib/query-options"
 import { serverIdToServerKey } from "@/lib/server-key"
 import { getServerDailyTransferList } from "@/lib/server-view-model"
 import { formatPageTitle, resolveSiteName } from "@/lib/site-name"
@@ -123,9 +123,14 @@ function TransferDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const { data: transferData } = useQuery(serverTransferStatsQueryOptions(open))
+  const transferStats = useMemo(
+    () => new Map((transferData?.success ? transferData.data : []).map((item) => [item.server_id, { in: item.in, out: item.out }])),
+    [transferData],
+  )
   const dailyTransferList = useMemo(
-    () => (open ? getServerDailyTransferList(workspace.now, workspace.servers) : []),
-    [open, workspace.now, workspace.servers],
+    () => (open ? getServerDailyTransferList(workspace.now, workspace.servers, transferStats) : []),
+    [open, transferStats, workspace.now, workspace.servers],
   )
 
   return (

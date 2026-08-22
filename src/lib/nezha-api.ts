@@ -1,4 +1,11 @@
-import { LoginUserResponse, MonitorResponse, ServerGroupResponse, ServerSpeedHistoryResponse, SettingResponse } from "@/types/nezha-api"
+import {
+  LoginUserResponse,
+  MonitorResponse,
+  ServerGroupResponse,
+  ServerSpeedHistoryResponse,
+  ServerTransferStatsResponse,
+  SettingResponse,
+} from "@/types/nezha-api"
 
 import { nezhaApiUrl } from "./nezha-endpoints"
 
@@ -107,6 +114,10 @@ export const fetchServerSpeedHistory = async (serverId: number, signal?: AbortSi
       net_out_speed: timestamps.map((timestamp) => outByTime.get(timestamp) || 0),
     },
   }
+}
+
+export const fetchServerTransferStats = async (signal?: AbortSignal): Promise<ServerTransferStatsResponse> => {
+  return fetchApi<ServerTransferStatsResponse>("/server/transfer?period=today", { signal })
 }
 
 export const fetchSetting = async (signal?: AbortSignal): Promise<SettingResponse> => {

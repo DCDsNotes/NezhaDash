@@ -96,6 +96,17 @@ export interface ServerSpeedHistoryResponse {
   data: NezhaServerSpeedHistory
 }
 
+export interface ServerTransferStatsResponse {
+  success: boolean
+  data: ServerTransferStats[]
+}
+
+export interface ServerTransferStats {
+  server_id: number
+  in: number
+  out: number
+}
+
 export interface NezhaServerSpeedHistory {
   server_id: number
   server_name: string

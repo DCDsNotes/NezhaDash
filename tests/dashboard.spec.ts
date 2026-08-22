@@ -157,6 +157,17 @@ async function mockBackend(
       return
     }
 
+    if (pathname.endsWith("/server/transfer")) {
+      await json({
+        success: true,
+        data: [
+          { server_id: 1, in: 12 * 1024 ** 3, out: 8 * 1024 ** 3 },
+          { server_id: 2, in: 90 * 1024 ** 3, out: 45 * 1024 ** 3 },
+        ],
+      })
+      return
+    }
+
     if (pathname.endsWith("/server/1/metrics")) {
       const metric = new URL(route.request().url()).searchParams.get("metric")
       await json({
@@ -368,7 +379,9 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
 
   await page.getByTitle("查看今日流量").click()
   await expect(page.getByRole("dialog", { name: "今日流量" })).toBeVisible()
+  await expect(page.locator(".probe-transfer-dialog__description, .dashboard-dialog__description")).toContainText("统计周期 00:00 至 当前时间")
   await expect(page.locator(".dashboard-transfer-row")).toHaveCount(2)
+  await expect(page.locator(".dashboard-transfer-row").first()).not.toContainText("0K")
   const transferValuePositions = await page.locator(".dashboard-transfer-row__values").evaluateAll((rows) =>
     rows.map((row) =>
       Array.from(row.children).map((value) => {

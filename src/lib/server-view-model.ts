@@ -54,6 +54,11 @@ export type ServerDailyTransferViewModel = {
   totalBytes: number
 }
 
+export type ServerTransferStats = {
+  in: number
+  out: number
+}
+
 type TransferCounter = {
   in: number
   out: number
@@ -461,9 +466,13 @@ export function getServerOverviewStats(now: number, servers: NezhaServer[]) {
   }
 }
 
-export function getServerDailyTransferList(now: number, servers: NezhaServer[]): ServerDailyTransferViewModel[] {
+export function getServerDailyTransferList(
+  now: number,
+  servers: NezhaServer[],
+  transferStats?: ReadonlyMap<number, ServerTransferStats>,
+): ServerDailyTransferViewModel[] {
   return servers.map((server) => {
-    const transfer = getServerTransferStatsCounter(server, "today")
+    const transfer = transferStats?.get(server.id) ?? getServerTransferStatsCounter(server, "today")
     const total = transfer.in + transfer.out
     return {
       id: server.id,

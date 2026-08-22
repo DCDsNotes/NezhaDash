@@ -6,7 +6,8 @@
 
 const APP_BASE = new URL("./", self.location.href).pathname
 const APP_INDEX = `${APP_BASE}index.html`
-const CACHE_VERSION = "v8"
+const CACHE_VERSION = "v9"
+const CACHE_MAX_AGE = 30 * 24 * 60 * 60 * 1000
 const CACHE_SCOPE = APP_BASE.replace(/[^a-z0-9]/gi, "_")
 const STATIC_CACHE = `static-${CACHE_SCOPE}-${CACHE_VERSION}`
 const ASSET_CACHE = `asset-${CACHE_SCOPE}-${CACHE_VERSION}`
@@ -33,10 +34,25 @@ async function cachePut(cacheName, request, response) {
   try {
     if (!response || response.status !== 200 || !hasExpectedContentType(request, response)) return
     const cache = await caches.open(cacheName)
-    await cache.put(request, response)
+    const headers = new Headers(response.headers)
+    headers.set("x-nezha-cached-at", String(Date.now()))
+    const body = await response.clone().arrayBuffer()
+    await cache.put(
+      request,
+      new Response(body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      }),
+    )
   } catch {
     // ignore
   }
+}
+
+function isFresh(response) {
+  const cachedAt = Number(response?.headers.get("x-nezha-cached-at") || 0)
+  return cachedAt > 0 && Date.now() - cachedAt < CACHE_MAX_AGE
 }
 
 function offlineResponse() {
@@ -76,9 +92,9 @@ async function navigationNetworkFirst(request) {
 async function cacheFirst(request) {
   const cache = await caches.open(ASSET_CACHE)
   const cached = await cache.match(request, { ignoreSearch: false })
-  if (cached) return cached
+  if (cached && isFresh(cached)) return cached
   const response = await safeFetch(request)
-  if (!response) return offlineResponse()
+  if (!response) return cached || offlineResponse()
   if (!hasExpectedContentType(request, response)) return response
   await cachePut(ASSET_CACHE, request, response.clone())
   return response
@@ -92,7 +108,7 @@ async function staleWhileRevalidate(request, event) {
     return response
   })
 
-  if (cached) {
+  if (cached && isFresh(cached)) {
     event.waitUntil(fetchPromise.then(() => undefined))
     return cached
   }

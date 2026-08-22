@@ -1,6 +1,13 @@
 import { queryOptions } from "@tanstack/react-query"
 
-import { fetchLoginUser, fetchMonitor, fetchServerGroup, fetchServerSpeedHistory, fetchSetting } from "./nezha-api"
+import {
+  fetchLoginUser,
+  fetchMonitor,
+  fetchServerGroup,
+  fetchServerSpeedHistory,
+  fetchServerTransferStats,
+  fetchSetting,
+} from "./nezha-api"
 
 export const queryKeys = {
   setting: ["setting"] as const,
@@ -8,6 +15,7 @@ export const queryKeys = {
   serverGroups: ["server-group"] as const,
   monitor: (serverId: number) => ["monitor", serverId] as const,
   serverSpeed: (serverId: number) => ["server-speed", serverId] as const,
+  serverTransferStats: ["server-transfer-stats", "today"] as const,
 }
 
 export function settingQueryOptions() {
@@ -57,5 +65,16 @@ export function serverSpeedQueryOptions(serverId: number) {
     queryFn: ({ signal }) => fetchServerSpeedHistory(serverId, signal),
     refetchOnWindowFocus: false,
     staleTime: 15_000,
+  })
+}
+
+export function serverTransferStatsQueryOptions(enabled = true) {
+  return queryOptions({
+    queryKey: queryKeys.serverTransferStats,
+    queryFn: ({ signal }) => fetchServerTransferStats(signal),
+    enabled,
+    staleTime: 30_000,
+    refetchInterval: enabled ? 60_000 : false,
+    refetchOnWindowFocus: false,
   })
 }
