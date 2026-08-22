@@ -34,7 +34,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tag="\${REQUESTED_TAG:-}"
+          tag="${REQUESTED_TAG:-}"
           if [[ -z "$tag" ]]; then
             tag="v$(TZ=Asia/Shanghai date +%Y%m%d%H%M%S)"
           fi
@@ -92,16 +92,16 @@ jobs:
           set -euo pipefail
           mapfile -t old_releases < <(gh release list --repo "$GH_REPO" --limit 1000 \
             --json tagName,createdAt --jq 'sort_by(.createdAt) | reverse | .[5:][] | .tagName')
-          for tag in "\${old_releases[@]}"; do
+          for tag in "${old_releases[@]}"; do
             [[ -n "$tag" ]] || continue
             gh release delete "$tag" --repo "$GH_REPO" --yes --cleanup-tag
           done
 
           mapfile -t timestamp_tags < <(gh api --paginate "repos/$GH_REPO/git/matching-refs/tags/v" \
             --jq '.[].ref | select(test("^refs/tags/v[0-9]{14}$"))' | sort -r)
-          for index in "\${!timestamp_tags[@]}"; do
+          for index in "${!timestamp_tags[@]}"; do
             (( index < 5 )) && continue
-            ref="\${timestamp_tags[$index]#refs/}"
+            ref="${timestamp_tags[$index]#refs/}"
             gh api --method DELETE "repos/$GH_REPO/git/refs/$ref"
           done
 
@@ -115,10 +115,10 @@ jobs:
           set +e
           while true; do
             mapfile -t run_ids < <(gh api "repos/$GH_REPO/actions/runs?per_page=100" \
-              --jq ".workflow_runs | map(select(.id != \${GITHUB_RUN_ID} and .status == \"completed\")) | sort_by(.created_at) | reverse | .[4:][] | .id")
-            (( \${#run_ids[@]} > 0 )) || break
+              --jq ".workflow_runs | map(select(.id != ${GITHUB_RUN_ID} and .status == \"completed\")) | sort_by(.created_at) | reverse | .[4:][] | .id")
+            (( ${#run_ids[@]} > 0 )) || break
             deleted=0
-            for run_id in "\${run_ids[@]}"; do
+            for run_id in "${run_ids[@]}"; do
               if gh api --method DELETE "repos/$GH_REPO/actions/runs/$run_id"; then
                 ((deleted += 1))
               fi
