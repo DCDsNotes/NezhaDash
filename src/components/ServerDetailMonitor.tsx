@@ -373,7 +373,7 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
     isFetching,
     isLoading,
   } = useQuery({
-    ...monitorQueryOptions(),
+    ...monitorQueryOptions(serverId),
     enabled: shouldFetchHistory,
     refetchInterval: shouldFetchHistory && refreshData ? 60000 : false,
   })

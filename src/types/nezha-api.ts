@@ -82,18 +82,6 @@ export interface ServiceHistoryCollectionResponse {
   data: ServiceHistory[]
 }
 
-export interface ServiceOverviewResponse {
-  success: boolean
-  data: {
-    services?: Record<string, { service_name?: string }>
-  }
-}
-
-export interface ServiceHistoryResponse {
-  success: boolean
-  data: ServiceHistory
-}
-
 export interface ServiceHistory {
   service_id: number
   service_name: string
@@ -128,13 +116,12 @@ export interface ServerNetworkHistoryResponse {
   data: ServerNetworkHistory
 }
 
-export interface ServerMetricsResponse {
+export interface ServerMetricsBatchResponse {
   success: boolean
   data: {
     server_id: number
     server_name: string
-    metric: string
-    data_points: Array<{ ts: number; value: number }>
+    metrics: Record<string, Array<{ ts: number; value: number }>>
   }
 }
 

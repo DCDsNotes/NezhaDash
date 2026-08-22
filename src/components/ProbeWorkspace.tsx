@@ -80,7 +80,7 @@ function SiteHeader({
     enabled: Boolean(detailServerId),
   })
   const monitorQuery = useQuery({
-    ...monitorQueryOptions(),
+    ...monitorQueryOptions(detailServerId || 0),
     enabled: Boolean(detailServerId),
   })
   const detailDataLoading = Boolean(detailServerId && (speedQuery.isPending || monitorQuery.isPending))

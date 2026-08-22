@@ -2,12 +2,10 @@ import {
   LoginUserResponse,
   NezhaMonitor,
   ServerGroupResponse,
-  ServerMetricsResponse,
+  ServerMetricsBatchResponse,
   ServerNetworkHistoryResponse,
   ServerTrafficResponse,
   ServiceHistoryCollectionResponse,
-  ServiceHistoryResponse,
-  ServiceOverviewResponse,
   SettingResponse,
 } from "@/types/nezha-api"
 
@@ -80,32 +78,8 @@ export const fetchLoginUser = async (signal?: AbortSignal): Promise<LoginUserRes
   }
 }
 
-const HISTORY_CONCURRENCY = 4
-
-export const fetchServiceHistories = async (signal?: AbortSignal): Promise<ServiceHistoryCollectionResponse> => {
-  const overview = await fetchApi<ServiceOverviewResponse>("/service", { signal })
-  const serviceIds = Object.keys(overview.data.services || {}).map(Number).filter(Number.isFinite)
-  const histories = new Array<ServiceHistoryResponse["data"] | undefined>(serviceIds.length)
-  const errors: unknown[] = []
-  let nextIndex = 0
-
-  async function worker() {
-    while (nextIndex < serviceIds.length) {
-      const index = nextIndex++
-      try {
-        const response = await fetchApi<ServiceHistoryResponse>(`/service/${serviceIds[index]}/history`, { signal })
-        histories[index] = response.data
-      } catch (error) {
-        if (signal?.aborted) throw error
-        errors.push(error)
-      }
-    }
-  }
-
-  await Promise.all(Array.from({ length: Math.min(HISTORY_CONCURRENCY, serviceIds.length) }, worker))
-  const data = histories.filter((history): history is ServiceHistoryResponse["data"] => Boolean(history))
-  if (serviceIds.length > 0 && data.length === 0 && errors.length > 0) throw errors[0]
-  return { success: overview.success, data }
+export const fetchServiceHistories = async (serverId: number, signal?: AbortSignal): Promise<ServiceHistoryCollectionResponse> => {
+  return fetchApi<ServiceHistoryCollectionResponse>(`/server/${serverId}/service/history`, { signal })
 }
 
 export function selectServerMonitorHistory(histories: ServiceHistoryCollectionResponse | undefined, serverId: number): NezhaMonitor[] {
@@ -130,26 +104,22 @@ export const fetchTodayServerTraffic = async (signal?: AbortSignal): Promise<Ser
   return fetchApi<ServerTrafficResponse>("/server/traffic", { signal })
 }
 
-function fetchServerMetric(serverId: number, metric: "net_in_speed" | "net_out_speed", signal?: AbortSignal) {
-  return fetchApi<ServerMetricsResponse>(`/server/${serverId}/metrics?metric=${metric}`, { signal })
-}
-
 export const fetchServerNetworkMetrics = async (serverId: number, signal?: AbortSignal): Promise<ServerNetworkHistoryResponse> => {
-  const [inbound, outbound] = await Promise.all([
-    fetchServerMetric(serverId, "net_in_speed", signal),
-    fetchServerMetric(serverId, "net_out_speed", signal),
-  ])
-  const inboundByTime = new Map(inbound.data.data_points.map((point) => [Number(point.ts), Number(point.value) || 0]))
-  const outboundByTime = new Map(outbound.data.data_points.map((point) => [Number(point.ts), Number(point.value) || 0]))
+  const response = await fetchApi<ServerMetricsBatchResponse>(
+    `/server/${serverId}/metrics/batch?metric=net_in_speed&metric=net_out_speed`,
+    { signal },
+  )
+  const inboundByTime = new Map((response.data.metrics.net_in_speed || []).map((point) => [Number(point.ts), Number(point.value) || 0]))
+  const outboundByTime = new Map((response.data.metrics.net_out_speed || []).map((point) => [Number(point.ts), Number(point.value) || 0]))
   const createdAt = Array.from(new Set([...inboundByTime.keys(), ...outboundByTime.keys()]))
     .filter(Number.isFinite)
     .sort((a, b) => a - b)
 
   return {
-    success: inbound.success && outbound.success,
+    success: response.success,
     data: {
       server_id: serverId,
-      server_name: inbound.data.server_name || outbound.data.server_name,
+      server_name: response.data.server_name,
       created_at: createdAt,
       net_in_speed: createdAt.map((time) => inboundByTime.get(time) || 0),
       net_out_speed: createdAt.map((time) => outboundByTime.get(time) || 0),

@@ -6,7 +6,7 @@ export const queryKeys = {
   setting: ["setting"] as const,
   loginUser: ["login-user"] as const,
   serverGroups: ["server-group"] as const,
-  monitorHistory: ["service-history"] as const,
+  monitorHistory: (serverId: number) => ["service-history", serverId] as const,
   serverMetrics: (serverId: number) => ["server-metrics", serverId] as const,
   todayTraffic: ["server-traffic", "today"] as const,
 }
@@ -42,10 +42,10 @@ export function serverGroupsQueryOptions() {
   })
 }
 
-export function monitorQueryOptions() {
+export function monitorQueryOptions(serverId: number) {
   return queryOptions({
-    queryKey: queryKeys.monitorHistory,
-    queryFn: ({ signal }) => fetchServiceHistories(signal),
+    queryKey: queryKeys.monitorHistory(serverId),
+    queryFn: ({ signal }) => fetchServiceHistories(serverId, signal),
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     staleTime: 15_000,
