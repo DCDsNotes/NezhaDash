@@ -103,14 +103,14 @@ jobs:
           CURRENT_TAG: ${{ steps.version.outputs.tag }}
         shell: bash
         run: |
-          mapfile -t releases < <(gh release list --repo "$GH_REPO" --limit 100 --json tagName,createdAt --jq '[.[] | select(.tagName | test("^v[0-9]{14}$"))] | sort_by(.createdAt) | reverse | .[5:][] | .tagName')
-          mapfile -t legacy < <(gh release list --repo "$GH_REPO" --limit 100 --json tagName --jq '.[] | select(.tagName | test("^v[0-9]{14}$") | not) | .tagName')
+          mapfile -t releases < <(gh release list --repo "$GH_REPO" --limit 1000 --json tagName,createdAt --jq '[.[] | select(.tagName | test("^v[0-9]{14}$"))] | sort_by(.createdAt) | reverse | .[5:][] | .tagName')
+          mapfile -t legacy < <(gh release list --repo "$GH_REPO" --limit 1000 --json tagName --jq '.[] | select(.tagName | test("^v[0-9]{14}$") | not) | .tagName')
           for tag in "${releases[@]}" "${legacy[@]}"; do
             [[ -n "$tag" ]] || continue
             gh release delete "$tag" --repo "$GH_REPO" --yes --cleanup-tag || true
           done
-          mapfile -t tags < <(gh api "repos/${GH_REPO}/git/matching-refs/tags/v" --jq '.[].ref | select(test("^refs/tags/v[0-9]{14}$"))' | sort -r)
-          mapfile -t legacy_tags < <(gh api "repos/${GH_REPO}/git/matching-refs/tags/v" --jq '.[].ref | select(test("^refs/tags/v[0-9]{14}$") | not)')
+          mapfile -t tags < <(gh api --paginate "repos/${GH_REPO}/git/matching-refs/tags" --jq '.[].ref | select(test("^refs/tags/v[0-9]{14}$"))' | sort -r)
+          mapfile -t legacy_tags < <(gh api --paginate "repos/${GH_REPO}/git/matching-refs/tags" --jq '.[].ref | select(test("^refs/tags/v[0-9]{14}$") | not)')
           for index in "${!tags[@]}"; do
             if (( index >= 5 )); then
               gh api --method DELETE "repos/${GH_REPO}/git/refs/${tags[$index]#refs/}"
@@ -168,7 +168,7 @@ jobs:
             exit 1
           fi
 
-          payload="$(jq -n --arg version "${RELEASE_TAG}" --arg admin_version "${ADMIN_TAG}" '{ref:"main",inputs:{version:$version,admin_version:$admin_version}}')"
+          payload="$(jq -n --arg frontend_version "${RELEASE_TAG}" --arg admin_version "${ADMIN_TAG}" '{ref:"main",inputs:{frontend_version:$frontend_version,admin_version:$admin_version}}')"
           curl --fail-with-body --silent --show-error \
             --request POST \
             --header "Accept: application/vnd.github+json" \

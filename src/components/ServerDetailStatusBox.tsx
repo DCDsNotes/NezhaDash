@@ -7,7 +7,7 @@ export default function ServerDetailStatusBox({ now, server }: { now: number; se
   const { realtime, rings } = useMemo(() => getServerDetailStatusViewModel(now, server), [now, server])
 
   return (
-    <div className="server-detail-status app-box">
+    <div className="server-detail-status nazha-box">
       <div className="server-detail-status__rings server-detail-status__rings--ring">
         {rings.map((item) => (
           <ServerStatusRing

@@ -1,7 +1,7 @@
 import { useWorldMapSize } from "@/hooks/use-world-map-size"
 import { countryCoordinates } from "@/lib/geo-limit"
 import { cn } from "@/lib/utils"
-import { count2size, findIntersectingGroups, lonLatToMapXY, preloadWorldMapImage, worldMapImageUrl } from "@/lib/world-map"
+import { count2size, findIntersectingGroups, lonLatToMapXY, worldMapImageUrl } from "@/lib/world-map"
 import "@/styles/map.css"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 
@@ -79,18 +79,7 @@ export default function WorldMap({
   const [tipsShow, setTipsShow] = useState(false)
   const [tipsContent, setTipsContent] = useState("")
   const [activeXY, setActiveXY] = useState({ x: 0, y: 0 })
-  const [isMapReady, setIsMapReady] = useState(false)
   const tipsTimer = useRef<number | null>(null)
-
-  useEffect(() => {
-    let active = true
-    void preloadWorldMapImage().then(() => {
-      if (active) setIsMapReady(true)
-    })
-    return () => {
-      active = false
-    }
-  }, [])
 
   function handleTap(info: any) {
     setTipsContent(info.label || "")
@@ -119,7 +108,6 @@ export default function WorldMap({
   return (
     <div
       className={cn("world-map-group", className)}
-      onClick={() => setTipsShow(false)}
       style={
         {
           "--world-map-width": `${mapWidth}px`,
@@ -128,8 +116,7 @@ export default function WorldMap({
         } as React.CSSProperties
       }
     >
-      <div className={cn("world-map-img", { "world-map-img--loading": !isMapReady })} />
-      {!isMapReady ? <div className="world-map-skeleton" role="status" aria-label="地图加载中" /> : null}
+      <div className="world-map-img" />
       <div className="world-map-point-container">
         {points.map((p) => (
           <WorldMapPoint key={p.key} info={p} onTap={handleTap} />

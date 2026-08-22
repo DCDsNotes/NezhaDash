@@ -14,9 +14,8 @@ import ErrorPage from "./pages/ErrorPage"
 export default function App() {
   const { data: settingData, error } = useQuery(settingQueryOptions())
   const [injectedCustomCode, setInjectedCustomCode] = useState<string | null>(null)
-  const config = settingData?.data?.config
-  const customCode = config?.custom_code || ""
-  const configuredLanguage = config?.language
+  const customCode = settingData?.data?.config?.custom_code || ""
+  const configuredLanguage = settingData?.data?.config?.language
   const { backgroundImage: customBackgroundImage } = useBackground(injectedCustomCode)
 
   useEffect(() => {
@@ -46,7 +45,7 @@ export default function App() {
   }, [configuredLanguage])
 
   if (error) {
-    return <ErrorPage code={500} standalone />
+    return <ErrorPage code={500} />
   }
 
   if (!settingData) {
@@ -61,19 +60,19 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div className="app-layout">
+      <div className="nazha-layout">
         <div
-          className={cn("app-layout-bg", {
+          className={cn("nazha-layout-bg", {
             "hidden sm:block": customMobileBackgroundImage,
           })}
           style={customBackgroundImage ? { backgroundImage: `url(${customBackgroundImage})`, backgroundSize: "cover" } : undefined}
         />
         {customMobileBackgroundImage && (
-          <div className="app-layout-bg sm:hidden" style={{ backgroundImage: `url(${customMobileBackgroundImage})`, backgroundSize: "cover" }} />
+          <div className="nazha-layout-bg sm:hidden" style={{ backgroundImage: `url(${customMobileBackgroundImage})`, backgroundSize: "cover" }} />
         )}
-        <div className="app-layout-main">
+        <div className="nazha-layout-main">
           <RefreshToast />
-          <ProbeWorkspace configuredSiteName={config?.site_name} />
+          <ProbeWorkspace />
         </div>
       </div>
     </ErrorBoundary>

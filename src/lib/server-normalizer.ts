@@ -76,9 +76,6 @@ export function getServerLastActiveTime(serverInfo: NezhaServer) {
 }
 
 export function isServerOnline(_now: number, serverInfo: NezhaServer) {
-  // Presence is authoritative on the backend state stream. Do not recreate
-  // a client-side timeout from `last_active`; browser clocks and reconnect
-  // scheduling can otherwise produce a different status than notifications.
   return serverInfo.online === true
 }
 

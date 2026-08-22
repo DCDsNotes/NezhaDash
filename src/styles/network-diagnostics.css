@@ -1,9 +1,9 @@
 .network-diagnostics {
   display: grid;
-  width: min(var(--probe-content-width), calc(100% - var(--app-page-inline-gap) - var(--app-page-inline-gap)));
+  width: min(var(--probe-content-width), calc(100% - 32px));
   gap: 12px;
   margin: 0 auto;
-  padding: 24px 0 var(--probe-page-bottom-padding);
+  padding: 24px 0 48px;
 }
 
 .network-diagnostics h1,
@@ -971,8 +971,8 @@
 
 @media (max-width: 640px) {
   .network-diagnostics {
-    width: min(var(--probe-content-width), calc(100% - var(--app-page-inline-gap) - var(--app-page-inline-gap)));
-    padding: 18px 0 var(--probe-page-bottom-padding);
+    width: min(var(--probe-content-width), calc(100% - 24px));
+    padding: 18px 0 36px;
   }
 
   .network-diagnostics__back {

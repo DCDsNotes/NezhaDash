@@ -1,13 +1,4 @@
-import {
-  LoginUserResponse,
-  NezhaMonitor,
-  ServerGroupResponse,
-  ServerMetricsBatchResponse,
-  ServerNetworkHistoryResponse,
-  ServerTrafficResponse,
-  ServiceHistoryCollectionResponse,
-  SettingResponse,
-} from "@/types/nezha-api"
+import { LoginUserResponse, MonitorResponse, ServerGroupResponse, ServerSpeedHistoryResponse, SettingResponse } from "@/types/nezha-api"
 
 import { nezhaApiUrl } from "./nezha-endpoints"
 
@@ -78,53 +69,12 @@ export const fetchLoginUser = async (signal?: AbortSignal): Promise<LoginUserRes
   }
 }
 
-export const fetchServiceHistories = async (serverId: number, signal?: AbortSignal): Promise<ServiceHistoryCollectionResponse> => {
-  return fetchApi<ServiceHistoryCollectionResponse>(`/server/${serverId}/service/history`, { signal })
+export const fetchMonitor = async (serverId: number, signal?: AbortSignal): Promise<MonitorResponse> => {
+  return fetchApi<MonitorResponse>(`/service/${serverId}`, { signal })
 }
 
-export function selectServerMonitorHistory(histories: ServiceHistoryCollectionResponse | undefined, serverId: number): NezhaMonitor[] {
-  if (!histories?.success || !serverId) return []
-  return histories.data.flatMap((history) => {
-    const server = history.servers.find((item) => Number(item.server_id) === serverId)
-    if (!server) return []
-    const points = server.stats.data_points || []
-    return [{
-      monitor_id: Number(history.service_id),
-      monitor_name: history.service_name,
-      server_id: serverId,
-      server_name: server.server_name,
-      created_at: points.map((point) => Number(point.ts)),
-      avg_delay: points.map((point) => Number(point.delay) || 0),
-      packet_loss: points.map((point) => (Number(point.status) === 1 ? 0 : 100)),
-    }]
-  })
-}
-
-export const fetchTodayServerTraffic = async (signal?: AbortSignal): Promise<ServerTrafficResponse> => {
-  return fetchApi<ServerTrafficResponse>("/server/traffic", { signal })
-}
-
-export const fetchServerNetworkMetrics = async (serverId: number, signal?: AbortSignal): Promise<ServerNetworkHistoryResponse> => {
-  const response = await fetchApi<ServerMetricsBatchResponse>(
-    `/server/${serverId}/metrics/batch?metric=net_in_speed&metric=net_out_speed`,
-    { signal },
-  )
-  const inboundByTime = new Map((response.data.metrics.net_in_speed || []).map((point) => [Number(point.ts), Number(point.value) || 0]))
-  const outboundByTime = new Map((response.data.metrics.net_out_speed || []).map((point) => [Number(point.ts), Number(point.value) || 0]))
-  const createdAt = Array.from(new Set([...inboundByTime.keys(), ...outboundByTime.keys()]))
-    .filter(Number.isFinite)
-    .sort((a, b) => a - b)
-
-  return {
-    success: response.success,
-    data: {
-      server_id: serverId,
-      server_name: response.data.server_name,
-      created_at: createdAt,
-      net_in_speed: createdAt.map((time) => inboundByTime.get(time) || 0),
-      net_out_speed: createdAt.map((time) => outboundByTime.get(time) || 0),
-    },
-  }
+export const fetchServerSpeedHistory = async (serverId: number, signal?: AbortSignal): Promise<ServerSpeedHistoryResponse> => {
+  return fetchApi<ServerSpeedHistoryResponse>(`/server-speed/${serverId}`, { signal })
 }
 
 export const fetchSetting = async (signal?: AbortSignal): Promise<SettingResponse> => {

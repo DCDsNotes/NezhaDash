@@ -180,7 +180,7 @@ export default function Servers() {
   return (
     <div className="status-page">
       <section className="status-hero" aria-labelledby="system-status-title">
-        <span className={cn("status-hero__mark", { "status-hero__mark--attention": overallState === "attention" })} aria-hidden="true">
+        <span className="status-hero__mark" aria-hidden="true">
           <i className="ri-pulse-line" />
         </span>
         <h1 id="system-status-title">系统状态</h1>
@@ -222,7 +222,7 @@ export default function Servers() {
               <small>{networkStats.netSpeed.inData.unit}/s</small>
             </strong>
             <p>
-              累计流量 {networkStats.transfer.inData.value} {networkStats.transfer.inData.unit}
+              今日流量 {networkStats.transfer.inData.value} {networkStats.transfer.inData.unit}
             </p>
           </div>
           <div className="status-network__metric status-network__metric--up">
@@ -234,7 +234,7 @@ export default function Servers() {
               <small>{networkStats.netSpeed.outData.unit}/s</small>
             </strong>
             <p>
-              累计流量 {networkStats.transfer.outData.value} {networkStats.transfer.outData.unit}
+              今日流量 {networkStats.transfer.outData.value} {networkStats.transfer.outData.unit}
             </p>
           </div>
         </div>

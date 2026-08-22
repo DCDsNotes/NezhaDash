@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button"
 import { useAppTranslation } from "@/i18n"
-import "@/styles/not-found.css"
 import { Link, useLocation } from "react-router-dom"
 
 export default function NotFound() {

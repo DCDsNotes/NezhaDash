@@ -1,18 +1,15 @@
-import PageScrollControls from "@/components/PageScrollControls"
 import SearchBox from "@/components/SearchBox"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { type ServerWorkspaceValue, useServerWorkspace } from "@/hooks/use-server-workspace"
-import { useStatusFavicon } from "@/hooks/use-status-favicon"
 import { useWebSocketControls } from "@/hooks/use-websocket-context"
-import { loginUserQueryOptions, monitorQueryOptions, serverMetricsQueryOptions, todayTrafficQueryOptions } from "@/lib/query-options"
-import { preloadNetworkDiagnostics } from "@/lib/route-preload"
+import { loginUserQueryOptions, settingQueryOptions } from "@/lib/query-options"
 import { serverIdToServerKey } from "@/lib/server-key"
-import { getServerTransferSummaryList } from "@/lib/server-view-model"
+import { getServerDailyTransferList } from "@/lib/server-view-model"
 import { formatPageTitle, resolveSiteName } from "@/lib/site-name"
 import { cn } from "@/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react"
-import { Link, Outlet, matchPath, useLocation, useNavigation } from "react-router-dom"
+import { Link, Outlet, matchPath, useLocation } from "react-router-dom"
 
 let mapDialogPromise: ReturnType<typeof importMapDialog> | null = null
 
@@ -23,10 +20,6 @@ function importMapDialog() {
 function loadMapDialog() {
   mapDialogPromise ||= importMapDialog()
   return mapDialogPromise
-}
-
-function preloadMapDialog() {
-  void loadMapDialog().then(({ preloadMapAssets }) => preloadMapAssets())
 }
 
 const MapDialog = lazy(loadMapDialog)
@@ -56,53 +49,22 @@ function useDashboardLinkState(): DashboardLinkState {
 
 function SiteHeader({
   dashboardLink,
-  siteName,
   servers,
   onOpenMap,
   onPreloadMap,
   onOpenTransfer,
-  workspaceLoading,
 }: {
   dashboardLink: DashboardLinkState
-  siteName: string
   servers: ServerWorkspaceValue["servers"]
   onOpenMap: () => void
   onPreloadMap: () => void
   onOpenTransfer: () => void
-  workspaceLoading: boolean
 }) {
-  const navigation = useNavigation()
-  const { pathname } = useLocation()
-  const serverMatch = matchPath({ path: "/server/:serverKey", end: true }, pathname)
-  const detailServerId = serverMatch ? servers.find((server) => serverIdToServerKey(server.id) === serverMatch.params.serverKey)?.id : undefined
-  const speedQuery = useQuery({
-    ...serverMetricsQueryOptions(detailServerId || 0),
-    enabled: Boolean(detailServerId),
-  })
-  const monitorQuery = useQuery({
-    ...monitorQueryOptions(detailServerId || 0),
-    enabled: Boolean(detailServerId),
-  })
-  const detailDataLoading = Boolean(detailServerId && (speedQuery.isPending || monitorQuery.isPending))
-  const isLoading = navigation.state !== "idle" || workspaceLoading || detailDataLoading
-  const [progressState, setProgressState] = useState<"idle" | "loading" | "finishing">("idle")
-
-  useEffect(() => {
-    if (isLoading) {
-      setProgressState("loading")
-      return
-    }
-
-    setProgressState((current) => (current === "idle" ? current : "finishing"))
-    const timeoutId = window.setTimeout(() => setProgressState("idle"), 180)
-    return () => window.clearTimeout(timeoutId)
-  }, [isLoading])
+  const { data: settingData } = useQuery(settingQueryOptions())
+  const siteName = resolveSiteName(settingData?.data?.config?.site_name)
 
   return (
-    <header className="probe-site-header" aria-busy={isLoading}>
-      <span className={cn("app-route-progress", `app-route-progress--${progressState}`)} aria-hidden="true">
-        <span />
-      </span>
+    <header className="probe-site-header">
       <div className="probe-site-header__inner">
         <Link to="/" className="probe-site-brand" aria-label="返回系统状态">
           <span className="probe-site-brand__mark" aria-hidden="true">
@@ -118,17 +80,10 @@ function SiteHeader({
           <div className="probe-site-actions__search">
             <SearchBox servers={servers} />
           </div>
-          <Link
-            to="/network"
-            className="probe-site-action"
-            aria-label="IP 分流与泄露检测"
-            title="IP 分流与泄露检测"
-            onPointerEnter={() => void preloadNetworkDiagnostics()}
-            onFocus={() => void preloadNetworkDiagnostics()}
-          >
+          <Link to="/network" className="probe-site-action" aria-label="IP 分流与泄露检测" title="IP 分流与泄露检测">
             <i className="ri-route-line" aria-hidden="true" />
           </Link>
-          <button type="button" className="probe-site-action" onClick={onOpenTransfer} aria-label="查看流量汇总" title="查看流量汇总">
+          <button type="button" className="probe-site-action" onClick={onOpenTransfer} aria-label="查看今日流量" title="查看今日流量">
             <i className="ri-exchange-2-line" aria-hidden="true" />
           </button>
           <button
@@ -159,26 +114,28 @@ function SiteHeader({
   )
 }
 
-function TransferDialog({ workspace, onOpenChange }: { workspace: ServerWorkspaceValue; onOpenChange: (open: boolean) => void }) {
-  const trafficQuery = useQuery(todayTrafficQueryOptions())
-  const todayTraffic = trafficQuery.data?.success ? trafficQuery.data.data.servers : {}
-  const transferList = useMemo(
-    () => getServerTransferSummaryList(workspace.now, workspace.servers, todayTraffic),
-    [todayTraffic, workspace.now, workspace.servers],
+function TransferDialog({
+  workspace,
+  open,
+  onOpenChange,
+}: {
+  workspace: ServerWorkspaceValue
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const dailyTransferList = useMemo(
+    () => (open ? getServerDailyTransferList(workspace.now, workspace.servers) : []),
+    [open, workspace.now, workspace.servers],
   )
 
   return (
-    <Dialog open onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="dashboard-dialog probe-transfer-dialog">
-        <DialogTitle className="dashboard-dialog__title">今日流量汇总</DialogTitle>
-        <DialogDescription className="dashboard-dialog__description">统计周期：今日 00:00 至当前</DialogDescription>
+        <DialogTitle className="dashboard-dialog__title">今日流量</DialogTitle>
+        <DialogDescription className="dashboard-dialog__description">统计周期 00:00 至 23:59</DialogDescription>
         <div className="dashboard-transfer-list">
-          {trafficQuery.isPending ? (
-            <div className="dashboard-empty"><i className="ri-loader-4-line probe-spin" aria-hidden="true" /> 正在加载今日流量</div>
-          ) : trafficQuery.isError ? (
-            <div className="dashboard-empty">今日流量加载失败</div>
-          ) : transferList.length > 0 ? (
-            transferList.map((item) => (
+          {dailyTransferList.length > 0 ? (
+            dailyTransferList.map((item) => (
               <div key={item.id} className="dashboard-transfer-row">
                 <div className="dashboard-transfer-row__name">
                   <span className={cn("probe-status-dot", { "probe-status-dot--offline": !item.online })} />
@@ -217,31 +174,26 @@ function getWorkspacePageName(pathname: string, workspace: Pick<ServerWorkspaceV
   return serverName || (workspace.isLoading ? "" : "页面不存在")
 }
 
-function shouldRenderPageScrollControls(pathname: string) {
-  return Boolean(
-    matchPath({ path: "/", end: true }, pathname) ||
-    matchPath({ path: "/server/:serverKey", end: true }, pathname) ||
-    matchPath({ path: "/network", end: true }, pathname) ||
-    matchPath({ path: "/error", end: true }, pathname),
-  )
-}
-
-export default function ProbeWorkspace({ configuredSiteName }: { configuredSiteName?: string }) {
+export default function ProbeWorkspace() {
   const workspace = useServerWorkspace()
   const dashboardLink = useDashboardLinkState()
+  const { data: settingData } = useQuery(settingQueryOptions())
   const { pathname } = useLocation()
   const [showTransfer, setShowTransfer] = useState(false)
   const [showMap, setShowMap] = useState(false)
-  const siteName = resolveSiteName(configuredSiteName)
+  const configuredSiteName = settingData?.data?.config?.site_name
   const pageTitle = formatPageTitle(getWorkspacePageName(pathname, workspace), configuredSiteName)
-  useStatusFavicon(!workspace.isLoading && workspace.totalCounts.offline > 0)
 
   useEffect(() => {
     document.title = pageTitle
   }, [pageTitle])
 
+  function preloadMap() {
+    void loadMapDialog().then(({ preloadMapAssets }) => preloadMapAssets())
+  }
+
   function openMap() {
-    preloadMapDialog()
+    preloadMap()
     setShowMap(true)
   }
 
@@ -249,18 +201,15 @@ export default function ProbeWorkspace({ configuredSiteName }: { configuredSiteN
     <div className="probe-workspace">
       <SiteHeader
         dashboardLink={dashboardLink}
-        siteName={siteName}
         servers={workspace.servers}
         onOpenMap={openMap}
-        onPreloadMap={preloadMapDialog}
+        onPreloadMap={preloadMap}
         onOpenTransfer={() => setShowTransfer(true)}
-        workspaceLoading={workspace.isLoading}
       />
       <main className="probe-main">
         <Outlet context={workspace} />
       </main>
-      {shouldRenderPageScrollControls(pathname) ? <PageScrollControls /> : null}
-      {showTransfer ? <TransferDialog workspace={workspace} onOpenChange={setShowTransfer} /> : null}
+      <TransferDialog workspace={workspace} open={showTransfer} onOpenChange={setShowTransfer} />
       {showMap ? (
         <Suspense fallback={null}>
           <MapDialog workspace={workspace} open onOpenChange={setShowMap} />

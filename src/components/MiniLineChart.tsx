@@ -532,7 +532,7 @@ export default function MiniLineChart({
             const y = paddingTop + plotHeight - clamp01(tick / yMax) * plotHeight
             const label = yAxisLabelFormatter(tick)
             return (
-              <text key={`yl_${tick}`} x={paddingLeft - 6} y={y + 4} textAnchor="end" fontSize="10" fontWeight="600" fill="rgba(68,88,110,0.84)">
+              <text key={`yl_${tick}`} x={paddingLeft - 6} y={y + 4} textAnchor="end" fontSize="12" fontWeight="700" fill="rgba(68,88,110,0.84)">
                 {label}
               </text>
             )
@@ -548,8 +548,8 @@ export default function MiniLineChart({
                   x={paddingLeft + plotWidth + 6}
                   y={y + 4}
                   textAnchor="start"
-                  fontSize="10"
-                  fontWeight="600"
+                  fontSize="12"
+                  fontWeight="700"
                   fill="rgba(68,88,110,0.70)"
                 >
                   {label}
@@ -569,8 +569,8 @@ export default function MiniLineChart({
                 x={x}
                 y={viewHeight - 6}
                 textAnchor={isFirst ? "start" : isLast ? "end" : "middle"}
-                fontSize="10"
-                fontWeight="600"
+                fontSize="12"
+                fontWeight="700"
                 fill="rgba(68,88,110,0.76)"
               >
                 {label}

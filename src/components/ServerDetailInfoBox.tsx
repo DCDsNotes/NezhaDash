@@ -7,7 +7,7 @@ export default function ServerDetailInfoBox({ now, server }: { now: number; serv
   const { bootTime, cpuList, gpuList, lastActive, platformVersion, systemLabel, tagList, temperatureItems } = viewModel
 
   return (
-    <div className="server-detail-info app-box">
+    <div className="server-detail-info nazha-box">
       <div className="server-detail-info__group server-detail-info__group--cpu">
         <div className="server-detail-info__label">CPU</div>
         <div className="server-detail-info__content">

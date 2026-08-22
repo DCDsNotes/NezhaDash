@@ -3,18 +3,33 @@
   flex-direction: column;
   gap: 12px;
   width: var(--detail-container-width);
-  padding: 24px 0 var(--probe-page-bottom-padding);
+  padding: 24px 0 56px;
   margin: auto;
   min-height: calc(100vh - var(--layout-header-height) - 80px);
 }
 
 .server-detail-skeleton {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid var(--probe-skeleton-border);
   border-radius: 12px;
-  background: var(--probe-skeleton-base);
+  background: #f6f8f9;
   box-shadow: none;
+  overflow: hidden;
+  position: relative;
+}
+
+.server-detail-skeleton::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.35) 45%,
+    rgba(255, 255, 255, 0.72) 50%,
+    rgba(255, 255, 255, 0.35) 55%,
+    transparent 100%
+  );
+  transform: translateX(-60%);
+  animation: shimmer 1.2s ease-in-out infinite;
 }
 
 .server-detail-skeleton--name {
@@ -35,6 +50,15 @@
 
 .server-detail-skeleton--monitor {
   height: 420px;
+}
+
+@keyframes shimmer {
+  from {
+    transform: translateX(-60%);
+  }
+  to {
+    transform: translateX(60%);
+  }
 }
 
 .server-status-ring {
@@ -623,7 +647,7 @@
   display: none;
 }
 
-.server-detail-page .app-box,
+.server-detail-page .nazha-box,
 .server-detail-page .server-detail-header,
 .server-detail-page .server-detail-status,
 .server-detail-page .server-detail-info,
@@ -739,14 +763,13 @@
 }
 
 .server-detail-page .server-monitor__placeholder-line {
-  background: var(--probe-skeleton-base);
-  border: 1px solid var(--probe-skeleton-border);
+  background: #f2f6f4;
   box-shadow: none;
 }
 
 .server-detail-page .server-monitor__placeholder-chart {
-  background: var(--probe-skeleton-base);
-  border: 1px solid var(--probe-skeleton-border);
+  background: #f8faf9;
+  border: 1px solid #f0f4f2;
   box-shadow: none;
 }
 
@@ -787,8 +810,8 @@
 }
 
 .server-detail-page .server-detail-skeleton {
-  border: 1px solid var(--probe-skeleton-border);
-  background: var(--probe-skeleton-base);
+  border: 1px solid #eef2f4;
+  background: #f4f7f8;
   box-shadow: none;
 }
 
@@ -810,7 +833,7 @@
   .server-detail-page {
     width: min(100% - 28px, var(--detail-container-width));
     padding-top: 18px;
-    padding-bottom: var(--probe-page-bottom-padding);
+    padding-bottom: 40px;
     gap: 10px;
   }
 

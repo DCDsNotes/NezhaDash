@@ -7,23 +7,8 @@ export function parseNezhaWsMessage(data: string | undefined | null): NezhaWebso
 
   try {
     const parsed = JSON.parse(data) as Partial<NezhaWebsocketResponse> | null
-    if (
-      !parsed ||
-      !Number.isFinite(Number(parsed.now)) ||
-      !Number.isFinite(Number(parsed.online)) ||
-      !Number.isFinite(Number(parsed.offline)) ||
-      !Array.isArray(parsed.servers) ||
-      parsed.servers.some((server) => !server || typeof server.online !== "boolean")
-    ) {
-      return null
-    }
-
-    return {
-      now: Number(parsed.now),
-      online: Number(parsed.online),
-      offline: Number(parsed.offline),
-      servers: parsed.servers,
-    }
+    if (!parsed || !Number.isFinite(Number(parsed.now)) || !Array.isArray(parsed.servers)) return null
+    return { now: Number(parsed.now), servers: parsed.servers }
   } catch {
     return null
   }

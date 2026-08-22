@@ -36,10 +36,7 @@ export default function WorldMapPoint({ info, onTap, className }: { info: PointI
       }
       title={info.label || ""}
       aria-label={info.label || "服务器位置"}
-      onClick={(event) => {
-        event.stopPropagation()
-        onTap?.(info)
-      }}
+      onClick={() => onTap?.(info)}
     >
       <span className="point-block" />
     </button>

@@ -21,9 +21,8 @@ export function WebSocketProvider({ path, children }: { path: string; children: 
     let reconnectAttempts = 0
     let disposed = false
     let pendingData: NezhaWebsocketResponse | null = null
-    let lastMessageAt = 0
 
-    const canConnect = () => !disposed && navigator.onLine !== false
+    const canConnect = () => !disposed && document.visibilityState !== "hidden" && navigator.onLine !== false
 
     const clearReconnectTimer = () => {
       if (!reconnectTimer) return
@@ -79,10 +78,6 @@ export function WebSocketProvider({ path, children }: { path: string; children: 
       staleTimer = setTimeout(() => {
         staleTimer = null
         if (!socket || socket.readyState !== WebSocket.OPEN) return
-        if (document.visibilityState === "hidden") {
-          armStaleTimer()
-          return
-        }
         closeSocket()
         scheduleReconnect()
       }, MESSAGE_IDLE_TIMEOUT)
@@ -102,13 +97,11 @@ export function WebSocketProvider({ path, children }: { path: string; children: 
         nextSocket.onopen = () => {
           if (socket !== nextSocket) return
           reconnectAttempts = 0
-          lastMessageAt = Date.now()
           armStaleTimer()
         }
 
         nextSocket.onmessage = (event) => {
           if (socket !== nextSocket) return
-          lastMessageAt = Date.now()
           armStaleTimer()
           const parsed = parseNezhaWsMessage(typeof event.data === "string" ? event.data : String(event.data || ""))
           if (parsed) queueRender(parsed)
@@ -138,13 +131,10 @@ export function WebSocketProvider({ path, children }: { path: string; children: 
     const resume = () => {
       if (!canConnect()) return
       reconnectAttempts = 0
-      if (socket?.readyState === WebSocket.OPEN && lastMessageAt && Date.now() - lastMessageAt >= MESSAGE_IDLE_TIMEOUT) closeSocket()
       connect()
     }
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") resume()
-    }
+    const handleVisibilityChange = () => (document.visibilityState === "hidden" ? pause() : resume())
     const handlePageShow = () => resume()
     const handleOffline = () => pause()
     const handleOnline = () => resume()

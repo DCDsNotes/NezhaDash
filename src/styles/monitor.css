@@ -237,12 +237,9 @@
 }
 
 .server-monitor__placeholder-line {
-  position: relative;
-  overflow: hidden;
   height: 12px;
   border-radius: 6px;
-  background: var(--probe-skeleton-base, #fbfcfd);
-  border: 1px solid var(--probe-skeleton-border, #f0f3f5);
+  background: #f2f5f6;
   box-shadow: none;
 }
 
@@ -255,12 +252,9 @@
 }
 
 .server-monitor__placeholder-chart {
-  position: relative;
-  overflow: hidden;
   height: var(--line-chart-size);
   border-radius: 10px;
-  background: var(--probe-skeleton-base, #fbfcfd);
-  border: 1px solid var(--probe-skeleton-border, #f0f3f5);
+  background: #f7f9fa;
   box-shadow: none;
 }
 
@@ -296,27 +290,6 @@
   font-size: 16px;
   font-weight: 700;
   color: #eee;
-}
-
-.server-monitor__title-area,
-.server-monitor__loading-indicator {
-  display: inline-flex;
-  align-items: center;
-}
-
-.server-monitor__title-area {
-  gap: 6px;
-}
-
-.server-monitor__loading-indicator {
-  justify-content: center;
-  color: var(--probe-accent, #0aa579);
-}
-
-.server-monitor__loading-indicator i {
-  width: 14px;
-  height: 14px;
-  font-size: 14px;
 }
 
 .server-monitor__controls {
@@ -672,16 +645,6 @@
     font-size: 14px;
   }
 
-  .server-monitor__title-area {
-    gap: 5px;
-  }
-
-  .server-monitor__loading-indicator i {
-    width: 13px;
-    height: 13px;
-    font-size: 13px;
-  }
-
   .server-monitor__controls {
     gap: 11px;
   }
@@ -775,11 +738,5 @@
   .line-box .chart-tooltip-row .dot {
     width: 7px;
     height: 7px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .server-monitor__loading-indicator i {
-    animation: none;
   }
 }

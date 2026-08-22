@@ -1,10 +1,8 @@
 import MiniLineChart, { type LineChartPoint, type LineChartSeries } from "@/components/MiniLineChart"
-import { LoadingSpinner } from "@/components/loading/loading-spinner"
 import { Switch } from "@/components/ui/switch"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useNearViewport } from "@/hooks/use-near-viewport"
 import { monitorQueryOptions } from "@/lib/query-options"
-import { selectServerMonitorHistory } from "@/lib/nezha-api"
 import { cn } from "@/lib/utils"
 import { type NezhaMonitor } from "@/types/nezha-api"
 import { useQuery } from "@tanstack/react-query"
@@ -25,7 +23,6 @@ type CateItem = {
 
 type MonitorChartData = {
   dateList: number[]
-  dateListByCate: number[][]
   cateList: CateItem[]
   seriesList: LineChartSeries[]
   seriesByCate: LineChartSeries[][]
@@ -180,7 +177,6 @@ function buildMonitorChartData({
   showCates: Record<number, boolean>
 }): MonitorChartData {
   const cateList: CateItem[] = []
-  const dateListByCate: number[][] = []
   const seriesByCate: LineChartSeries[][] = []
   const seriesList: LineChartSeries[] = []
 
@@ -246,8 +242,7 @@ function buildMonitorChartData({
     let lossTotal = 0
     let lossCount = 0
 
-    const monitorTimes = Array.from(new Set([...delayByTime.keys(), ...lossByTime.keys()])).sort((a, b) => a - b)
-    monitorTimes.forEach((time) => {
+    dateList.forEach((time) => {
       const delayValRaw = delayByTime.get(time)
       const delayVal =
         typeof delayValRaw === "number" && Number.isFinite(delayValRaw) ? Number((Math.round(delayValRaw * 100) / 100).toFixed(2)) : null
@@ -295,7 +290,6 @@ function buildMonitorChartData({
     }
 
     cateList.push(cate)
-    dateListByCate.push(monitorTimes)
 
     const cateId = monitorId
     const delaySeries: LineChartSeries = {
@@ -324,7 +318,6 @@ function buildMonitorChartData({
   })
   return {
     dateList,
-    dateListByCate,
     cateList,
     seriesList,
     seriesByCate,
@@ -370,7 +363,6 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
   const {
     data: monitorResp,
     isError,
-    isFetching,
     isLoading,
   } = useQuery({
     ...monitorQueryOptions(serverId),
@@ -378,7 +370,7 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
     refetchInterval: shouldFetchHistory && refreshData ? 60000 : false,
   })
 
-  const monitorData = useMemo(() => selectServerMonitorHistory(monitorResp, serverId), [monitorResp, serverId])
+  const monitorData = useMemo(() => (monitorResp?.success && Array.isArray(monitorResp.data) ? monitorResp.data : []), [monitorResp])
 
   useEffect(() => {
     if (monitorData.length === 0) return
@@ -464,7 +456,7 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
   return (
     <div
       ref={containerRef}
-      className={cn("server-monitor", "app-box", {
+      className={cn("server-monitor", "nazha-box", {
         "server-monitor--multi": chartType === "multi",
         "server-monitor--single": chartType === "single",
       })}
@@ -472,11 +464,6 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
       <div className="server-monitor__header">
         <div className="server-monitor__title-area">
           <span className="server-monitor__title">网络监控</span>
-          {isFetching ? (
-            <span className="server-monitor__loading-indicator" role="status" aria-label="正在加载网络监控数据">
-              <LoadingSpinner />
-            </span>
-          ) : null}
         </div>
         <div className="server-monitor__controls">
           <label className="server-monitor__toggle server-monitor__toggle--chart-type" title="监控折线图是否聚合">
@@ -576,7 +563,7 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
                   </div>
                 </div>
               </div>
-              <MiniLineChart seriesList={chartData.seriesByCate[index] || []} dateList={chartData.dateListByCate[index] || []} />
+              <MiniLineChart seriesList={chartData.seriesByCate[index] || []} dateList={chartData.dateList} />
             </div>
           ))}
         </div>

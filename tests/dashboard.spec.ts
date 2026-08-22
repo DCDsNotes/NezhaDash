@@ -25,7 +25,6 @@ const servers = [
       },
       customData: {},
     }),
-    online: true,
     last_active: new Date(now - 5_000).toISOString(),
     country_code: "CN",
     host: {
@@ -59,13 +58,16 @@ const servers = [
       temperatures: [{ Name: "CPU", Temperature: 54.2 }],
       gpu: [],
     },
+    transfer_stats: {
+      today: { in: 12 * 1024 ** 3, out: 8 * 1024 ** 3 },
+      billing: { in: 320 * 1024 ** 3, out: 180 * 1024 ** 3 },
+    },
   },
   {
     id: 2,
     name: "法兰克福备份节点",
     public_note: "",
-    online: false,
-    last_active: new Date(now - 5_000).toISOString(),
+    last_active: new Date(now - 120_000).toISOString(),
     country_code: "DE",
     host: {
       platform: "debian",
@@ -98,19 +100,22 @@ const servers = [
       temperatures: [],
       gpu: [],
     },
+    transfer_stats: {
+      today: { in: 0, out: 0 },
+      billing: { in: 90 * 1024 ** 3, out: 45 * 1024 ** 3 },
+    },
   },
 ]
 
-const wsPayload = { now, online: 1, offline: 1, servers }
+const wsPayload = { now, servers }
 
-async function mockBackend(page: Page, getWebSocketPayload: () => unknown = () => wsPayload, historyDelayMs = 0) {
+async function mockBackend(page: Page, getWebSocketPayload: () => unknown = () => wsPayload) {
   await page.routeWebSocket("**/api/v1/ws/server", (webSocket) => {
     webSocket.send(JSON.stringify(getWebSocketPayload()))
   })
 
   await page.route("**/api/v1/**", async (route) => {
-    const requestUrl = new URL(route.request().url())
-    const pathname = requestUrl.pathname
+    const pathname = new URL(route.request().url()).pathname
     const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) })
 
     if (pathname.endsWith("/setting")) {
@@ -135,80 +140,48 @@ async function mockBackend(page: Page, getWebSocketPayload: () => unknown = () =
       return
     }
 
-    if (pathname.endsWith("/server/traffic")) {
-      await json({
-        success: true,
-        data: {
-          from: new Date(now).toISOString(),
-          to: new Date(now).toISOString(),
-          servers: {
-            "1": { server_id: 1, in: 70.7 * 1024 ** 2, out: 71 * 1024 ** 2 },
-            "2": { server_id: 2, in: 249.2 * 1024 ** 2, out: 35.5 * 1024 ** 2 },
-          },
-        },
-      })
-      return
-    }
-
     if (pathname.endsWith("/profile")) {
       await json({ error: "unauthorized" }, 401)
       return
     }
 
-    if (pathname.endsWith("/server/1/metrics")) {
-      if (historyDelayMs) await new Promise((resolve) => setTimeout(resolve, historyDelayMs))
-      const metric = requestUrl.searchParams.get("metric") || ""
-      const values = metric === "net_in_speed" ? [4 * 1024 ** 2, 9 * 1024 ** 2, 12 * 1024 ** 2] : [2 * 1024 ** 2, 5 * 1024 ** 2, 4 * 1024 ** 2]
+    if (pathname.endsWith("/server-speed/1")) {
       await json({
         success: true,
         data: {
           server_id: 1,
           server_name: servers[0].name,
-          metric,
-          data_points: [now - 3600_000, now - 1800_000, now - 600_000].map((ts, index) => ({ ts, value: values[index] })),
+          created_at: [now / 1000 - 3600, now / 1000 - 1800, now / 1000 - 600],
+          net_in_speed: [4 * 1024 ** 2, 9 * 1024 ** 2, 12 * 1024 ** 2],
+          net_out_speed: [2 * 1024 ** 2, 5 * 1024 ** 2, 4 * 1024 ** 2],
         },
       })
       return
     }
 
-    if (pathname.endsWith("/service")) {
+    if (pathname.endsWith("/service/1")) {
       await json({
         success: true,
-        data: {
-          services: {
-            "11": { service_name: "上海 TCP" },
-            "12": { service_name: "东京 ICMP" },
-          },
-        },
-      })
-      return
-    }
-
-    if (/\/service\/(11|12)\/history$/.test(pathname)) {
-      if (historyDelayMs) await new Promise((resolve) => setTimeout(resolve, historyDelayMs))
-      const serviceId = Number(pathname.split("/").at(-2))
-      const delays = serviceId === 11 ? [24, 29, 22] : [48, 51, 45]
-      await json({
-        success: true,
-        data: {
-          service_id: serviceId,
-          service_name: serviceId === 11 ? "上海 TCP" : "东京 ICMP",
-          servers: [{
+        data: [
+          {
+            monitor_id: 11,
+            monitor_name: "上海 TCP",
             server_id: 1,
             server_name: servers[0].name,
-            stats: {
-              avg_delay: delays.reduce((sum, value) => sum + value, 0) / delays.length,
-              up_percent: 100,
-              total_up: 3,
-              total_down: 0,
-              data_points: [now - 3600_000, now - 1800_000, now - 600_000].map((ts, index) => ({
-                ts,
-                delay: delays[index],
-                status: 1,
-              })),
-            },
-          }],
-        },
+            created_at: [now / 1000 - 3600, now / 1000 - 1800, now / 1000 - 600],
+            avg_delay: [24, 29, 22],
+            packet_loss: [0, 0.5, 0],
+          },
+          {
+            monitor_id: 12,
+            monitor_name: "东京 ICMP",
+            server_id: 1,
+            server_name: servers[0].name,
+            created_at: [now / 1000 - 3600, now / 1000 - 1800, now / 1000 - 600],
+            avg_delay: [48, 51, 45],
+            packet_loss: [0, 1, 0],
+          },
+        ],
       })
       return
     }
@@ -231,15 +204,6 @@ async function assertCenteredStatusColumn(page: Page) {
   expect(Math.abs(layout.left - (layout.viewport - layout.width) / 2)).toBeLessThanOrEqual(1)
 }
 
-async function assertPageScrollControls(page: Page, bottomOffset: number) {
-  const controls = page.locator(".probe-page-scroll-controls")
-  await expect(controls).toBeVisible()
-  await expect(page.getByRole("button", { name: "滚动到底部" })).toBeVisible()
-  const controlsBox = await controls.boundingBox()
-  expect(controlsBox).not.toBeNull()
-  expect(Math.abs(page.viewportSize()!.height - controlsBox!.y - controlsBox!.height - bottomOffset)).toBeLessThanOrEqual(1)
-}
-
 async function screenshot(page: Page, testInfo: TestInfo, name: string) {
   await page.screenshot({ path: testInfo.outputPath(name), fullPage: true, animations: "disabled" })
 }
@@ -252,22 +216,14 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   page.on("request", (request) => {
     const pathname = new URL(request.url()).pathname
     if (request.resourceType() === "image" && pathname.endsWith("/world-map.svg")) worldMapRequestCount += 1
-    if (pathname.endsWith("/server/1/metrics")) serverSpeedRequestCount += 1
-    if (/\/service\/(11|12)\/history$/.test(pathname)) monitorRequestCount += 1
+    if (pathname.endsWith("/server-speed/1")) serverSpeedRequestCount += 1
+    if (pathname.endsWith("/service/1")) monitorRequestCount += 1
   })
 
-  await mockBackend(page, () => wsPayload, 800)
+  await mockBackend(page)
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto("/")
 
-  await assertPageScrollControls(page, 56)
-  await expect(page.getByRole("button", { name: "滚动到顶部" })).toHaveCount(0)
-  await page.getByRole("button", { name: "滚动到底部" }).click()
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(240)
-  await expect(page.getByRole("button", { name: "滚动到顶部" })).toBeVisible()
-  await page.getByRole("button", { name: "滚动到顶部" }).click()
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(1)
-  await expect(page.getByRole("button", { name: "滚动到顶部" })).toHaveCount(0)
   await expect(page).toHaveTitle("节点监控")
   await expect(page.locator(".probe-site-brand strong")).toHaveText("节点监控")
   await expect(page.locator(".probe-node-item")).toHaveCount(2)
@@ -374,13 +330,9 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await expect(page.locator(".dashboard-search-result")).toHaveCount(1)
   await page.getByLabel("关闭搜索").click()
 
-  await page.getByTitle("查看流量汇总").click()
-  await expect(page.getByRole("dialog", { name: "今日流量汇总" })).toBeVisible()
+  await page.getByTitle("查看今日流量").click()
+  await expect(page.getByRole("dialog", { name: "今日流量" })).toBeVisible()
   await expect(page.locator(".dashboard-transfer-row")).toHaveCount(2)
-  await expect(page.locator(".dashboard-transfer-row").first().locator(".dashboard-transfer-row__values span").first()).toHaveAttribute(
-    "title",
-    "74.13 MB",
-  )
   const transferValuePositions = await page.locator(".dashboard-transfer-row__values").evaluateAll((rows) =>
     rows.map((row) =>
       Array.from(row.children).map((value) => {
@@ -404,26 +356,11 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await expect(page).toHaveTitle("页面不存在 - 节点监控")
   await expect(page.locator(".not-found-page__path")).toContainText("/missing-node-page")
   await expect(page.locator(".not-found-page__visual")).toBeVisible()
-  await expect(page.locator(".probe-page-scroll-controls")).toHaveCount(0)
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "not-found-desktop.png")
   await Promise.all([page.waitForURL(/\/$/), page.getByRole("link", { name: "回到主页" }).click()])
 
   await Promise.all([page.waitForURL(/\/server\/25ce76bd$/), page.getByLabel("查看 上海边缘节点 详情").click()])
-  const routeProgress = page.locator(".app-route-progress")
-  await expect(routeProgress).toHaveClass(/app-route-progress--loading/)
-  await expect(routeProgress.locator("> span")).toHaveCSS("animation-name", "none")
-  const speedLoadingIndicator = page.locator(".server-speed .server-monitor__loading-indicator")
-  await expect(speedLoadingIndicator).toBeVisible()
-  const monitorPanel = page.locator(".server-monitor:not(.server-speed)")
-  await monitorPanel.scrollIntoViewIfNeeded()
-  await expect(monitorPanel.locator(".server-monitor__loading-indicator")).toBeVisible()
-  await expect(speedLoadingIndicator).toHaveCount(0)
-  await expect(monitorPanel.locator(".server-monitor__loading-indicator")).toHaveCount(0)
-  await expect(routeProgress).toHaveClass(/app-route-progress--idle/)
-  await expect(routeProgress).toHaveCSS("opacity", "0")
-  await page.getByRole("button", { name: "滚动到顶部" }).click()
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(1)
   await expect(page).toHaveTitle("上海边缘节点 - 节点监控")
   await expect(page.getByText("网络速度", { exact: true })).toBeVisible()
   await expect(page.locator(".probe-detail-priority")).toContainText("18M/s")
@@ -457,27 +394,6 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await expect(activeMinuteOptions).toHaveCount(2)
   await expect(activeMinuteOptions.first()).toHaveCSS("text-shadow", "none")
   await expect(activeMinuteOptions.last()).toHaveCSS("text-shadow", "none")
-  const axisLabels = page.locator(".server-detail-page .chart-axis-labels text")
-  await expect(axisLabels.first()).toHaveAttribute("font-size", "10")
-  await expect(axisLabels.first()).toHaveAttribute("font-weight", "600")
-  expect(
-    await axisLabels.evaluateAll((labels) =>
-      labels.every((label) => label.getAttribute("font-size") === "10" && label.getAttribute("font-weight") === "600"),
-    ),
-  ).toBe(true)
-  const [detailPageBox, scrollControlsBox] = await Promise.all([
-    page.locator(".server-detail-page").boundingBox(),
-    page.locator(".probe-page-scroll-controls").boundingBox(),
-  ])
-  expect(detailPageBox).not.toBeNull()
-  expect(scrollControlsBox).not.toBeNull()
-  expect(scrollControlsBox!.x - (detailPageBox!.x + detailPageBox!.width)).toBeGreaterThanOrEqual(9)
-  expect(scrollControlsBox!.x - (detailPageBox!.x + detailPageBox!.width)).toBeLessThanOrEqual(11)
-  expect(Math.abs(page.viewportSize()!.height - scrollControlsBox!.y - scrollControlsBox!.height - 56)).toBeLessThanOrEqual(1)
-  await page.getByRole("button", { name: "滚动到底部" }).click()
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100)
-  await page.getByRole("button", { name: "滚动到顶部" }).click()
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(1)
   const speedChart = page.locator(".server-speed .line-box")
   await speedChart.hover()
   const speedTooltip = speedChart.locator(".chart-tooltip")
@@ -493,8 +409,8 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "server-detail-desktop.png")
 
-  await expect.poll(() => serverSpeedRequestCount).toBe(2)
-  await expect.poll(() => monitorRequestCount).toBe(2)
+  await expect.poll(() => serverSpeedRequestCount).toBe(1)
+  await expect.poll(() => monitorRequestCount).toBe(1)
   await page.evaluate(() => {
     Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" })
     document.dispatchEvent(new Event("visibilitychange"))
@@ -507,8 +423,8 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   })
   await expect(page.locator(".server-detail-header")).toBeVisible()
   await expect(page.locator(".server-detail-skeleton")).toHaveCount(0)
-  await expect.poll(() => serverSpeedRequestCount).toBe(2)
-  await expect.poll(() => monitorRequestCount).toBe(2)
+  await expect.poll(() => serverSpeedRequestCount).toBe(1)
+  await expect.poll(() => monitorRequestCount).toBe(1)
 
   await page.reload()
   await expect(page).toHaveURL(/\/server\/25ce76bd$/)
@@ -550,17 +466,6 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await page.goto("/server/25ce76bd")
   await expect(page.getByText("网络速度", { exact: true })).toBeVisible()
   await expect(page.getByRole("switch")).toHaveCount(3)
-  await assertPageScrollControls(page, 40)
-  await expect(page.getByRole("button", { name: "滚动到顶部" })).toHaveCount(0)
-  const [mobileDetailPageBox, mobileScrollButtonBox] = await Promise.all([
-    page.locator(".server-detail-page").boundingBox(),
-    page.getByRole("button", { name: "滚动到底部" }).boundingBox(),
-  ])
-  expect(mobileDetailPageBox).not.toBeNull()
-  expect(mobileScrollButtonBox).not.toBeNull()
-  expect(
-    Math.abs(mobileDetailPageBox!.x + mobileDetailPageBox!.width - (mobileScrollButtonBox!.x + mobileScrollButtonBox!.width)),
-  ).toBeLessThanOrEqual(1)
   await page.locator(".probe-site-action:has(.ri-exchange-2-line)").click()
   const mobileTransferRows = page.locator(".dashboard-transfer-row")
   await expect(mobileTransferRows).toHaveCount(2)
@@ -576,7 +481,6 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await page.goto("/missing-node-page")
   await expect(page.getByRole("heading", { name: "页面不存在" })).toBeVisible()
   await expect(page).toHaveTitle("页面不存在 - 节点监控")
-  await expect(page.locator(".probe-page-scroll-controls")).toHaveCount(0)
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "not-found-mobile.png")
 })
@@ -592,7 +496,9 @@ test("server billing survives a restored mobile browser session with an incomple
 
   const priority = page.locator(".probe-detail-priority")
   await expect(priority).toContainText("2027-01-01")
-  await expect.poll(() => page.evaluate(() => Boolean(localStorage.getItem("nezha_public_notes_v1")))).toBe(true)
+  await expect
+    .poll(() => page.evaluate(() => Boolean(localStorage.getItem("nezha_public_notes_v1"))))
+    .toBe(true)
 
   omitPublicNotes = true
   await page.evaluate(() => sessionStorage.clear())
@@ -697,7 +603,10 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
           ip === "203.0.113.20"
             ? { asn: 7018, org: "AT&T Internet", isp: "AT&T Internet" }
             : { asn: 4134, org: "China Telecom", isp: "China Telecom" },
-        timezone: ip === "203.0.113.20" ? { id: "America/Los_Angeles", utc: "-07:00" } : { id: "Asia/Shanghai", utc: "+08:00" },
+        timezone:
+          ip === "203.0.113.20"
+            ? { id: "America/Los_Angeles", utc: "-07:00" }
+            : { id: "Asia/Shanghai", utc: "+08:00" },
       }),
     })
   })
@@ -749,8 +658,6 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   await expect(page.locator(".probe-site-actions__search + a[aria-label='IP 分流与泄露检测']")).toHaveCount(1)
 
   await Promise.all([page.waitForURL(/\/network$/), networkLink.click()])
-  await assertPageScrollControls(page, 56)
-  await expect(page.getByRole("button", { name: "滚动到顶部" })).toHaveCount(0)
   await expect(page).toHaveTitle("分流查询 - 节点监控")
   await expect(page.getByRole("heading", { name: "网络与 IP 分流检测" })).toBeVisible()
   await expect(page.getByRole("heading", { name: "我的 IP" })).toBeVisible()

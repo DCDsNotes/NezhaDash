@@ -1,5 +1,4 @@
 import ServerFlag from "@/components/ServerFlag"
-import { preloadServerDetail } from "@/lib/route-preload"
 import { serverIdToServerKey } from "@/lib/server-key"
 import { getServerCardViewModel } from "@/lib/server-view-model"
 import { cn } from "@/lib/utils"
@@ -23,8 +22,6 @@ export default function ServerNavigatorItem({ now, server, active }: { now: numb
         "probe-node-item--offline": !viewModel.info.online,
       })}
       aria-label={`查看 ${viewModel.info.name} 详情`}
-      onPointerEnter={() => void preloadServerDetail()}
-      onFocus={() => void preloadServerDetail()}
       onClick={() => sessionStorage.setItem("fromMainPage", "true")}
     >
       <div className="probe-node-item__identity">

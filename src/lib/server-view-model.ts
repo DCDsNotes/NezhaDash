@@ -41,7 +41,7 @@ export type TransferInfoItem = {
   variant?: "in" | "out" | "total" | "used" | "remaining"
 }
 
-export type ServerTransferSummaryViewModel = {
+export type ServerDailyTransferViewModel = {
   id: number
   name: string
   online: boolean
@@ -132,10 +132,11 @@ function hasTrafficPlan(parsedData: PublicNoteData | null) {
   return !!plan?.trafficType && parseTrafficQuotaBytes(plan.trafficVol) != null
 }
 
-function getServerTransferCounter(server: NezhaServer): TransferCounter {
+function getServerTransferStatsCounter(server: NezhaServer, period: "today" | "billing"): TransferCounter {
+  const transfer = server.transfer_stats?.[period]
   return {
-    in: Number(server.state?.net_in_transfer || 0),
-    out: Number(server.state?.net_out_transfer || 0),
+    in: Number(transfer?.in || 0),
+    out: Number(transfer?.out || 0),
   }
 }
 
@@ -381,7 +382,7 @@ export function getServerBillingViewModel(publicNote: string, now = Date.now()):
 function createServerCardViewModel(now: number, server: NezhaServer) {
   const info = normalizeServer(now, server)
   const billing = getServerBillingViewModel(info.public_note, now)
-  const billingTransfer = getServerTransferCounter(server)
+  const billingTransfer = getServerTransferStatsCounter(server, "billing")
   return {
     info,
     billing,
@@ -402,7 +403,7 @@ export function getServerCardViewModel(now: number, server: NezhaServer) {
 function createServerDetailStatusViewModel(now: number, server: NezhaServer) {
   const info = normalizeServer(now, server)
   const billing = getServerBillingViewModel(info.public_note, now)
-  const billingTransfer = getServerTransferCounter(server)
+  const billingTransfer = getServerTransferStatsCounter(server, "billing")
   return {
     info,
     billing,
@@ -434,9 +435,9 @@ export function getServerOverviewStats(now: number, servers: NezhaServer[]) {
   servers.forEach((server) => {
     if (getServerStatus(now, server) !== "online") return
     online += 1
-    const transfer = getServerTransferCounter(server)
-    transferIn += transfer.in
-    transferOut += transfer.out
+    const dailyTransfer = getServerTransferStatsCounter(server, "today")
+    transferIn += dailyTransfer.in
+    transferOut += dailyTransfer.out
     speedIn += Number(server.state?.net_in_speed || 0)
     speedOut += Number(server.state?.net_out_speed || 0)
   })
@@ -460,17 +461,9 @@ export function getServerOverviewStats(now: number, servers: NezhaServer[]) {
   }
 }
 
-export function getServerTransferSummaryList(
-  now: number,
-  servers: NezhaServer[],
-  todayTraffic: Record<string, { in: number; out: number }>,
-): ServerTransferSummaryViewModel[] {
+export function getServerDailyTransferList(now: number, servers: NezhaServer[]): ServerDailyTransferViewModel[] {
   return servers.map((server) => {
-    const traffic = todayTraffic[String(server.id)]
-    const transfer = {
-      in: Math.max(0, Number(traffic?.in) || 0),
-      out: Math.max(0, Number(traffic?.out) || 0),
-    }
+    const transfer = getServerTransferStatsCounter(server, "today")
     const total = transfer.in + transfer.out
     return {
       id: server.id,
@@ -576,7 +569,7 @@ function getDetailTransferItems(server: NezhaServer, parsedData: PublicNoteData 
     return getDefaultDetailTransferItems(server)
   }
 
-  const billingTransfer = getServerTransferCounter(server)
+  const billingTransfer = getServerTransferStatsCounter(server, "billing")
   const usedBytes = getTrafficRuleBytes(billingTransfer, plan?.trafficType)
   const remainingBytes = Math.max(quotaBytes - usedBytes, 0)
 

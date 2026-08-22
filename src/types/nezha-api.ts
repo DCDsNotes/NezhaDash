@@ -1,7 +1,5 @@
 export interface NezhaWebsocketResponse {
   now: number
-  online: number
-  offline: number
   servers: NezhaServer[]
 }
 
@@ -14,6 +12,17 @@ export interface NezhaServer {
   country_code: string
   host: NezhaServerHost
   state: NezhaServerStatus
+  transfer_stats?: NezhaServerTransferStats
+}
+
+export interface NezhaServerTransferUsage {
+  in: number
+  out: number
+}
+
+export interface NezhaServerTransferStats {
+  today?: NezhaServerTransferUsage
+  billing?: NezhaServerTransferUsage
 }
 
 export interface NezhaServerHost {
@@ -77,55 +86,17 @@ export interface LoginUserResponse {
   }
 }
 
-export interface ServiceHistoryCollectionResponse {
+export interface MonitorResponse {
   success: boolean
-  data: ServiceHistory[]
+  data: NezhaMonitor[]
 }
 
-export interface ServiceHistory {
-  service_id: number
-  service_name: string
-  servers: Array<{
-    server_id: number
-    server_name: string
-    stats: {
-      avg_delay: number
-      up_percent: number
-      total_up: number
-      total_down: number
-      data_points?: Array<{
-        ts: number
-        delay: number
-        status: number
-      }>
-    }
-  }>
-}
-
-export interface ServerTrafficResponse {
+export interface ServerSpeedHistoryResponse {
   success: boolean
-  data: {
-    from: string
-    to: string
-    servers: Record<string, { server_id: number; in: number; out: number }>
-  }
+  data: NezhaServerSpeedHistory
 }
 
-export interface ServerNetworkHistoryResponse {
-  success: boolean
-  data: ServerNetworkHistory
-}
-
-export interface ServerMetricsBatchResponse {
-  success: boolean
-  data: {
-    server_id: number
-    server_name: string
-    metrics: Record<string, Array<{ ts: number; value: number }>>
-  }
-}
-
-export interface ServerNetworkHistory {
+export interface NezhaServerSpeedHistory {
   server_id: number
   server_name: string
   created_at: number[]
