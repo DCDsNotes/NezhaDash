@@ -1,5 +1,5 @@
 import { nezhaWebSocketUrl } from "@/lib/nezha-endpoints"
-import { parseNezhaWsMessage } from "@/lib/nezha-websocket"
+import { createPresenceStabilizer, parseNezhaWsMessage, stabilizeNezhaWsResponse } from "@/lib/nezha-websocket"
 import { type NezhaWebsocketResponse } from "@/types/nezha-api"
 import { type ReactNode, useEffect, useMemo, useState } from "react"
 
@@ -22,6 +22,7 @@ export function WebSocketProvider({ path, children }: { path: string; children: 
     let disposed = false
     let pendingData: NezhaWebsocketResponse | null = null
     let lastMessageAt = 0
+    const presence = createPresenceStabilizer()
 
     const canConnect = () => !disposed && navigator.onLine !== false
 
@@ -111,7 +112,7 @@ export function WebSocketProvider({ path, children }: { path: string; children: 
           lastMessageAt = Date.now()
           armStaleTimer()
           const parsed = parseNezhaWsMessage(typeof event.data === "string" ? event.data : String(event.data || ""))
-          if (parsed) queueRender(parsed)
+          if (parsed) queueRender(stabilizeNezhaWsResponse(parsed, presence))
         }
 
         nextSocket.onclose = () => {
