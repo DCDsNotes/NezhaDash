@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      admin_version:
+        description: "Admin frontend timestamp version (leave empty to use current main)"
+        required: false
+        default: ""
 
 permissions:
   actions: write
@@ -117,11 +122,45 @@ jobs:
           done
           echo "Retained the five newest frontend releases." >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Resolve admin frontend release
+        id: admin
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ADMIN_REPOSITORY: ${{ github.repository_owner }}/NezhaAdmin
+          REQUESTED_ADMIN_VERSION: ${{ inputs.admin_version }}
+        shell: bash
+        run: |
+          if [[ -n "$REQUESTED_ADMIN_VERSION" && ! "$REQUESTED_ADMIN_VERSION" =~ ^v[0-9]{14}$ ]]; then
+            echo "Invalid admin frontend version: $REQUESTED_ADMIN_VERSION" >&2
+            exit 1
+          fi
+
+          for attempt in {1..60}; do
+            admin_tag="$REQUESTED_ADMIN_VERSION"
+            if [[ -z "$admin_tag" ]]; then
+              admin_sha="$(gh api "repos/${ADMIN_REPOSITORY}/commits/main" --jq '.sha')"
+              admin_tag="$(gh api "repos/${ADMIN_REPOSITORY}/git/matching-refs/tags/v" \
+                --jq ".[] | select(.object.type == \"commit\" and .object.sha == \"${admin_sha}\" and (.ref | test(\"^refs/tags/v[0-9]{14}$\"))) | .ref" \
+                | sed 's#refs/tags/##' | sort -r | head -n 1)"
+            fi
+
+            if [[ -n "$admin_tag" ]] && [[ "$(gh release view "$admin_tag" --repo "$ADMIN_REPOSITORY" --json assets --jq '.assets | any(.name == "dist.zip")' 2>/dev/null || true)" == "true" ]]; then
+              echo "tag=$admin_tag" >> "$GITHUB_OUTPUT"
+              echo "Using admin frontend ${admin_tag}." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep 10
+          done
+
+          echo "Timed out waiting for the current NezhaAdmin main release." >&2
+          exit 1
+
       - name: Trigger backend release build
         env:
           BACKEND_ACTIONS_TOKEN: ${{ secrets.NEZHA_ACTIONS_TOKEN }}
           BACKEND_REPOSITORY: ${{ github.repository_owner }}/Nezha
           RELEASE_TAG: ${{ steps.version.outputs.tag }}
+          ADMIN_TAG: ${{ steps.admin.outputs.tag }}
         shell: bash
         run: |
           if [[ -z "${BACKEND_ACTIONS_TOKEN}" ]]; then
@@ -129,7 +168,7 @@ jobs:
             exit 1
           fi
 
-          payload="$(jq -n --arg version "${RELEASE_TAG}" '{ref:"main",inputs:{version:$version}}')"
+          payload="$(jq -n --arg version "${RELEASE_TAG}" --arg admin_version "${ADMIN_TAG}" '{ref:"main",inputs:{version:$version,admin_version:$admin_version}}')"
           curl --fail-with-body --silent --show-error \
             --request POST \
             --header "Accept: application/vnd.github+json" \
@@ -137,3 +176,21 @@ jobs:
             --header "X-GitHub-Api-Version: 2022-11-28" \
             "${GITHUB_API_URL}/repos/${BACKEND_REPOSITORY}/actions/workflows/release.yml/dispatches" \
             --data "${payload}"
+
+      - name: Keep only five workflow runs
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          while true; do
+            mapfile -t run_ids < <(gh api "repos/${GH_REPO}/actions/runs?per_page=100" \
+              --jq ".workflow_runs | map(select(.id != ${GITHUB_RUN_ID} and .status == \"completed\")) | sort_by(.created_at) | reverse | .[4:][] | .id")
+            if [[ "${#run_ids[@]}" -eq 0 ]]; then
+              break
+            fi
+            for run_id in "${run_ids[@]}"; do
+              gh api --method DELETE "repos/${GH_REPO}/actions/runs/${run_id}"
+            done
+          done
