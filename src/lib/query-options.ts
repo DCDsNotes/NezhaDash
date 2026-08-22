@@ -26,7 +26,7 @@ export function loginUserQueryOptions() {
     queryFn: ({ signal }) => fetchLoginUser(signal),
     staleTime: 5 * 60_000,
     refetchOnMount: false,
-    refetchOnWindowFocus: "always",
+    refetchOnWindowFocus: true,
     retry: 0,
   })
 }

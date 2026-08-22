@@ -12,9 +12,10 @@ export const router = createBrowserRouter(
       element: <App />,
       errorElement: <ErrorPage code={500} />,
       children: [
-        { index: true, element: <Server /> },
+        { index: true, element: <Server />, errorElement: <ErrorPage code={500} /> },
         {
           path: "server/:serverKey",
+          errorElement: <ErrorPage code={500} />,
           lazy: async () => {
             const { default: Component } = await import("@/pages/ServerDetail")
             return { Component }
@@ -22,13 +23,14 @@ export const router = createBrowserRouter(
         },
         {
           path: "network",
+          errorElement: <ErrorPage code={500} />,
           lazy: async () => {
             const { default: Component } = await import("@/pages/NetworkDiagnostics")
             return { Component }
           },
         },
-        { path: "error", element: <ErrorPage /> },
-        { path: "*", element: <NotFound /> },
+        { path: "error", element: <ErrorPage />, errorElement: <ErrorPage code={500} /> },
+        { path: "*", element: <NotFound />, errorElement: <ErrorPage code={500} /> },
       ],
     },
   ],

@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 
-import ErrorBoundary from "./components/ErrorBoundary"
 import ProbeWorkspace from "./components/ProbeWorkspace"
 import RefreshToast from "./components/RefreshToast"
 import { useBackground } from "./hooks/use-background"
@@ -9,7 +8,6 @@ import { hasStoredLanguage, setAppLanguage } from "./i18n"
 import { clearInjectedContext, injectContext } from "./lib/inject"
 import { settingQueryOptions } from "./lib/query-options"
 import { cn } from "./lib/utils"
-import ErrorPage from "./pages/ErrorPage"
 
 export default function App() {
   const { data: settingData, error } = useQuery(settingQueryOptions())
@@ -44,37 +42,24 @@ export default function App() {
     }
   }, [configuredLanguage])
 
-  if (error) {
-    return <ErrorPage code={500} />
-  }
-
-  if (!settingData) {
-    return null
-  }
-
-  if (customCode && injectedCustomCode !== customCode) {
-    return null
-  }
-
   const customMobileBackgroundImage = window.CustomMobileBackgroundImage || undefined
+  const contentReady = Boolean(settingData) && (!customCode || injectedCustomCode === customCode)
 
   return (
-    <ErrorBoundary>
-      <div className="nazha-layout">
-        <div
-          className={cn("nazha-layout-bg", {
-            "hidden sm:block": customMobileBackgroundImage,
-          })}
-          style={customBackgroundImage ? { backgroundImage: `url(${customBackgroundImage})`, backgroundSize: "cover" } : undefined}
-        />
-        {customMobileBackgroundImage && (
-          <div className="nazha-layout-bg sm:hidden" style={{ backgroundImage: `url(${customMobileBackgroundImage})`, backgroundSize: "cover" }} />
-        )}
-        <div className="nazha-layout-main">
-          <RefreshToast />
-          <ProbeWorkspace />
-        </div>
+    <div className="nazha-layout">
+      <div
+        className={cn("nazha-layout-bg", {
+          "hidden sm:block": customMobileBackgroundImage,
+        })}
+        style={customBackgroundImage ? { backgroundImage: `url(${customBackgroundImage})`, backgroundSize: "cover" } : undefined}
+      />
+      {customMobileBackgroundImage && (
+        <div className="nazha-layout-bg sm:hidden" style={{ backgroundImage: `url(${customMobileBackgroundImage})`, backgroundSize: "cover" }} />
+      )}
+      <div className="nazha-layout-main">
+        <RefreshToast />
+        <ProbeWorkspace contentReady={contentReady} contentError={Boolean(error)} configuredSiteName={settingData?.data?.config?.site_name} />
       </div>
-    </ErrorBoundary>
+    </div>
   )
 }
