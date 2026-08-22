@@ -25,23 +25,29 @@
         height: 3px;
         overflow: hidden;
         background: transparent;
-        opacity: 1;
+        opacity: 0;
         transition: opacity 180ms ease 60ms;
       }
       #app-progress::after {
         display: block;
         width: 72%;
         height: 100%;
-        background: #16a66a;
+        background: #2563eb;
         content: "";
         transform: translateX(-100%);
-        animation: appProgress 8s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+        animation: none;
         transition: width 160ms ease, transform 160ms ease;
       }
-      #app-progress.complete {
+      #app-progress.is-loading {
+        opacity: 1;
+      }
+      #app-progress.is-loading::after {
+        animation: appProgress 8s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+      }
+      #app-progress.is-complete {
         opacity: 0;
       }
-      #app-progress.complete::after {
+      #app-progress.is-complete::after {
         width: 100%;
         transform: translateX(0);
         animation: none;
@@ -79,7 +85,7 @@
     </style>
   </head>
   <body>
-    <div id="app-progress" role="progressbar" aria-label="页面加载进度"></div>
+    <div id="app-progress" class="is-loading" role="progressbar" aria-label="页面加载进度"></div>
     <div id="root">
       <header class="app-header-placeholder" aria-hidden="true">
         <div class="app-header-placeholder__inner">

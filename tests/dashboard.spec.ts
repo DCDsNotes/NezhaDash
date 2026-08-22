@@ -157,21 +157,25 @@ async function mockBackend(
       return
     }
 
-    if (pathname.endsWith("/server-speed/1")) {
+    if (pathname.endsWith("/server/1/metrics")) {
+      const metric = new URL(route.request().url()).searchParams.get("metric")
       await json({
         success: true,
         data: {
           server_id: 1,
           server_name: servers[0].name,
-          created_at: [now / 1000 - 3600, now / 1000 - 1800, now / 1000 - 600],
-          net_in_speed: [4 * 1024 ** 2, 9 * 1024 ** 2, 12 * 1024 ** 2],
-          net_out_speed: [2 * 1024 ** 2, 5 * 1024 ** 2, 4 * 1024 ** 2],
+          metric,
+          data_points: [
+            { ts: now - 3600_000, value: metric === "net_out_speed" ? 2 * 1024 ** 2 : 4 * 1024 ** 2 },
+            { ts: now - 1800_000, value: metric === "net_out_speed" ? 5 * 1024 ** 2 : 9 * 1024 ** 2 },
+            { ts: now - 600_000, value: metric === "net_out_speed" ? 4 * 1024 ** 2 : 12 * 1024 ** 2 },
+          ],
         },
       })
       return
     }
 
-    if (pathname.endsWith("/service/1")) {
+    if (pathname.endsWith("/server/1/service")) {
       await json({
         success: true,
         data: [
@@ -209,7 +213,7 @@ test("keeps the header visible through initial loading and completes progress on
   await expect(page.locator(".probe-site-header")).toBeVisible()
   await expect(page.locator("#app-progress")).toBeVisible()
   await expect(page.locator(".probe-node-item")).toHaveCount(2)
-  await expect(page.locator("#app-progress")).toHaveCount(0)
+  await expect(page.locator("#app-progress")).toHaveCSS("opacity", "0")
 
   await page.evaluate(() => {
     Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" })
@@ -219,7 +223,7 @@ test("keeps the header visible through initial loading and completes progress on
   })
 
   await expect(page.locator(".probe-site-header")).toBeVisible()
-  await expect(page.locator("#app-progress")).toHaveCount(0)
+  await expect(page.locator("#app-progress")).toHaveCSS("opacity", "0")
 })
 
 async function assertNoHorizontalOverflow(page: Page) {
@@ -248,8 +252,8 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   page.on("request", (request) => {
     const pathname = new URL(request.url()).pathname
     if (request.resourceType() === "image" && pathname.endsWith("/world-map.svg")) worldMapRequestCount += 1
-    if (pathname.endsWith("/server-speed/1")) serverSpeedRequestCount += 1
-    if (pathname.endsWith("/service/1")) monitorRequestCount += 1
+    if (pathname.endsWith("/server/1/metrics")) serverSpeedRequestCount += 1
+    if (pathname.endsWith("/server/1/service")) monitorRequestCount += 1
   })
 
   await mockBackend(page)
@@ -441,7 +445,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "server-detail-desktop.png")
 
-  await expect.poll(() => serverSpeedRequestCount).toBe(1)
+  await expect.poll(() => serverSpeedRequestCount).toBe(2)
   await expect.poll(() => monitorRequestCount).toBe(1)
   await page.evaluate(() => {
     Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" })
@@ -455,7 +459,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   })
   await expect(page.locator(".server-detail-header")).toBeVisible()
   await expect(page.locator(".server-detail-skeleton")).toHaveCount(0)
-  await expect.poll(() => serverSpeedRequestCount).toBe(1)
+  await expect.poll(() => serverSpeedRequestCount).toBe(2)
   await expect.poll(() => monitorRequestCount).toBe(1)
 
   await page.reload()

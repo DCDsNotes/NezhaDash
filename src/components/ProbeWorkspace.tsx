@@ -132,7 +132,7 @@ function TransferDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="dashboard-dialog probe-transfer-dialog">
         <DialogTitle className="dashboard-dialog__title">今日流量</DialogTitle>
-        <DialogDescription className="dashboard-dialog__description">统计周期 00:00 至 23:59</DialogDescription>
+        <DialogDescription className="dashboard-dialog__description">统计周期 00:00 至 当前时间</DialogDescription>
         <div className="dashboard-transfer-list">
           {dailyTransferList.length > 0 ? (
             dailyTransferList.map((item) => (
@@ -185,13 +185,22 @@ export default function ProbeWorkspace() {
   const pageTitle = formatPageTitle(getWorkspacePageName(pathname, workspace), configuredSiteName)
 
   useEffect(() => {
-    if (workspace.isLoading || !isSettingFetched) return
     const progress = document.getElementById("app-progress")
     if (!progress) return
-    progress.classList.add("complete")
-    const timer = window.setTimeout(() => progress.remove(), 240)
+
+    progress.classList.remove("is-complete")
+    progress.classList.add("is-loading")
+
+    if (workspace.isLoading || !isSettingFetched) return
+
+    const timer = window.setTimeout(() => {
+      progress.classList.remove("is-loading")
+      progress.classList.add("is-complete")
+      window.setTimeout(() => progress.classList.remove("is-complete"), 240)
+    }, 160)
+
     return () => window.clearTimeout(timer)
-  }, [isSettingFetched, workspace.isLoading])
+  }, [isSettingFetched, pathname, workspace.isLoading])
 
   useEffect(() => {
     document.title = pageTitle

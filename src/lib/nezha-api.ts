@@ -70,11 +70,43 @@ export const fetchLoginUser = async (signal?: AbortSignal): Promise<LoginUserRes
 }
 
 export const fetchMonitor = async (serverId: number, signal?: AbortSignal): Promise<MonitorResponse> => {
-  return fetchApi<MonitorResponse>(`/service/${serverId}`, { signal })
+  return fetchApi<MonitorResponse>(`/server/${serverId}/service`, { signal })
 }
 
 export const fetchServerSpeedHistory = async (serverId: number, signal?: AbortSignal): Promise<ServerSpeedHistoryResponse> => {
-  return fetchApi<ServerSpeedHistoryResponse>(`/server-speed/${serverId}`, { signal })
+  type MetricResponse = {
+    success: boolean
+    data: {
+      server_id: number
+      server_name: string
+      metric: string
+      data_points: Array<{ ts: number; value: number }>
+    }
+  }
+
+  const [inResponse, outResponse] = await Promise.all([
+    fetchApi<MetricResponse>(`/server/${serverId}/metrics?metric=net_in_speed&period=1d`, { signal }),
+    fetchApi<MetricResponse>(`/server/${serverId}/metrics?metric=net_out_speed&period=1d`, { signal }),
+  ])
+
+  const inPoints = Array.isArray(inResponse.data?.data_points) ? inResponse.data.data_points : []
+  const outPoints = Array.isArray(outResponse.data?.data_points) ? outResponse.data.data_points : []
+  const timestamps = Array.from(new Set([...inPoints, ...outPoints].map((point) => Number(point.ts)).filter(Number.isFinite))).sort(
+    (a, b) => a - b,
+  )
+  const inByTime = new Map(inPoints.map((point) => [Number(point.ts), Number(point.value) || 0]))
+  const outByTime = new Map(outPoints.map((point) => [Number(point.ts), Number(point.value) || 0]))
+
+  return {
+    success: inResponse.success && outResponse.success,
+    data: {
+      server_id: Number(inResponse.data?.server_id || outResponse.data?.server_id || serverId),
+      server_name: String(inResponse.data?.server_name || outResponse.data?.server_name || ""),
+      created_at: timestamps,
+      net_in_speed: timestamps.map((timestamp) => inByTime.get(timestamp) || 0),
+      net_out_speed: timestamps.map((timestamp) => outByTime.get(timestamp) || 0),
+    },
+  }
 }
 
 export const fetchSetting = async (signal?: AbortSignal): Promise<SettingResponse> => {
