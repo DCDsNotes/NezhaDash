@@ -3,7 +3,7 @@
   "short_name": "节点监控",
   "icons": [
     {
-      "src": "./android-chrome-192x192.svg?v=5",
+      "src": "./android-chrome-192x192.svg?v=6",
       "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any maskable"

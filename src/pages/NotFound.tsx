@@ -1,10 +1,14 @@
 import { Button } from "@/components/ui/button"
 import { useAppTranslation } from "@/i18n"
+import { completePageProgress } from "@/lib/page-progress"
+import { useEffect } from "react"
 import { Link, useLocation } from "react-router-dom"
 
 export default function NotFound() {
   const location = useLocation()
   const t = useAppTranslation()
+
+  useEffect(() => completePageProgress(), [])
 
   return (
     <section className="not-found-page" aria-labelledby="not-found-title">

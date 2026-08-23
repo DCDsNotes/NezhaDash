@@ -44,5 +44,12 @@
       ]
     }
   ],
+  "redirects": [
+    {
+      "source": "/favicon.ico",
+      "destination": "/icon.svg?v=6",
+      "permanent": false
+    }
+  ],
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }

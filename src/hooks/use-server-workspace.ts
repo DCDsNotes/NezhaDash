@@ -17,6 +17,8 @@ export type Status = "all" | "online" | "offline"
 
 export type ServerWorkspaceValue = {
   isLoading: boolean
+  isGroupLoading: boolean
+  isGroupFetched: boolean
   isGroupError: boolean
   now: number
   servers: NezhaServer[]
@@ -49,7 +51,7 @@ function getInitialGroup() {
 }
 
 export function useServerWorkspace(): ServerWorkspaceValue {
-  const { data: groupData, isError: isGroupError } = useQuery(serverGroupsQueryOptions())
+  const { data: groupData, isError: isGroupError, isLoading: isGroupLoading, isFetched: isGroupFetched } = useQuery(serverGroupsQueryOptions())
   const { data: wsData } = useNezhaWsData()
   const [status, setStatus] = useState<Status>("all")
   const [sortProp, setSortProp] = useState("DisplayIndex")
@@ -110,6 +112,8 @@ export function useServerWorkspace(): ServerWorkspaceValue {
   return useMemo(
     () => ({
       isLoading: !wsData,
+      isGroupLoading,
+      isGroupFetched,
       isGroupError,
       now,
       servers,
@@ -135,6 +139,8 @@ export function useServerWorkspace(): ServerWorkspaceValue {
       groups,
       headerStats,
       isGroupError,
+      isGroupFetched,
+      isGroupLoading,
       now,
       searchWord,
       servers,

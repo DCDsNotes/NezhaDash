@@ -10,7 +10,7 @@ import { formatPageTitle, resolveSiteName } from "@/lib/site-name"
 import { cn } from "@/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react"
-import { Link, Outlet, matchPath, useLocation } from "react-router-dom"
+import { Link, Outlet, matchPath, useLocation, useNavigation } from "react-router-dom"
 
 let mapDialogPromise: ReturnType<typeof importMapDialog> | null = null
 
@@ -189,6 +189,7 @@ export default function ProbeWorkspace() {
   const dashboardLink = useDashboardLinkState()
   const { data: settingData, isFetched: isSettingFetched } = useQuery(settingQueryOptions())
   const { pathname } = useLocation()
+  const navigation = useNavigation()
   const [showTransfer, setShowTransfer] = useState(false)
   const [showMap, setShowMap] = useState(false)
   const configuredSiteName = settingData?.data?.config?.site_name
@@ -196,18 +197,22 @@ export default function ProbeWorkspace() {
 
   useEffect(() => {
     const isDetailPage = Boolean(matchPath({ path: "/server/:serverKey", end: true }, pathname))
+    if (navigation.state !== "idle") {
+      setPageProgress(8)
+      return
+    }
     if (isDetailPage) {
       setPageProgress(12)
       return
     }
 
-    const completedSteps = Number(!workspace.isLoading) + Number(isSettingFetched)
-    if (completedSteps < 2) {
-      setPageProgress(12 + completedSteps * 38)
+    const completedSteps = Number(!workspace.isLoading) + Number(workspace.isGroupFetched) + Number(isSettingFetched)
+    if (completedSteps < 3) {
+      setPageProgress(8 + completedSteps * 28)
       return
     }
     completePageProgress()
-  }, [isSettingFetched, pathname, workspace.isLoading])
+  }, [isSettingFetched, navigation.state, pathname, workspace.isGroupFetched, workspace.isLoading])
 
   useEffect(() => {
     document.title = pageTitle
@@ -217,13 +222,14 @@ export default function ProbeWorkspace() {
     const favicon = document.getElementById("app-favicon") as HTMLLinkElement | null
     if (!favicon) return
     const prefix = workspace.totalCounts.offline > 0 ? "/icon-offline" : "/icon"
-    let expanded = false
+    let frame = 0
+    const frames = ["", "-pulse-mid", "-pulse", "-pulse-mid"]
     const updateFavicon = () => {
-      favicon.href = `${prefix}${expanded ? "-pulse" : ""}.svg?v=5`
-      expanded = !expanded
+      favicon.href = `${prefix}${frames[frame]}.svg?v=6`
+      frame = (frame + 1) % frames.length
     }
     updateFavicon()
-    const timer = window.setInterval(updateFavicon, 575)
+    const timer = window.setInterval(updateFavicon, 288)
     return () => window.clearInterval(timer)
   }, [workspace.totalCounts.offline])
 

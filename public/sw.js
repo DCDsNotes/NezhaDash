@@ -6,7 +6,7 @@
 
 const APP_BASE = new URL("./", self.location.href).pathname
 const APP_INDEX = `${APP_BASE}index.html`
-const CACHE_VERSION = "v12"
+const CACHE_VERSION = "v13"
 const CACHE_MAX_AGE = 30 * 24 * 60 * 60 * 1000
 const CACHE_SCOPE = APP_BASE.replace(/[^a-z0-9]/gi, "_")
 const STATIC_CACHE = `static-${CACHE_SCOPE}-${CACHE_VERSION}`
@@ -61,10 +61,40 @@ function isFresh(response) {
 }
 
 function offlineResponse() {
-  return new Response("", {
-    status: 504,
-    statusText: "Network unavailable",
-  })
+  // Do not manufacture a successful-looking HTTP error for unavailable
+  // resources. A cached app shell is preferred; if it is genuinely missing,
+  // let the browser surface a normal network failure instead of a misleading
+  // 504 response that looks like an API outage.
+  return Response.error()
+}
+
+function appShellUrls(indexResponse) {
+  const urls = new Set([APP_INDEX, APP_BASE, `${APP_BASE}manifest.json`, `${APP_BASE}icon.svg?v=6`])
+  try {
+    const html = indexResponse.clone()
+    return html.text().then((source) => {
+      for (const match of source.matchAll(/(?:src|href)=["']([^"']+)["']/g)) {
+        const value = match[1]
+        if (!value || value.startsWith("data:") || value.startsWith("//")) continue
+        const url = new URL(value, self.location.href)
+        if (isSameOrigin(url) && !isApiPath(url)) urls.add(`${url.pathname}${url.search}`)
+      }
+      return Array.from(urls)
+    })
+  } catch {
+    return Promise.resolve(Array.from(urls))
+  }
+}
+
+async function precacheAppShell(indexResponse) {
+  const urls = await appShellUrls(indexResponse)
+  await Promise.all(
+    urls.map(async (path) => {
+      const request = new Request(new URL(path, self.location.origin).toString())
+      const response = path === APP_INDEX ? indexResponse.clone() : await safeFetch(request)
+      if (response?.ok) await cachePut(STATIC_CACHE, request, response.clone())
+    }),
+  )
 }
 
 async function safeFetch(request) {
@@ -127,7 +157,7 @@ self.addEventListener("install", (event) => {
     (async () => {
       const response = await safeFetch(APP_INDEX)
       if (!response?.ok) return
-      await Promise.all([cachePut(STATIC_CACHE, APP_INDEX, response.clone()), cachePut(STATIC_CACHE, APP_BASE, response)])
+      await precacheAppShell(response)
     })(),
   )
 })
