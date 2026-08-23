@@ -219,13 +219,15 @@ export default function ProbeWorkspace() {
   }, [pageTitle])
 
   useEffect(() => {
-    const favicon = document.getElementById("app-favicon") as HTMLLinkElement | null
-    if (!favicon) return
-    const prefix = workspace.totalCounts.offline > 0 ? "/icon-offline" : "/icon"
-    let frame = 0
+    const favicons = Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"]'))
+    if (favicons.length === 0) return
+    const offline = workspace.totalCounts.offline > 0
+    const prefix = offline ? "/icon-offline" : "/icon"
     const frames = ["", "-pulse-mid", "-pulse", "-pulse-mid"]
+    let frame = 0
     const updateFavicon = () => {
-      favicon.href = `${prefix}${frames[frame]}.svg?v=6`
+      const href = `${prefix}${frames[frame]}.svg?v=8&status=${offline ? "offline" : "online"}&frame=${frame}`
+      favicons.forEach((favicon) => favicon.setAttribute("href", href))
       frame = (frame + 1) % frames.length
     }
     updateFavicon()

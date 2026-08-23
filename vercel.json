@@ -47,7 +47,7 @@
   "redirects": [
     {
       "source": "/favicon.ico",
-      "destination": "/icon.svg?v=6",
+      "destination": "/icon-animated.svg?v=8",
       "permanent": false
     }
   ],

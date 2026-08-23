@@ -217,6 +217,16 @@ async function mockBackend(
   })
 }
 
+test("favicon pulses and reflects offline server state", async ({ page }) => {
+  await mockBackend(page)
+  await page.goto("/")
+
+  const favicon = page.locator("#app-favicon")
+  await expect(favicon).toHaveAttribute("href", /status=offline/)
+  const firstFrame = await favicon.getAttribute("href")
+  await expect.poll(() => favicon.getAttribute("href")).not.toBe(firstFrame)
+})
+
 test("keeps the header visible through initial loading and completes progress once", async ({ page }) => {
   await mockBackend(page, () => wsPayload, { websocket: 700, setting: 500 })
   await page.goto("/")
