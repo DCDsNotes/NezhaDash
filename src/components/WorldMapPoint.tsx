@@ -5,6 +5,8 @@ type PointInfo = {
   key?: string
   left: number
   top: number
+  leftPercent?: number
+  topPercent?: number
   size?: number
   label?: string
   type?: "single" | "group" | "default"
@@ -30,6 +32,8 @@ export default function WorldMapPoint({ info, onTap, className }: { info: PointI
         {
           "--map-point-left": `${info.left}px`,
           "--map-point-top": `${info.top}px`,
+          "--map-point-left-percent": info.leftPercent == null ? undefined : `${info.leftPercent}%`,
+          "--map-point-top-percent": info.topPercent == null ? undefined : `${info.topPercent}%`,
           "--map-point-size": info.size ? `${info.size}px` : undefined,
           "--map-point-delay": hashToDelay(info.key),
         } as React.CSSProperties

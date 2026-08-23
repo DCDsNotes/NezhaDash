@@ -44,6 +44,8 @@ export default function WorldMap({
         key: loc.key,
         left,
         top,
+        leftPercent: mapWidth > 0 ? (left / mapWidth) * 100 : 0,
+        topPercent: mapHeight > 0 ? (top / mapHeight) * 100 : 0,
         size,
         label: loc.label,
         servers: loc.servers,

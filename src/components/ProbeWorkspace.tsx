@@ -222,17 +222,9 @@ export default function ProbeWorkspace() {
     const favicons = Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"]'))
     if (favicons.length === 0) return
     const offline = workspace.totalCounts.offline > 0
-    const prefix = offline ? "/icon-offline" : "/icon"
-    const frames = ["", "-pulse-mid", "-pulse", "-pulse-mid"]
-    let frame = 0
-    const updateFavicon = () => {
-      const href = `${prefix}${frames[frame]}.svg?v=8&status=${offline ? "offline" : "online"}&frame=${frame}`
-      favicons.forEach((favicon) => favicon.setAttribute("href", href))
-      frame = (frame + 1) % frames.length
-    }
-    updateFavicon()
-    const timer = window.setInterval(updateFavicon, 288)
-    return () => window.clearInterval(timer)
+    const icon = offline ? "/icon-offline-animated.svg" : "/icon-animated.svg"
+    const href = `${icon}?v=9&status=${offline ? "offline" : "online"}`
+    favicons.forEach((favicon) => favicon.setAttribute("href", href))
   }, [workspace.totalCounts.offline])
 
   function preloadMap() {

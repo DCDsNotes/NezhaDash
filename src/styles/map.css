@@ -83,8 +83,8 @@
   --map-point-size: 6px;
   --map-point-scale: 1;
   position: absolute;
-  left: var(--map-point-left);
-  top: var(--map-point-top);
+  left: var(--map-point-left-percent, var(--map-point-left));
+  top: var(--map-point-top-percent, var(--map-point-top));
   width: 16px;
   height: 16px;
   transform: translate(-50%, -50%);

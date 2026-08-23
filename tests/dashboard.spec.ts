@@ -222,9 +222,9 @@ test("favicon pulses and reflects offline server state", async ({ page }) => {
   await page.goto("/")
 
   const favicon = page.locator("#app-favicon")
-  await expect(favicon).toHaveAttribute("href", /status=offline/)
-  const firstFrame = await favicon.getAttribute("href")
-  await expect.poll(() => favicon.getAttribute("href")).not.toBe(firstFrame)
+  await expect(favicon).toHaveAttribute("href", /icon-offline-animated\.svg\?v=9&status=offline/)
+  const faviconHrefs = await page.locator('link[rel~="icon"]').evaluateAll((links) => links.map((link) => link.getAttribute("href")))
+  expect(new Set(faviconHrefs).size).toBe(1)
 })
 
 test("keeps the header visible through initial loading and completes progress once", async ({ page }) => {
@@ -351,6 +351,11 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await page.getByLabel("查看节点地图").click()
   await expect(page.getByRole("dialog", { name: "节点地图" })).toBeVisible()
   await expect(page.locator(".world-map-img")).toHaveCSS("background-image", /world-map[^"]*\.svg/)
+  const desktopMapPointRatio = await page.locator('.world-map-point[aria-label^="China,"]').evaluate((point) => {
+    const map = point.closest(".world-map-group")!.getBoundingClientRect()
+    const marker = point.getBoundingClientRect()
+    return { x: (marker.x + marker.width / 2 - map.x) / map.width, y: (marker.y + marker.height / 2 - map.y) / map.height }
+  })
   await screenshot(page, testInfo, "map-desktop.png")
   await page.getByRole("button", { name: "关闭" }).click()
   await page.getByLabel("查看节点地图").click()
@@ -519,6 +524,13 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
 
   await page.getByRole("button", { name: "查看节点地图" }).click()
   await expect(page.getByRole("dialog", { name: "节点地图" })).toBeVisible()
+  const mobileMapPointRatio = await page.locator('.world-map-point[aria-label^="China,"]').evaluate((point) => {
+    const map = point.closest(".world-map-group")!.getBoundingClientRect()
+    const marker = point.getBoundingClientRect()
+    return { x: (marker.x + marker.width / 2 - map.x) / map.width, y: (marker.y + marker.height / 2 - map.y) / map.height }
+  })
+  expect(Math.abs(mobileMapPointRatio.x - desktopMapPointRatio.x)).toBeLessThan(0.002)
+  expect(Math.abs(mobileMapPointRatio.y - desktopMapPointRatio.y)).toBeLessThan(0.002)
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "map-mobile.png")
   await page.getByRole("button", { name: "关闭" }).click()
