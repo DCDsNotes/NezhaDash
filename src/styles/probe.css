@@ -175,6 +175,16 @@ body {
   color: #fff;
 }
 
+/* The status mark uses the same round ECG treatment as the browser icon. */
+.probe-site-brand__mark,
+.status-hero__mark {
+  border-radius: 50%;
+}
+
+.status-hero__mark--offline {
+  background: var(--probe-offline);
+}
+
 .status-hero h1 {
   color: var(--probe-text);
   font-weight: 700;
@@ -841,6 +851,12 @@ body {
   .probe-main .server-detail-page .server-monitor {
     --line-chart-size: 190px;
   }
+}
+
+/* Keep later responsive rules from turning the pulse marks back into squares. */
+.probe-site-brand__mark,
+.status-hero__mark {
+  border-radius: 50%;
 }
 
 @media (max-width: 430px) {

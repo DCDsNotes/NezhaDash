@@ -180,7 +180,7 @@ export default function Servers() {
   return (
     <div className="status-page">
       <section className="status-hero" aria-labelledby="system-status-title">
-        <span className="status-hero__mark" aria-hidden="true">
+        <span className={cn("status-hero__mark", { "status-hero__mark--offline": overallState === "attention" })} aria-hidden="true">
           <i className="ri-pulse-line" />
         </span>
         <h1 id="system-status-title">系统状态</h1>
