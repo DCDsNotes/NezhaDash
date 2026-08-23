@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { type ServerWorkspaceValue, useServerWorkspace } from "@/hooks/use-server-workspace"
 import { useWebSocketControls } from "@/hooks/use-websocket-context"
 import { loginUserQueryOptions, serverTransferStatsQueryOptions, settingQueryOptions } from "@/lib/query-options"
+import { completePageProgress, setPageProgress } from "@/lib/page-progress"
 import { serverIdToServerKey } from "@/lib/server-key"
 import { getServerDailyTransferList } from "@/lib/server-view-model"
 import { formatPageTitle, resolveSiteName } from "@/lib/site-name"
@@ -194,22 +195,18 @@ export default function ProbeWorkspace() {
   const pageTitle = formatPageTitle(getWorkspacePageName(pathname, workspace), configuredSiteName)
 
   useEffect(() => {
-    const progress = document.getElementById("app-progress")
-    if (!progress) return
-
-    progress.classList.remove("is-complete")
-    progress.classList.add("is-loading")
-
     const isDetailPage = Boolean(matchPath({ path: "/server/:serverKey", end: true }, pathname))
-    if (isDetailPage || workspace.isLoading || !isSettingFetched) return
+    if (isDetailPage) {
+      setPageProgress(12)
+      return
+    }
 
-    const timer = window.setTimeout(() => {
-      progress.classList.remove("is-loading")
-      progress.classList.add("is-complete")
-      window.setTimeout(() => progress.classList.remove("is-complete"), 240)
-    }, 160)
-
-    return () => window.clearTimeout(timer)
+    const completedSteps = Number(!workspace.isLoading) + Number(isSettingFetched)
+    if (completedSteps < 2) {
+      setPageProgress(12 + completedSteps * 38)
+      return
+    }
+    completePageProgress()
   }, [isSettingFetched, pathname, workspace.isLoading])
 
   useEffect(() => {
@@ -222,7 +219,7 @@ export default function ProbeWorkspace() {
     const prefix = workspace.totalCounts.offline > 0 ? "/icon-offline" : "/icon"
     let expanded = false
     const updateFavicon = () => {
-      favicon.href = `${prefix}${expanded ? "-pulse" : ""}.svg?v=4`
+      favicon.href = `${prefix}${expanded ? "-pulse" : ""}.svg?v=5`
       expanded = !expanded
     }
     updateFavicon()

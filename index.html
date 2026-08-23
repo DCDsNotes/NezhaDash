@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <title>节点监控</title>
-    <link id="app-favicon" rel="icon" type="image/svg+xml" href="/icon.svg?v=4" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.svg?v=4" />
-    <link rel="icon" sizes="192x192" type="image/svg+xml" href="/android-chrome-192x192.svg?v=4" />
+    <link id="app-favicon" rel="icon" type="image/svg+xml" href="/icon.svg?v=5" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.svg?v=5" />
+    <link rel="icon" sizes="192x192" type="image/svg+xml" href="/android-chrome-192x192.svg?v=5" />
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
@@ -19,6 +19,7 @@
 
     <style>
       #app-progress {
+        --app-progress-value: 8%;
         position: fixed;
         inset: 0 0 auto;
         z-index: 100000;
@@ -30,32 +31,20 @@
       }
       #app-progress::after {
         display: block;
-        width: 72%;
+        width: var(--app-progress-value);
         height: 100%;
         background: #16a66a;
         content: "";
-        transform: translateX(-100%);
-        animation: none;
-        transition: width 160ms ease, transform 160ms ease;
+        transition: width 220ms ease;
       }
       #app-progress.is-loading {
         opacity: 1;
-      }
-      #app-progress.is-loading::after {
-        animation: appProgress 8s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
       }
       #app-progress.is-complete {
         opacity: 0;
       }
       #app-progress.is-complete::after {
         width: 100%;
-        transform: translateX(0);
-        animation: none;
-      }
-      @keyframes appProgress {
-        to {
-          transform: translateX(-8%);
-        }
       }
       .app-header-placeholder {
         min-height: 62px;

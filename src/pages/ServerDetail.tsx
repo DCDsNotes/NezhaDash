@@ -7,6 +7,7 @@ import WorldMap from "@/components/WorldMap"
 import { useNezhaWsData } from "@/hooks/use-nezha-ws-data"
 import { useWorldMapSize } from "@/hooks/use-world-map-size"
 import { countryCoordinates } from "@/lib/geo-limit"
+import { completePageProgress, setPageProgress } from "@/lib/page-progress"
 import { serverIdToServerKey } from "@/lib/server-key"
 import { getServerDetailStatusViewModel, getServerStatus } from "@/lib/server-view-model"
 import { cn } from "@/lib/utils"
@@ -16,14 +17,6 @@ import "@/styles/shared.css"
 import { type NezhaServer } from "@/types/nezha-api"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link, Navigate, useParams } from "react-router-dom"
-
-function setDetailProgress(loading: boolean) {
-  const progress = document.getElementById("app-progress")
-  if (!progress) return
-  progress.classList.toggle("is-loading", loading)
-  progress.classList.toggle("is-complete", !loading)
-  if (!loading) window.setTimeout(() => progress.classList.remove("is-complete"), 240)
-}
 
 function ServerDetailPriority({ now, server }: { now: number; server: NezhaServer }) {
   const { billing, realtime } = useMemo(() => getServerDetailStatusViewModel(now, server), [now, server])
@@ -78,12 +71,21 @@ export default function ServerDetail() {
 
   useEffect(() => {
     setReady({ map: false, speed: false, monitor: false })
-    setDetailProgress(true)
+    setPageProgress(serverId ? 28 : 14)
   }, [serverId])
 
   useEffect(() => {
-    if (serverId && ready.map && ready.speed && ready.monitor) setDetailProgress(false)
-  }, [ready, serverId])
+    if (!serverId) {
+      if (nezhaWsData) completePageProgress()
+      return
+    }
+    const completedSteps = Number(ready.map) + Number(ready.speed) + Number(ready.monitor)
+    if (completedSteps === 3) {
+      completePageProgress()
+      return
+    }
+    setPageProgress(28 + completedSteps * 22)
+  }, [nezhaWsData, ready, serverId])
 
   const markReady = useCallback((key: "map" | "speed" | "monitor") => {
     setReady((current) => (current[key] ? current : { ...current, [key]: true }))
