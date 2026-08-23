@@ -175,16 +175,6 @@ body {
   color: #fff;
 }
 
-/* The status mark uses the same round ECG treatment as the browser icon. */
-.probe-site-brand__mark,
-.status-hero__mark {
-  border-radius: 50%;
-}
-
-.status-hero__mark--offline {
-  background: var(--probe-offline);
-}
-
 .status-hero h1 {
   color: var(--probe-text);
   font-weight: 700;
@@ -851,12 +841,6 @@ body {
   .probe-main .server-detail-page .server-monitor {
     --line-chart-size: 190px;
   }
-}
-
-/* Keep later responsive rules from turning the pulse marks back into squares. */
-.probe-site-brand__mark,
-.status-hero__mark {
-  border-radius: 50%;
 }
 
 @media (max-width: 430px) {
@@ -1894,4 +1878,38 @@ html {
     min-height: 250px;
     overflow: hidden;
   }
+}
+
+/* Keep the header pulse icon unchanged and scope the animated indicator to the hero. */
+.probe-site-brand__mark {
+  border-radius: 8px;
+}
+
+.status-hero__mark {
+  border-radius: 50%;
+  background: var(--probe-accent-soft);
+  color: var(--probe-accent);
+}
+
+.status-hero__mark .ri-pulse-line {
+  width: 0.9em;
+  height: 0.9em;
+  border-radius: 50%;
+  background: var(--probe-accent);
+  -webkit-mask: none;
+  mask: none;
+  animation: status-pulse-breathe 1.15s ease-in-out infinite;
+}
+
+.status-hero__mark--offline {
+  background: color-mix(in srgb, var(--probe-offline) 12%, #fff);
+}
+
+.status-hero__mark--offline .ri-pulse-line {
+  background: var(--probe-offline);
+}
+
+@keyframes status-pulse-breathe {
+  0%, 100% { transform: scale(0.82); }
+  50% { transform: scale(1.18); }
 }

@@ -216,6 +216,20 @@ export default function ProbeWorkspace() {
     document.title = pageTitle
   }, [pageTitle])
 
+  useEffect(() => {
+    const favicon = document.getElementById("app-favicon") as HTMLLinkElement | null
+    if (!favicon) return
+    const prefix = workspace.totalCounts.offline > 0 ? "/icon-offline" : "/icon"
+    let expanded = false
+    const updateFavicon = () => {
+      favicon.href = `${prefix}${expanded ? "-pulse" : ""}.svg?v=4`
+      expanded = !expanded
+    }
+    updateFavicon()
+    const timer = window.setInterval(updateFavicon, 575)
+    return () => window.clearInterval(timer)
+  }, [workspace.totalCounts.offline])
+
   function preloadMap() {
     void loadMapDialog().then(({ preloadMapAssets }) => preloadMapAssets())
   }
