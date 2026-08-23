@@ -161,8 +161,8 @@ async function mockBackend(
       await json({
         success: true,
         data: [
-          { server_id: 1, in: 12 * 1024 ** 3, out: 8 * 1024 ** 3 },
-          { server_id: 2, in: 90 * 1024 ** 3, out: 45 * 1024 ** 3 },
+          { server_id: 1, in: 0, out: 0 },
+          { server_id: 2, in: 0, out: 0 },
         ],
       })
       return
@@ -416,6 +416,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await expect(page.locator(".probe-detail-priority")).toContainText("7M/s")
   await expect(page.locator(".probe-detail-priority")).toContainText("2027-01-01")
   await expect(page.locator(".probe-detail-priority")).toContainText(/\d+\s*天/)
+  await expect(page.locator(".server-detail-info__group--transfer")).not.toContainText("0K")
   await expect(page.locator(".server-detail-header__cpu-model")).toHaveCSS("color", "rgb(82, 102, 124)")
   await expect(page.locator(".probe-detail-priority strong").first()).toHaveCSS("align-items", "center")
   const priorityRows = await page.locator(".probe-detail-priority > div").evaluateAll((items) =>
