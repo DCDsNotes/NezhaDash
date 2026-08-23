@@ -6,9 +6,19 @@
 }
 
 .world-map-skeleton {
-  background: transparent;
-  border: none;
+  width: var(--world-map-width, 1280px);
+  height: var(--world-map-height, 621px);
+  border: 1px solid #edf1f3;
+  border-radius: 10px;
+  background: linear-gradient(100deg, #f4f7f7 20%, #ffffff 42%, #f4f7f7 64%);
+  background-size: 220% 100%;
+  animation: map-skeleton-shimmer 1.4s ease-in-out infinite;
   box-shadow: none;
+}
+
+@keyframes map-skeleton-shimmer {
+  from { background-position: 120% 0; }
+  to { background-position: -120% 0; }
 }
 
 .world-map-group {

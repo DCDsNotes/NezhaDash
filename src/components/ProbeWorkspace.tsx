@@ -123,14 +123,14 @@ function TransferDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const { data: transferData } = useQuery(serverTransferStatsQueryOptions(open))
+  const { data: transferData, isLoading, isError } = useQuery(serverTransferStatsQueryOptions(open))
   const transferStats = useMemo(
     () => new Map((transferData?.success ? transferData.data : []).map((item) => [item.server_id, { in: item.in, out: item.out }])),
     [transferData],
   )
   const dailyTransferList = useMemo(
-    () => (open ? getServerDailyTransferList(workspace.now, workspace.servers, transferStats) : []),
-    [open, transferStats, workspace.now, workspace.servers],
+    () => (open && !isLoading && !isError ? getServerDailyTransferList(workspace.now, workspace.servers, transferStats) : []),
+    [isError, isLoading, open, transferStats, workspace.now, workspace.servers],
   )
 
   return (
@@ -139,7 +139,11 @@ function TransferDialog({
         <DialogTitle className="dashboard-dialog__title">今日流量</DialogTitle>
         <DialogDescription className="dashboard-dialog__description">统计周期 00:00 至 当前时间</DialogDescription>
         <div className="dashboard-transfer-list">
-          {dailyTransferList.length > 0 ? (
+          {isLoading ? (
+            <div className="dashboard-empty dashboard-empty--loading">正在加载今日流量</div>
+          ) : isError ? (
+            <div className="dashboard-empty" role="alert">今日流量数据暂时不可用</div>
+          ) : dailyTransferList.length > 0 ? (
             dailyTransferList.map((item) => (
               <div key={item.id} className="dashboard-transfer-row">
                 <div className="dashboard-transfer-row__name">
@@ -196,7 +200,8 @@ export default function ProbeWorkspace() {
     progress.classList.remove("is-complete")
     progress.classList.add("is-loading")
 
-    if (workspace.isLoading || !isSettingFetched) return
+    const isDetailPage = Boolean(matchPath({ path: "/server/:serverKey", end: true }, pathname))
+    if (isDetailPage || workspace.isLoading || !isSettingFetched) return
 
     const timer = window.setTimeout(() => {
       progress.classList.remove("is-loading")

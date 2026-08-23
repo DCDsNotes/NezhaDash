@@ -161,8 +161,8 @@ async function mockBackend(
       await json({
         success: true,
         data: [
-          { server_id: 1, in: 0, out: 0 },
-          { server_id: 2, in: 0, out: 0 },
+          { server_id: 1, in: 12 * 1024 ** 3, out: 8 * 1024 ** 3 },
+          { server_id: 2, in: 90 * 1024 ** 3, out: 45 * 1024 ** 3 },
         ],
       })
       return

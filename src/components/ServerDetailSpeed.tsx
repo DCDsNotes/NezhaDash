@@ -5,7 +5,7 @@ import { serverSpeedQueryOptions } from "@/lib/query-options"
 import { cn } from "@/lib/utils"
 import { type NezhaServer, type NezhaServerSpeedHistory } from "@/types/nezha-api"
 import { useQuery } from "@tanstack/react-query"
-import { type CSSProperties, useMemo, useState } from "react"
+import { type CSSProperties, useEffect, useMemo, useState } from "react"
 
 type SpeedPoint = {
   time: number
@@ -89,8 +89,8 @@ function appendCurrentPoint(points: SpeedPoint[], point: SpeedPoint) {
   return [...list, point]
 }
 
-export default function ServerDetailSpeed({ now, server }: { now: number; server: NezhaServer }) {
-  const [containerRef, shouldFetchHistory] = useNearViewport<HTMLDivElement>()
+export default function ServerDetailSpeed({ now, server, onReady }: { now: number; server: NezhaServer; onReady?: () => void }) {
+  const [containerRef] = useNearViewport<HTMLDivElement>()
   const [minute, setMinute] = useState<number>(1440)
   const nowTime = normalizeTimestampMs(now) || Date.now()
   const chartNowTime = Math.floor(nowTime / 60000) * 60000
@@ -104,11 +104,15 @@ export default function ServerDetailSpeed({ now, server }: { now: number; server
     isLoading,
   } = useQuery({
     ...serverSpeedQueryOptions(server.id),
-    enabled: shouldFetchHistory,
+    enabled: true,
     refetchInterval: 60000,
   })
 
   const serverPoints = useMemo(() => buildSpeedPoints(speedResp?.success ? speedResp.data : undefined), [speedResp])
+
+  useEffect(() => {
+    if (!isLoading) onReady?.()
+  }, [isLoading, onReady])
 
   const chartData = useMemo(() => {
     const cutoff = chartNowTime - historyWindowMs
@@ -227,7 +231,7 @@ export default function ServerDetailSpeed({ now, server }: { now: number; server
         ))}
       </div>
 
-      {!shouldFetchHistory || (isLoading && chartData.points.length <= 1) ? (
+      {isLoading && chartData.points.length <= 1 ? (
         <div className="server-monitor__placeholder">
           <div className="server-monitor__placeholder-chart" />
         </div>

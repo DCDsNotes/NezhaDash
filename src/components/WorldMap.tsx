@@ -1,7 +1,7 @@
 import { useWorldMapSize } from "@/hooks/use-world-map-size"
 import { countryCoordinates } from "@/lib/geo-limit"
 import { cn } from "@/lib/utils"
-import { count2size, findIntersectingGroups, lonLatToMapXY, worldMapImageUrl } from "@/lib/world-map"
+import { count2size, findIntersectingGroups, lonLatToMapXY, preloadWorldMapImage, worldMapImageUrl } from "@/lib/world-map"
 import "@/styles/map.css"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 
@@ -20,10 +20,12 @@ export default function WorldMap({
   locations,
   mapWidth: mapWidthProp,
   className,
+  onReady,
 }: {
   locations: LocationInput[]
   mapWidth?: number
   className?: string
+  onReady?: () => void
 }) {
   const fallbackSize = useWorldMapSize(mapWidthProp == null)
   const mapWidth = mapWidthProp ?? fallbackSize.width
@@ -77,9 +79,25 @@ export default function WorldMap({
   }, [locations, mapWidth, mapHeight])
 
   const [tipsShow, setTipsShow] = useState(false)
+  const [imageReady, setImageReady] = useState(false)
   const [tipsContent, setTipsContent] = useState("")
   const [activeXY, setActiveXY] = useState({ x: 0, y: 0 })
   const tipsTimer = useRef<number | null>(null)
+
+  useEffect(() => {
+    let mounted = true
+    void preloadWorldMapImage().finally(() => {
+      if (!mounted) return
+      setImageReady(true)
+    })
+    return () => {
+      mounted = false
+    }
+  }, [onReady])
+
+  useEffect(() => {
+    if (imageReady) onReady?.()
+  }, [imageReady, onReady])
 
   function handleTap(info: any) {
     setTipsContent(info.label || "")
@@ -116,16 +134,22 @@ export default function WorldMap({
         } as React.CSSProperties
       }
     >
-      <div className="world-map-img" />
-      <div className="world-map-point-container">
-        {points.map((p) => (
-          <WorldMapPoint key={p.key} info={p} onTap={handleTap} />
-        ))}
-      </div>
-      {tipsShow && (
-        <div className="world-map-tips" style={tipsStyle as React.CSSProperties} role="status">
-          <span>{tipsContent}</span>
-        </div>
+      {imageReady ? (
+        <>
+          <div className="world-map-img" />
+          <div className="world-map-point-container">
+            {points.map((p) => (
+              <WorldMapPoint key={p.key} info={p} onTap={handleTap} />
+            ))}
+          </div>
+          {tipsShow && (
+            <div className="world-map-tips" style={tipsStyle as React.CSSProperties} role="status">
+              <span>{tipsContent}</span>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="world-map-skeleton" aria-label="地图加载中" />
       )}
     </div>
   )

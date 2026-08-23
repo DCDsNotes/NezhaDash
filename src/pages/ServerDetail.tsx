@@ -14,8 +14,16 @@ import "@/styles/detail.css"
 import "@/styles/monitor.css"
 import "@/styles/shared.css"
 import { type NezhaServer } from "@/types/nezha-api"
-import { useEffect, useMemo } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link, Navigate, useParams } from "react-router-dom"
+
+function setDetailProgress(loading: boolean) {
+  const progress = document.getElementById("app-progress")
+  if (!progress) return
+  progress.classList.toggle("is-loading", loading)
+  progress.classList.toggle("is-complete", !loading)
+  if (!loading) window.setTimeout(() => progress.classList.remove("is-complete"), 240)
+}
 
 function ServerDetailPriority({ now, server }: { now: number; server: NezhaServer }) {
   const { billing, realtime } = useMemo(() => getServerDetailStatusViewModel(now, server), [now, server])
@@ -58,6 +66,7 @@ function ServerDetailPriority({ now, server }: { now: number; server: NezhaServe
 export default function ServerDetail() {
   const { data: nezhaWsData } = useNezhaWsData()
   const { width: worldMapWidth, height: worldMapHeight } = useWorldMapSize()
+  const [ready, setReady] = useState({ map: false, speed: false, monitor: false })
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" })
@@ -66,6 +75,19 @@ export default function ServerDetail() {
   const { serverKey } = useParams()
   const server = serverKey ? nezhaWsData?.servers?.find((s) => serverIdToServerKey(s.id) === serverKey) : undefined
   const serverId = server?.id
+
+  useEffect(() => {
+    setReady({ map: false, speed: false, monitor: false })
+    setDetailProgress(true)
+  }, [serverId])
+
+  useEffect(() => {
+    if (serverId && ready.map && ready.speed && ready.monitor) setDetailProgress(false)
+  }, [ready, serverId])
+
+  const markReady = useCallback((key: "map" | "speed" | "monitor") => {
+    setReady((current) => (current[key] ? current : { ...current, [key]: true }))
+  }, [])
 
   const locations = useMemo(() => {
     if (!server) return []
@@ -133,14 +155,14 @@ export default function ServerDetail() {
         </span>
       </div>
       <div className="world-map-box top-world-map">
-        <WorldMap locations={locations} mapWidth={worldMapWidth} />
+        <WorldMap locations={locations} mapWidth={worldMapWidth} onReady={() => markReady("map")} />
       </div>
       <ServerDetailName server={server} />
       <ServerDetailPriority now={wsNow} server={server} />
       <ServerDetailStatusBox now={wsNow} server={server} />
       <ServerDetailInfoBox now={wsNow} server={server} />
-      <ServerDetailSpeed now={wsNow} server={server} />
-      <ServerDetailMonitor now={wsNow} serverId={serverId} />
+      <ServerDetailSpeed now={wsNow} server={server} onReady={() => markReady("speed")} />
+      <ServerDetailMonitor now={wsNow} serverId={serverId} onReady={() => markReady("monitor")} />
     </div>
   )
 }

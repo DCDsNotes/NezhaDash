@@ -477,11 +477,10 @@ export function getServerDailyTransferList(
   transferStats?: ReadonlyMap<number, ServerTransferStats>,
 ): ServerDailyTransferViewModel[] {
   return servers.map((server) => {
-    const remoteTransfer = transferStats?.get(server.id)
-    const liveTransfer = getServerTransferStatsCounter(server, "today")
-    // A backend with no persisted sample yet can legitimately return 0,0.
-    // Do not let that empty aggregate hide the live counters from the stream.
-    const transfer = remoteTransfer && (remoteTransfer.in > 0 || remoteTransfer.out > 0) ? remoteTransfer : liveTransfer
+    // This view is explicitly today's usage. Never substitute the live
+    // cumulative counter here: that counter spans the current agent lifetime
+    // and can look like monthly or all-time traffic.
+    const transfer = transferStats?.get(server.id) ?? { in: 0, out: 0 }
     const total = transfer.in + transfer.out
     return {
       id: server.id,

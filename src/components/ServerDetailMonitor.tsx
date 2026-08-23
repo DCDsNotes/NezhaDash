@@ -352,8 +352,8 @@ function readLocalChartType() {
   }
 }
 
-export default function ServerDetailMonitor({ now, serverId }: { now: number; serverId: number }) {
-  const [containerRef, shouldFetchHistory] = useNearViewport<HTMLDivElement>()
+export default function ServerDetailMonitor({ now, serverId, onReady }: { now: number; serverId: number; onReady?: () => void }) {
+  const [containerRef] = useNearViewport<HTMLDivElement>()
   const [minute, setMinute] = useState<number>(1440)
   const [peakShaving, setPeakShaving] = useState<boolean>(() => readLocalBool("nazhua_monitor_peak_shaving", false))
   const [refreshData, setRefreshData] = useState<boolean>(() => readLocalBool("nazhua_monitor_refresh_data", true))
@@ -366,11 +366,15 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
     isLoading,
   } = useQuery({
     ...monitorQueryOptions(serverId),
-    enabled: shouldFetchHistory,
-    refetchInterval: shouldFetchHistory && refreshData ? 60000 : false,
+    enabled: true,
+    refetchInterval: refreshData ? 60000 : false,
   })
 
   const monitorData = useMemo(() => (monitorResp?.success && Array.isArray(monitorResp.data) ? monitorResp.data : []), [monitorResp])
+
+  useEffect(() => {
+    if (!isLoading) onReady?.()
+  }, [isLoading, onReady])
 
   useEffect(() => {
     if (monitorData.length === 0) return
@@ -529,7 +533,7 @@ export default function ServerDetailMonitor({ now, serverId }: { now: number; se
         </div>
       </div>
 
-      {!shouldFetchHistory || isLoading ? (
+      {isLoading ? (
         <div className="server-monitor__placeholder">
           <div className="server-monitor__placeholder-line server-monitor__placeholder-line--w60" />
           <div className="server-monitor__placeholder-line server-monitor__placeholder-line--w40" />
