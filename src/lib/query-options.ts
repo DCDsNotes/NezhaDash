@@ -73,8 +73,8 @@ export function serverTransferStatsQueryOptions(enabled = true) {
     queryKey: queryKeys.serverTransferStats,
     queryFn: ({ signal }) => fetchServerTransferStats(signal),
     enabled,
-    staleTime: 30_000,
-    refetchInterval: enabled ? 60_000 : false,
-    refetchOnWindowFocus: false,
+    staleTime: 10_000,
+    refetchInterval: enabled ? 30_000 : false,
+    refetchOnWindowFocus: true,
   })
 }

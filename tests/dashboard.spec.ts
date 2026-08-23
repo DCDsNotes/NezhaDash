@@ -114,7 +114,7 @@ const wsPayload = { now, servers }
 async function mockBackend(
   page: Page,
   getWebSocketPayload: () => unknown = () => wsPayload,
-  delays: { websocket?: number; setting?: number } = {},
+  delays: { websocket?: number; setting?: number; transfer?: number } = {},
 ) {
   await page.routeWebSocket("**/api/v1/ws/server", (webSocket) => {
     const send = () => webSocket.send(JSON.stringify(getWebSocketPayload()))
@@ -158,6 +158,7 @@ async function mockBackend(
     }
 
     if (pathname.endsWith("/server/transfer")) {
+      if (delays.transfer) await new Promise((resolve) => setTimeout(resolve, delays.transfer))
       await json({
         success: true,
         data: [
@@ -222,17 +223,30 @@ test("favicon pulses and reflects offline server state", async ({ page }) => {
   await page.goto("/")
 
   const favicon = page.locator("#app-favicon")
-  await expect(favicon).toHaveAttribute("href", /icon-offline-animated\.svg\?v=9&status=offline/)
-  const faviconHrefs = await page.locator('link[rel~="icon"]').evaluateAll((links) => links.map((link) => link.getAttribute("href")))
-  expect(new Set(faviconHrefs).size).toBe(1)
+  await expect(favicon).toHaveAttribute("data-status", "offline")
+  await expect(favicon).toHaveAttribute("type", "image/png")
+  await expect(favicon).toHaveAttribute("href", /^data:image\/png;base64,/)
+  await expect(page.locator('link[rel~="icon"]')).toHaveCount(1)
+
+  const firstFrame = await favicon.getAttribute("href")
+  await expect.poll(() => favicon.getAttribute("href"), { timeout: 1_000 }).not.toBe(firstFrame)
+})
+
+test("homepage daily traffic uses the persisted daily API totals", async ({ page }) => {
+  await mockBackend(page)
+  await page.goto("/")
+
+  await expect(page.locator(".status-network__metric--down p")).toContainText("109.5 G")
+  await expect(page.locator(".status-network__metric--up p")).toContainText("56.9 G")
 })
 
 test("keeps the header visible through initial loading and completes progress once", async ({ page }) => {
-  await mockBackend(page, () => wsPayload, { websocket: 700, setting: 500 })
+  await mockBackend(page, () => wsPayload, { websocket: 700, setting: 500, transfer: 1_000 })
   await page.goto("/")
 
   await expect(page.locator(".probe-site-header")).toBeVisible()
   await expect(page.locator("#app-progress")).toBeVisible()
+  await expect(page.locator(".probe-node-skeleton")).toHaveCount(3)
   await expect(page.locator(".probe-node-item")).toHaveCount(2)
   await expect(page.locator("#app-progress")).toHaveCSS("opacity", "0")
 

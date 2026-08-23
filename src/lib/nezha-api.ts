@@ -117,7 +117,7 @@ export const fetchServerSpeedHistory = async (serverId: number, signal?: AbortSi
 }
 
 export const fetchServerTransferStats = async (signal?: AbortSignal): Promise<ServerTransferStatsResponse> => {
-  return fetchApi<ServerTransferStatsResponse>("/server/transfer", { signal })
+  return fetchApi<ServerTransferStatsResponse>("/server/transfer", { cache: "no-store", signal })
 }
 
 export const fetchSetting = async (signal?: AbortSignal): Promise<SettingResponse> => {

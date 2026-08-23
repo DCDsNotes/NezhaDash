@@ -139,15 +139,23 @@ function hasTrafficPlan(parsedData: PublicNoteData | null) {
 
 function getServerTransferStatsCounter(server: NezhaServer, period: "today" | "billing"): TransferCounter {
   const transfer = server.transfer_stats?.[period]
-  const inTransfer = Number(transfer?.in || 0)
-  const outTransfer = Number(transfer?.out || 0)
+  const inTransfer = Math.max(Number(transfer?.in) || 0, 0)
+  const outTransfer = Math.max(Number(transfer?.out) || 0, 0)
 
   // Older dashboard streams do not include transfer_stats. Keep the detail
   // page useful by falling back to the cumulative counters in the live state.
-  if (inTransfer > 0 || outTransfer > 0) {
+  if (transfer) {
     return { in: inTransfer, out: outTransfer }
   }
   return getTransferCounter(server)
+}
+
+function getServerDailyTransferCounter(server: NezhaServer, transferStats?: ReadonlyMap<number, ServerTransferStats>): TransferCounter {
+  const transfer = transferStats?.get(server.id) ?? server.transfer_stats?.today
+  return {
+    in: Math.max(Number(transfer?.in) || 0, 0),
+    out: Math.max(Number(transfer?.out) || 0, 0),
+  }
 }
 
 function formatHeaderBinary(bytes: number, decimals = 1) {
@@ -435,7 +443,7 @@ export function getServerStatus(now: number, server: NezhaServer) {
   return isServerOnline(now, server) ? "online" : "offline"
 }
 
-export function getServerOverviewStats(now: number, servers: NezhaServer[]) {
+export function getServerOverviewStats(now: number, servers: NezhaServer[], transferStats?: ReadonlyMap<number, ServerTransferStats>) {
   let online = 0
   let transferIn = 0
   let transferOut = 0
@@ -443,11 +451,12 @@ export function getServerOverviewStats(now: number, servers: NezhaServer[]) {
   let speedOut = 0
 
   servers.forEach((server) => {
-    if (getServerStatus(now, server) !== "online") return
-    online += 1
-    const dailyTransfer = getServerTransferStatsCounter(server, "today")
+    const dailyTransfer = getServerDailyTransferCounter(server, transferStats)
     transferIn += dailyTransfer.in
     transferOut += dailyTransfer.out
+
+    if (getServerStatus(now, server) !== "online") return
+    online += 1
     speedIn += Number(server.state?.net_in_speed || 0)
     speedOut += Number(server.state?.net_out_speed || 0)
   })

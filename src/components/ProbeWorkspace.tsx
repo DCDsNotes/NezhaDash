@@ -2,6 +2,7 @@ import SearchBox from "@/components/SearchBox"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { type ServerWorkspaceValue, useServerWorkspace } from "@/hooks/use-server-workspace"
 import { useWebSocketControls } from "@/hooks/use-websocket-context"
+import { startFaviconPulse } from "@/lib/favicon-pulse"
 import { loginUserQueryOptions, serverTransferStatsQueryOptions, settingQueryOptions } from "@/lib/query-options"
 import { completePageProgress, setPageProgress } from "@/lib/page-progress"
 import { serverIdToServerKey } from "@/lib/server-key"
@@ -219,12 +220,7 @@ export default function ProbeWorkspace() {
   }, [pageTitle])
 
   useEffect(() => {
-    const favicons = Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"]'))
-    if (favicons.length === 0) return
-    const offline = workspace.totalCounts.offline > 0
-    const icon = offline ? "/icon-offline-animated.svg" : "/icon-animated.svg"
-    const href = `${icon}?v=9&status=${offline ? "offline" : "online"}`
-    favicons.forEach((favicon) => favicon.setAttribute("href", href))
+    return startFaviconPulse(workspace.totalCounts.offline > 0 ? "offline" : "online")
   }, [workspace.totalCounts.offline])
 
   function preloadMap() {

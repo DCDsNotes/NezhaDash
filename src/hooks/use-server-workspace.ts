@@ -1,5 +1,5 @@
 import { useNezhaWsData } from "@/hooks/use-nezha-ws-data"
-import { serverGroupsQueryOptions } from "@/lib/query-options"
+import { serverGroupsQueryOptions, serverTransferStatsQueryOptions } from "@/lib/query-options"
 import { serverSortOptions, sortServers } from "@/lib/server-sort"
 import { getServerOverviewStats, getServerStatus, matchServerSearchWord } from "@/lib/server-view-model"
 import { type NezhaServer, type ServerGroup } from "@/types/nezha-api"
@@ -52,6 +52,7 @@ function getInitialGroup() {
 
 export function useServerWorkspace(): ServerWorkspaceValue {
   const { data: groupData, isError: isGroupError, isLoading: isGroupLoading, isFetched: isGroupFetched } = useQuery(serverGroupsQueryOptions())
+  const { data: transferData, isLoading: isTransferLoading } = useQuery(serverTransferStatsQueryOptions())
   const { data: wsData } = useNezhaWsData()
   const [status, setStatus] = useState<Status>("all")
   const [sortProp, setSortProp] = useState("DisplayIndex")
@@ -98,7 +99,11 @@ export function useServerWorkspace(): ServerWorkspaceValue {
     return sortServers(bySearch, sortProp, sortOrder)
   }, [currentGroup, groupServerIds, now, searchWord, servers, sortOrder, sortProp, status])
 
-  const { totalCounts, headerStats } = useMemo(() => getServerOverviewStats(now, servers), [now, servers])
+  const transferStats = useMemo(
+    () => new Map((transferData?.success ? transferData.data : []).map((item) => [item.server_id, item])),
+    [transferData],
+  )
+  const { totalCounts, headerStats } = useMemo(() => getServerOverviewStats(now, servers, transferStats), [now, servers, transferStats])
 
   const setCurrentGroup = useCallback((value: string) => {
     setCurrentGroupState(value)
@@ -111,7 +116,7 @@ export function useServerWorkspace(): ServerWorkspaceValue {
 
   return useMemo(
     () => ({
-      isLoading: !wsData,
+      isLoading: !wsData || isTransferLoading,
       isGroupLoading,
       isGroupFetched,
       isGroupError,
@@ -149,6 +154,7 @@ export function useServerWorkspace(): ServerWorkspaceValue {
       sortProp,
       status,
       totalCounts,
+      isTransferLoading,
       wsData,
     ],
   )

@@ -6,7 +6,7 @@
 
 const APP_BASE = new URL("./", self.location.href).pathname
 const APP_INDEX = `${APP_BASE}index.html`
-const CACHE_VERSION = "v15"
+const CACHE_VERSION = "v16"
 const CACHE_MAX_AGE = 30 * 24 * 60 * 60 * 1000
 const CACHE_SCOPE = APP_BASE.replace(/[^a-z0-9]/gi, "_")
 const STATIC_CACHE = `static-${CACHE_SCOPE}-${CACHE_VERSION}`
@@ -69,7 +69,7 @@ function offlineResponse() {
 }
 
 function appShellUrls(indexResponse) {
-  const urls = new Set([APP_INDEX, APP_BASE, `${APP_BASE}manifest.json`, `${APP_BASE}icon-animated.svg?v=9`])
+  const urls = new Set([APP_INDEX, APP_BASE, `${APP_BASE}manifest.json`, `${APP_BASE}icon.svg?v=10`])
   try {
     const html = indexResponse.clone()
     return html.text().then((source) => {
