@@ -205,7 +205,7 @@ async function mockBackend(
             monitor_name: "东京 ICMP",
             server_id: 1,
             server_name: servers[0].name,
-            created_at: [now / 1000 - 3600, now / 1000 - 1800, now / 1000 - 600],
+            created_at: [now / 1000 - 3570, now / 1000 - 1770, now / 1000 - 570],
             avg_delay: [48, 51, 45],
             packet_loss: [0, 1, 0],
           },
@@ -259,6 +259,20 @@ test("keeps the header visible through initial loading and completes progress on
 
   await expect(page.locator(".probe-site-header")).toBeVisible()
   await expect(page.locator("#app-progress")).toHaveCSS("opacity", "0")
+})
+
+test("renders staggered monitor samples as continuous lines", async ({ page }) => {
+  await mockBackend(page)
+  await page.goto("/server/25ce76bd")
+
+  const charts = page.locator(".server-monitor:not(.server-speed) .line-box")
+  await expect(charts).toHaveCount(2)
+
+  for (let index = 0; index < 2; index += 1) {
+    const chart = charts.nth(index)
+    await expect(chart.locator(".chart path[stroke]")).toHaveCount(2)
+    await expect(chart.locator(".chart circle")).toHaveCount(0)
+  }
 })
 
 async function assertNoHorizontalOverflow(page: Page) {

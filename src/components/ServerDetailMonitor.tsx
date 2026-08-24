@@ -242,7 +242,9 @@ function buildMonitorChartData({
     let lossTotal = 0
     let lossCount = 0
 
-    dateList.forEach((time) => {
+    const seriesTimes = Array.from(new Set([...delayByTime.keys(), ...lossByTime.keys()])).sort((a, b) => a - b)
+
+    seriesTimes.forEach((time) => {
       const delayValRaw = delayByTime.get(time)
       const delayVal =
         typeof delayValRaw === "number" && Number.isFinite(delayValRaw) ? Number((Math.round(delayValRaw * 100) / 100).toFixed(2)) : null
