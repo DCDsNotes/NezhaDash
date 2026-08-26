@@ -309,8 +309,8 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto("/")
 
-  await expect(page).toHaveTitle("节点监控")
-  await expect(page.locator(".probe-site-brand strong")).toHaveText("节点监控")
+  await expect(page).toHaveTitle("哪吒监控")
+  await expect(page.locator(".probe-site-brand strong")).toHaveText("哪吒监控")
   await expect(page.locator(".probe-node-item")).toHaveCount(2)
   await expect(page.locator(".probe-node-item__identity").first()).toHaveCSS("width", "260px")
   await expect(page.locator(".probe-node-item__speeds").first()).toHaveCSS("width", "200px")
@@ -342,6 +342,11 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await expect(page.locator(".status-network")).toContainText("18M/s")
   await expect(page.locator(".status-network")).toContainText("7M/s")
   await expect(page.locator(".status-current .status-panel__header")).toContainText(/\d+\/\d+/)
+  const activeStatusIndicator = await page.locator(".status-controls__state--active").evaluate((element) => {
+    const style = window.getComputedStyle(element, "::after")
+    return { left: style.left, right: style.right, bottom: style.bottom, height: style.height, zIndex: style.zIndex }
+  })
+  expect(activeStatusIndicator).toEqual({ left: "-1px", right: "-1px", bottom: "-1px", height: "3px", zIndex: "2" })
   await expect(page.locator(".probe-site-footer")).toHaveCount(0)
   await page.locator(".status-facts__action").click()
   await expect(page.locator(".status-renewal-dialog")).toBeVisible()
@@ -445,7 +450,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
 
   await page.goto("/missing-node-page")
   await expect(page.getByRole("heading", { name: "页面不存在" })).toBeVisible()
-  await expect(page).toHaveTitle("页面不存在 - 节点监控")
+  await expect(page).toHaveTitle("页面不存在 - 哪吒监控")
   await expect(page.locator(".not-found-page__path")).toContainText("/missing-node-page")
   await expect(page.locator(".not-found-page__visual")).toBeVisible()
   await assertNoHorizontalOverflow(page)
@@ -453,7 +458,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await Promise.all([page.waitForURL(/\/$/), page.getByRole("link", { name: "回到主页" }).click()])
 
   await Promise.all([page.waitForURL(/\/server\/25ce76bd$/), page.getByLabel("查看 上海边缘节点 详情").click()])
-  await expect(page).toHaveTitle("上海边缘节点 - 节点监控")
+  await expect(page).toHaveTitle("上海边缘节点 - 哪吒监控")
   await expect(page.getByText("网络速度", { exact: true })).toBeVisible()
   await expect(page.locator(".probe-detail-priority")).toContainText("18M/s")
   await expect(page.locator(".probe-detail-priority")).toContainText("7M/s")
@@ -521,7 +526,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
 
   await page.reload()
   await expect(page).toHaveURL(/\/server\/25ce76bd$/)
-  await expect(page).toHaveTitle("上海边缘节点 - 节点监控")
+  await expect(page).toHaveTitle("上海边缘节点 - 哪吒监控")
   await expect(page.getByText("网络速度", { exact: true })).toBeVisible()
   await expect(page.locator(".probe-detail-priority")).toContainText("18M/s")
 
@@ -580,7 +585,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
 
   await page.goto("/missing-node-page")
   await expect(page.getByRole("heading", { name: "页面不存在" })).toBeVisible()
-  await expect(page).toHaveTitle("页面不存在 - 节点监控")
+  await expect(page).toHaveTitle("页面不存在 - 哪吒监控")
   await assertNoHorizontalOverflow(page)
   await screenshot(page, testInfo, "not-found-mobile.png")
 })
@@ -758,7 +763,7 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
   await expect(page.locator(".probe-site-actions__search + a[aria-label='IP 分流与泄露检测']")).toHaveCount(1)
 
   await Promise.all([page.waitForURL(/\/network$/), networkLink.click()])
-  await expect(page).toHaveTitle("分流查询 - 节点监控")
+  await expect(page).toHaveTitle("分流查询 - 哪吒监控")
   await expect(page.getByRole("heading", { name: "网络与 IP 分流检测" })).toBeVisible()
   await expect(page.getByRole("heading", { name: "我的 IP" })).toBeVisible()
   await expect(page.getByRole("heading", { name: "网站分流测试" })).toBeVisible()
