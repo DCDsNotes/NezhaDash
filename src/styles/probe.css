@@ -304,6 +304,14 @@ body {
   content: "";
 }
 
+.status-controls__states .status-controls__state--active:first-child::after {
+  left: -2px;
+}
+
+.status-controls__states .status-controls__state--active:last-child::after {
+  right: -2px;
+}
+
 .status-controls__states strong {
   color: var(--probe-text);
   font-size: 12px;
@@ -1068,6 +1076,7 @@ body {
 }
 
 .status-current .status-controls {
+  overflow: visible;
   margin: 0;
   border: 0;
   border-bottom: 1px solid var(--probe-border);

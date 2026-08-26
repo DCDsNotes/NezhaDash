@@ -346,7 +346,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
     const style = window.getComputedStyle(element, "::after")
     return { left: style.left, right: style.right, bottom: style.bottom, height: style.height, zIndex: style.zIndex }
   })
-  expect(activeStatusIndicator).toEqual({ left: "-1px", right: "-1px", bottom: "-1px", height: "3px", zIndex: "2" })
+  expect(activeStatusIndicator).toEqual({ left: "-2px", right: "-1px", bottom: "-1px", height: "3px", zIndex: "2" })
   await expect(page.locator(".probe-site-footer")).toHaveCount(0)
   await page.locator(".status-facts__action").click()
   await expect(page.locator(".status-renewal-dialog")).toBeVisible()
@@ -359,6 +359,11 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
   await page.getByRole("button", { name: /离线节点 1/ }).click()
   await expect(page.locator(".probe-node-item")).toHaveCount(1)
   await expect(page.locator(".status-current .status-panel__header")).toContainText("1/2")
+  const offlineStatusIndicator = await page.locator(".status-controls__state--active").evaluate((element) => {
+    const style = window.getComputedStyle(element, "::after")
+    return { left: style.left, right: style.right }
+  })
+  expect(offlineStatusIndicator).toEqual({ left: "-1px", right: "-2px" })
   await expect(page.locator(".status-network")).toContainText("18M/s")
   await expect(page.locator(".status-network")).toContainText("7M/s")
   await page.getByRole("button", { name: /全部状态 2/ }).click()
