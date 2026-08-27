@@ -422,8 +422,8 @@ export default function MiniLineChart({
     if (left + w > cw - 10) left = hoverX - w - 12
     left = Math.max(10, Math.min(left, maxLeft))
 
-    let top = 10
-    if (ch && h && top + h > ch - 10) top = Math.max(10, ch - h - 10)
+    let top = 5
+    if (ch && h && top + h > ch - 5) top = Math.max(5, ch - h - 5)
 
     return { left: `${left}px`, top: `${top}px` }
   }, [containerHeight, containerWidth, hoverX, tooltipData, tooltipSize.h, tooltipSize.w])
@@ -532,7 +532,7 @@ export default function MiniLineChart({
             const y = paddingTop + plotHeight - clamp01(tick / yMax) * plotHeight
             const label = yAxisLabelFormatter(tick)
             return (
-              <text key={`yl_${tick}`} x={paddingLeft - 6} y={y + 4} textAnchor="end" fontSize="12" fontWeight="700" fill="rgba(68,88,110,0.84)">
+              <text key={`yl_${tick}`} x={paddingLeft - 6} y={y + 4} textAnchor="end" fontSize="10" fontWeight="600" fill="rgba(68,88,110,0.84)">
                 {label}
               </text>
             )
@@ -548,8 +548,8 @@ export default function MiniLineChart({
                   x={paddingLeft + plotWidth + 6}
                   y={y + 4}
                   textAnchor="start"
-                  fontSize="12"
-                  fontWeight="700"
+                  fontSize="10"
+                  fontWeight="600"
                   fill="rgba(68,88,110,0.70)"
                 >
                   {label}
@@ -569,8 +569,8 @@ export default function MiniLineChart({
                 x={x}
                 y={viewHeight - 6}
                 textAnchor={isFirst ? "start" : isLast ? "end" : "middle"}
-                fontSize="12"
-                fontWeight="700"
+                fontSize="10"
+                fontWeight="600"
                 fill="rgba(68,88,110,0.76)"
               >
                 {label}

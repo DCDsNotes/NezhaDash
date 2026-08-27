@@ -768,7 +768,7 @@
 }
 
 .server-detail-page .server-monitor__placeholder-chart {
-  background: #f8faf9;
+  background: var(--chart-placeholder-background);
   border: 1px solid #f0f4f2;
   box-shadow: none;
 }
