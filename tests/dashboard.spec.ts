@@ -346,7 +346,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
     const style = window.getComputedStyle(element, "::after")
     return { left: style.left, right: style.right, bottom: style.bottom, height: style.height, zIndex: style.zIndex }
   })
-  expect(activeStatusIndicator).toEqual({ left: "-2px", right: "-1px", bottom: "-1px", height: "3px", zIndex: "2" })
+  expect(activeStatusIndicator).toEqual({ left: "-1px", right: "-1px", bottom: "-1px", height: "3px", zIndex: "2" })
   const firstTabEdge = await page.locator(".status-controls__state--active").evaluate((element) => {
     const panel = element.closest<HTMLElement>(".status-current")
     const tabRect = element.getBoundingClientRect()
@@ -359,7 +359,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
     }
   })
   expect(firstTabEdge.panelOverflow).toBe("visible")
-  expect(firstTabEdge.indicatorLeft).toBeLessThanOrEqual(firstTabEdge.panelLeft)
+  expect(firstTabEdge.indicatorLeft).toBeCloseTo(firstTabEdge.panelLeft, 5)
   await expect(page.locator(".probe-site-footer")).toHaveCount(0)
   await page.locator(".status-facts__action").click()
   await expect(page.locator(".status-renewal-dialog")).toBeVisible()
@@ -376,7 +376,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
     const style = window.getComputedStyle(element, "::after")
     return { left: style.left, right: style.right }
   })
-  expect(offlineStatusIndicator).toEqual({ left: "-1px", right: "-2px" })
+  expect(offlineStatusIndicator).toEqual({ left: "-1px", right: "-1px" })
   const lastTabEdge = await page.locator(".status-controls__state--active").evaluate((element) => {
     const panel = element.closest<HTMLElement>(".status-current")
     const tabRect = element.getBoundingClientRect()
@@ -387,7 +387,7 @@ test("dashboard interactions remain usable on desktop and mobile", async ({ page
       panelRight: panelRect?.right ?? Number.NEGATIVE_INFINITY,
     }
   })
-  expect(lastTabEdge.indicatorRight).toBeGreaterThanOrEqual(lastTabEdge.panelRight)
+  expect(lastTabEdge.indicatorRight).toBeCloseTo(lastTabEdge.panelRight, 5)
   await expect(page.locator(".status-network")).toContainText("18M/s")
   await expect(page.locator(".status-network")).toContainText("7M/s")
   await page.getByRole("button", { name: /全部状态 2/ }).click()
