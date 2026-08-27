@@ -422,7 +422,7 @@ export default function MiniLineChart({
     if (left + w > cw - 10) left = hoverX - w - 12
     left = Math.max(10, Math.min(left, maxLeft))
 
-    let top = 5
+    let top = 15
     if (ch && h && top + h > ch - 5) top = Math.max(5, ch - h - 5)
 
     return { left: `${left}px`, top: `${top}px` }
