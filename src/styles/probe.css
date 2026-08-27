@@ -1075,6 +1075,10 @@ body {
   color: var(--probe-info);
 }
 
+.status-current {
+  overflow: visible;
+}
+
 .status-current .status-controls {
   overflow: visible;
   margin: 0;
