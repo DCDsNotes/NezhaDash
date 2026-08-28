@@ -1911,16 +1911,36 @@ html {
 }
 
 .status-hero__mark .ri-pulse-line {
+  position: relative;
   display: block;
-  width: 0.9em;
-  height: 0.9em;
-  border-radius: 50%;
-  background: currentColor;
+  width: 1em;
+  height: 1em;
+  background: transparent;
   -webkit-mask: none;
   mask: none;
+  vertical-align: 0;
+}
+
+.status-hero__mark .ri-pulse-line::before,
+.status-hero__mark .ri-pulse-line::after {
+  position: absolute;
+  inset: 20%;
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
   transform-origin: center;
-  will-change: transform, box-shadow;
-  animation: status-pulse-breathe 1.15s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.status-hero__mark .ri-pulse-line::before {
+  z-index: 1;
+  background: currentColor;
+  animation: status-pulse-core 1.35s ease-in-out infinite;
+}
+
+.status-hero__mark .ri-pulse-line::after {
+  border: 2px solid currentColor;
+  animation: status-pulse-ring 1.35s ease-out infinite;
 }
 
 .status-hero__mark--offline {
@@ -1928,15 +1948,34 @@ html {
   color: var(--probe-offline);
 }
 
-@keyframes status-pulse-breathe {
+@keyframes status-pulse-core {
   0%,
   100% {
-    transform: scale(0.78);
-    box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 0%, transparent);
+    transform: scale(0.76);
   }
 
   50% {
-    transform: scale(1.16);
-    box-shadow: 0 0 0 0.3em color-mix(in srgb, currentColor 22%, transparent);
+    transform: scale(1.18);
+  }
+}
+
+@keyframes status-pulse-ring {
+  0% {
+    opacity: 0.62;
+    transform: scale(0.72);
+  }
+
+  76%,
+  100% {
+    opacity: 0;
+    transform: scale(1.85);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-hero__mark .ri-pulse-line::before,
+  .status-hero__mark .ri-pulse-line::after {
+    animation-duration: 2.2s !important;
+    animation-iteration-count: infinite !important;
   }
 }

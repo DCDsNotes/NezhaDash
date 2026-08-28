@@ -219,23 +219,39 @@ async function mockBackend(
 }
 
 test("status indicators pulse and reflect offline server state", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" })
   await mockBackend(page)
   await page.goto("/")
 
   const heroPulse = page.locator(".status-hero__mark .ri-pulse-line")
-  await expect(heroPulse).toHaveCSS("animation-name", "status-pulse-breathe")
-
   const pulseFrames = await heroPulse.evaluate(async (element) => {
-    const samples: string[] = []
+    const samples: Array<{ core: string; ring: string }> = []
 
-    for (let index = 0; index < 5; index += 1) {
-      samples.push(getComputedStyle(element).transform)
-      await new Promise((resolve) => window.setTimeout(resolve, 120))
+    for (let index = 0; index < 6; index += 1) {
+      samples.push({
+        core: getComputedStyle(element, "::before").transform,
+        ring: getComputedStyle(element, "::after").opacity,
+      })
+      await new Promise((resolve) => window.setTimeout(resolve, 180))
     }
 
     return samples
   })
-  expect(new Set(pulseFrames).size).toBeGreaterThan(1)
+  expect(new Set(pulseFrames.map(({ core }) => core)).size).toBeGreaterThan(1)
+  expect(new Set(pulseFrames.map(({ ring }) => ring)).size).toBeGreaterThan(1)
+
+  const animations = await heroPulse.evaluate((element) => ({
+    core: getComputedStyle(element, "::before").animationName,
+    coreIterations: getComputedStyle(element, "::before").animationIterationCount,
+    ring: getComputedStyle(element, "::after").animationName,
+    ringIterations: getComputedStyle(element, "::after").animationIterationCount,
+  }))
+  expect(animations).toEqual({
+    core: "status-pulse-core",
+    coreIterations: "infinite",
+    ring: "status-pulse-ring",
+    ringIterations: "infinite",
+  })
 
   const favicon = page.locator("#app-favicon")
   await expect(favicon).toHaveAttribute("data-status", "offline")
