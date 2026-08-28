@@ -1924,7 +1924,7 @@ html {
 .status-hero__mark .ri-pulse-line::before,
 .status-hero__mark .ri-pulse-line::after {
   position: absolute;
-  inset: 20%;
+  inset: var(--status-pulse-core-inset, 12%);
   border-radius: 50%;
   content: "";
   pointer-events: none;
@@ -1935,12 +1935,12 @@ html {
 .status-hero__mark .ri-pulse-line::before {
   z-index: 1;
   background: currentColor;
-  animation: status-pulse-core 1.35s ease-in-out infinite;
+  animation: status-pulse-core var(--status-pulse-duration, 1s) ease-in-out infinite;
 }
 
 .status-hero__mark .ri-pulse-line::after {
   border: 2px solid currentColor;
-  animation: status-pulse-ring 1.35s ease-out infinite;
+  animation: status-pulse-ring var(--status-pulse-duration, 1s) ease-out infinite;
 }
 
 .status-hero__mark--offline {
@@ -1951,31 +1951,30 @@ html {
 @keyframes status-pulse-core {
   0%,
   100% {
-    transform: scale(0.76);
+    transform: scale(var(--status-pulse-core-min-scale, 0.86));
   }
 
   50% {
-    transform: scale(1.18);
+    transform: scale(var(--status-pulse-core-max-scale, 1.16));
   }
 }
 
 @keyframes status-pulse-ring {
   0% {
-    opacity: 0.62;
-    transform: scale(0.72);
+    opacity: var(--status-pulse-ring-start-opacity, 0.62);
+    transform: scale(var(--status-pulse-ring-start-scale, 0.72));
   }
 
-  76%,
   100% {
     opacity: 0;
-    transform: scale(1.85);
+    transform: scale(var(--status-pulse-ring-end-scale, 1.7));
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .status-hero__mark .ri-pulse-line::before,
   .status-hero__mark .ri-pulse-line::after {
-    animation-duration: 2.2s !important;
+    animation-duration: var(--status-pulse-duration, 1s) !important;
     animation-iteration-count: infinite !important;
   }
 }

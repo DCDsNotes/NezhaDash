@@ -5,6 +5,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenu
 import { type ServerWorkspaceValue } from "@/hooks/use-server-workspace"
 import { serverIdToServerKey } from "@/lib/server-key"
 import { getServerCardViewModel, getServerStatus } from "@/lib/server-view-model"
+import { STATUS_PULSE_STYLE } from "@/lib/status-pulse"
 import { cn } from "@/lib/utils"
 import dayjs from "dayjs"
 import { useMemo, useState } from "react"
@@ -180,7 +181,11 @@ export default function Servers() {
   return (
     <div className="status-page">
       <section className="status-hero" aria-labelledby="system-status-title">
-        <span className={cn("status-hero__mark", { "status-hero__mark--offline": overallState === "attention" })} aria-hidden="true">
+        <span
+          className={cn("status-hero__mark", { "status-hero__mark--offline": overallState === "attention" })}
+          style={STATUS_PULSE_STYLE}
+          aria-hidden="true"
+        >
           <i className="ri-pulse-line" />
         </span>
         <h1 id="system-status-title">系统状态</h1>

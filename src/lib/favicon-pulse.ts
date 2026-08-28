@@ -1,6 +1,10 @@
+import { STATUS_PULSE, getStatusPulseFrame } from "@/lib/status-pulse"
+
 const FAVICON_SIZE = 64
-const FAVICON_FRAME_COUNT = 36
-const FAVICON_CYCLE_MS = 1_150
+const FAVICON_FRAME_COUNT = 60
+const FAVICON_OUTER_RADIUS = (88 / 192) * FAVICON_SIZE
+const FAVICON_CORE_RADIUS = (52 / 192) * FAVICON_SIZE
+const FAVICON_RING_WIDTH = (6 / 192) * FAVICON_SIZE
 
 type FaviconStatus = "online" | "offline"
 
@@ -10,28 +14,6 @@ const palettes: Record<FaviconStatus, { outer: string; inner: string }> = {
 }
 
 const frameCache = new Map<FaviconStatus, string[]>()
-
-function easeInOut(progress: number) {
-  let low = 0
-  let high = 1
-
-  for (let index = 0; index < 12; index += 1) {
-    const time = (low + high) / 2
-    const inverse = 1 - time
-    const x = 3 * inverse * inverse * time * 0.42 + 3 * inverse * time * time * 0.58 + time * time * time
-    if (x < progress) low = time
-    else high = time
-  }
-
-  const time = (low + high) / 2
-  const inverse = 1 - time
-  return 3 * inverse * time * time + time * time * time
-}
-
-function pulseScale(progress: number) {
-  const halfCycleProgress = progress <= 0.5 ? progress * 2 : (1 - progress) * 2
-  return 0.82 + (1.18 - 0.82) * easeInOut(halfCycleProgress)
-}
 
 function createFrames(status: FaviconStatus) {
   const cached = frameCache.get(status)
@@ -46,16 +28,26 @@ function createFrames(status: FaviconStatus) {
   const palette = palettes[status]
   const frames = Array.from({ length: FAVICON_FRAME_COUNT }, (_, index) => {
     const progress = index / FAVICON_FRAME_COUNT
+    const pulse = getStatusPulseFrame(progress)
     context.clearRect(0, 0, FAVICON_SIZE, FAVICON_SIZE)
 
     context.fillStyle = palette.outer
     context.beginPath()
-    context.arc(FAVICON_SIZE / 2, FAVICON_SIZE / 2, (88 / 192) * FAVICON_SIZE, 0, Math.PI * 2)
+    context.arc(FAVICON_SIZE / 2, FAVICON_SIZE / 2, FAVICON_OUTER_RADIUS, 0, Math.PI * 2)
     context.fill()
+
+    context.save()
+    context.globalAlpha = pulse.ringOpacity
+    context.strokeStyle = palette.inner
+    context.lineWidth = FAVICON_RING_WIDTH
+    context.beginPath()
+    context.arc(FAVICON_SIZE / 2, FAVICON_SIZE / 2, FAVICON_CORE_RADIUS * pulse.ringScale, 0, Math.PI * 2)
+    context.stroke()
+    context.restore()
 
     context.fillStyle = palette.inner
     context.beginPath()
-    context.arc(FAVICON_SIZE / 2, FAVICON_SIZE / 2, (48 / 192) * FAVICON_SIZE * pulseScale(progress), 0, Math.PI * 2)
+    context.arc(FAVICON_SIZE / 2, FAVICON_SIZE / 2, FAVICON_CORE_RADIUS * pulse.coreScale, 0, Math.PI * 2)
     context.fill()
 
     return canvas.toDataURL("image/png")
@@ -75,14 +67,15 @@ export function startFaviconPulse(status: FaviconStatus) {
   favicon.type = "image/png"
   favicon.sizes.value = `${FAVICON_SIZE}x${FAVICON_SIZE}`
   favicon.dataset.status = status
+  favicon.dataset.pulseCycle = String(STATUS_PULSE.cycleMs)
 
   let animationFrame = 0
   let renderedFrame = -1
   const startedAt = performance.now()
 
   const render = (now: number) => {
-    const elapsed = (now - startedAt) % FAVICON_CYCLE_MS
-    const frame = Math.floor((elapsed / FAVICON_CYCLE_MS) * frames.length)
+    const elapsed = (now - startedAt) % STATUS_PULSE.cycleMs
+    const frame = Math.floor((elapsed / STATUS_PULSE.cycleMs) * frames.length)
     if (frame !== renderedFrame) {
       favicon.href = frames[frame]
       renderedFrame = frame

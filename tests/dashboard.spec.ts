@@ -242,25 +242,39 @@ test("status indicators pulse and reflect offline server state", async ({ page }
 
   const animations = await heroPulse.evaluate((element) => ({
     core: getComputedStyle(element, "::before").animationName,
+    coreDuration: getComputedStyle(element, "::before").animationDuration,
     coreIterations: getComputedStyle(element, "::before").animationIterationCount,
+    coreWidth: Number.parseFloat(getComputedStyle(element, "::before").width),
     ring: getComputedStyle(element, "::after").animationName,
+    ringDuration: getComputedStyle(element, "::after").animationDuration,
     ringIterations: getComputedStyle(element, "::after").animationIterationCount,
   }))
-  expect(animations).toEqual({
-    core: "status-pulse-core",
-    coreIterations: "infinite",
-    ring: "status-pulse-ring",
-    ringIterations: "infinite",
-  })
+  expect(animations.core).toBe("status-pulse-core")
+  expect(animations.ring).toBe("status-pulse-ring")
+  expect(animations.coreDuration).toBe("1s")
+  expect(animations.ringDuration).toBe(animations.coreDuration)
+  expect(animations.coreIterations).toBe("infinite")
+  expect(animations.ringIterations).toBe("infinite")
+  expect(animations.coreWidth).toBeGreaterThan(14)
 
   const favicon = page.locator("#app-favicon")
   await expect(favicon).toHaveAttribute("data-status", "offline")
+  await expect(favicon).toHaveAttribute("data-pulse-cycle", "1000")
   await expect(favicon).toHaveAttribute("type", "image/png")
   await expect(favicon).toHaveAttribute("href", /^data:image\/png;base64,/)
   await expect(page.locator('link[rel~="icon"]')).toHaveCount(1)
 
-  const firstFrame = await favicon.getAttribute("href")
-  await expect.poll(() => favicon.getAttribute("href"), { timeout: 1_000 }).not.toBe(firstFrame)
+  const faviconFrames = await favicon.evaluate(async (element) => {
+    const frames: string[] = []
+
+    for (let index = 0; index < 12; index += 1) {
+      frames.push(element.href)
+      await new Promise((resolve) => window.setTimeout(resolve, 25))
+    }
+
+    return frames
+  })
+  expect(new Set(faviconFrames).size).toBeGreaterThan(6)
 })
 
 test("homepage daily traffic uses the persisted daily API totals", async ({ page }) => {
