@@ -77,7 +77,7 @@ main.tsx
 
 `src/components/ui` 是本地拥有的 shadcn 风格组件代码。Dialog、DropdownMenu、Switch 和 ToggleGroup 由 Radix UI 提供焦点管理、键盘交互、ARIA 与 Portal 行为，Button 使用 Radix Slot 支持 `asChild`。
 
-业务组件中的数据逻辑与图表契约保持稳定。`src/styles/probe.css` 定义工作台的网格、色彩、间距和响应式覆盖，`workspace.css` 只保留首屏和弹层样式，详情样式随详情路由按需加载。Tailwind 用于基础组件状态、可访问焦点和尺寸；领域图表继续由独立 CSS 和 SVG 组件绘制。
+业务组件中的数据逻辑与图表契约保持稳定。详情页图表统一复用 `ServerMonitorTimeRange`、`ServerMonitorCategoryContent` 和 `ServerMonitorPlaceholder`，时间与数值边界处理集中在 `src/lib`，避免速度和监控视图分别维护相同契约。`src/styles/probe.css` 定义工作台的网格、色彩、间距和响应式覆盖，`workspace.css` 只保留首屏和弹层样式，详情样式随详情路由按需加载。Tailwind 用于基础组件状态、可访问焦点和尺寸；领域图表继续由独立 CSS 和 SVG 组件绘制。
 
 ## 核心功能
 

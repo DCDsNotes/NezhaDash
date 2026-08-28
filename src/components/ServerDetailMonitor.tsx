@@ -1,14 +1,16 @@
 import MiniLineChart, { type LineChartPoint, type LineChartSeries } from "@/components/MiniLineChart"
+import { ServerMonitorCategoryContent, type ServerMonitorMetric, getServerMonitorCategoryStyle } from "@/components/ServerMonitorCategory"
+import { ServerMonitorPlaceholder } from "@/components/ServerMonitorPlaceholder"
+import { ServerMonitorTimeRange } from "@/components/ServerMonitorTimeRange"
 import { Switch } from "@/components/ui/switch"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useNearViewport } from "@/hooks/use-near-viewport"
+import { clampPercent } from "@/lib/number"
 import { monitorQueryOptions } from "@/lib/query-options"
+import { normalizeTimestampMs } from "@/lib/time"
 import { cn } from "@/lib/utils"
 import { type NezhaMonitor } from "@/types/nezha-api"
 import { useQuery } from "@tanstack/react-query"
-import { type CSSProperties, useEffect, useMemo, useState } from "react"
-
-type MinuteOption = { label: string; value: number }
+import { useEffect, useMemo, useState } from "react"
 
 type CateItem = {
   id: number
@@ -27,15 +29,6 @@ type MonitorChartData = {
   seriesList: LineChartSeries[]
   seriesByCate: LineChartSeries[][]
 }
-
-const baseMinutes: MinuteOption[] = [
-  { label: "30分钟", value: 30 },
-  { label: "1小时", value: 60 },
-  { label: "3小时", value: 180 },
-  { label: "6小时", value: 360 },
-  { label: "12小时", value: 720 },
-  { label: "24小时", value: 1440 },
-]
 
 const DEFAULT_LINE_COLORS = [
   "#5470C6",
@@ -59,13 +52,6 @@ const DEFAULT_LINE_COLORS = [
   "#546570",
   "#C4CCD3",
 ]
-
-function normalizeTimestampMs(t: number) {
-  const n = Number(t)
-  if (!Number.isFinite(n)) return 0
-  if (n > 1e11) return n
-  return n * 1000
-}
 
 function getLineColor(id: number) {
   const idx = Math.abs(Number(id) || 0) % DEFAULT_LINE_COLORS.length
@@ -100,13 +86,6 @@ function formatLatency(value: number) {
 function formatPercent(value: number) {
   if (typeof value !== "number" || !Number.isFinite(value)) return "-"
   return `${value}%`
-}
-
-function clampPercent(n: number) {
-  if (!Number.isFinite(n)) return 0
-  if (n < 0) return 0
-  if (n > 100) return 100
-  return n
 }
 
 function calculatePacketLoss(delays: Array<number | null | undefined>): number[] {
@@ -345,6 +324,13 @@ function writeLocalBool(key: string, val: boolean) {
   }
 }
 
+function getCategoryMetrics(cate: CateItem): ServerMonitorMetric[] {
+  return [
+    { key: "latency", modifier: "server-monitor-category__metric--latency", label: "延时", value: formatLatency(cate.avg) },
+    { key: "loss", modifier: "server-monitor-category__metric--loss", label: "丢包", value: formatPercent(cate.loss) },
+  ]
+}
+
 function readLocalChartType() {
   if (typeof window === "undefined") return "single" as const
   try {
@@ -391,13 +377,7 @@ export default function ServerDetailMonitor({ now, serverId, onReady }: { now: n
     })
   }, [monitorData])
 
-  const minutes = baseMinutes
   const chartNowTime = Math.floor((normalizeTimestampMs(now) || Date.now()) / 60000) * 60000
-
-  const minuteActiveArrowStyle = useMemo(() => {
-    const index = minutes.findIndex((m) => m.value === minute)
-    return { left: `calc(${Math.max(0, index)} * var(--minute-item-width))` }
-  }, [minutes, minute])
 
   const chartData = useMemo(
     () =>
@@ -431,10 +411,6 @@ export default function ServerDetailMonitor({ now, serverId, onReady }: { now: n
     }
   }
 
-  function toggleMinute(val: number) {
-    setMinute(val)
-  }
-
   function handleMultiCateClick(id: number) {
     setShowCates((prev) => {
       const ids = chartData.cateList.map((c) => c.id)
@@ -457,8 +433,6 @@ export default function ServerDetailMonitor({ now, serverId, onReady }: { now: n
   }
 
   const hasMonitorData = monitorData.length > 0
-  const cateStyle = (color: string) => ({ ["--cate-color" as `--${string}`]: color }) as CSSProperties
-
   return (
     <div
       ref={containerRef}
@@ -508,39 +482,12 @@ export default function ServerDetailMonitor({ now, serverId, onReady }: { now: n
               thumbClassName="server-monitor__switch-dot"
             />
           </label>
-          <div className="server-monitor__range">
-            <span className="server-monitor__range-label">最近</span>
-            <ToggleGroup
-              type="single"
-              value={String(minute)}
-              onValueChange={(value) => {
-                if (value) toggleMinute(Number(value))
-              }}
-              className="server-monitor__minutes"
-              aria-label="监控时间范围"
-            >
-              {minutes.map((m) => (
-                <ToggleGroupItem
-                  key={m.value}
-                  value={String(m.value)}
-                  className={cn("server-monitor__minute", { "server-monitor__minute--active": m.value === minute })}
-                  aria-label={`最近${m.label}`}
-                >
-                  <span>{m.label}</span>
-                </ToggleGroupItem>
-              ))}
-              <div className="server-monitor__minute-indicator" style={minuteActiveArrowStyle} />
-            </ToggleGroup>
-          </div>
+          <ServerMonitorTimeRange value={minute} onValueChange={setMinute} ariaLabel="监控时间范围" />
         </div>
       </div>
 
       {isLoading ? (
-        <div className="server-monitor__placeholder">
-          <div className="server-monitor__placeholder-line server-monitor__placeholder-line--w60" />
-          <div className="server-monitor__placeholder-line server-monitor__placeholder-line--w40" />
-          <div className="server-monitor__placeholder-chart" />
-        </div>
+        <ServerMonitorPlaceholder withHeaderLines />
       ) : isError ? (
         <div className="server-monitor__empty" role="alert">
           监控数据加载失败
@@ -552,21 +499,8 @@ export default function ServerDetailMonitor({ now, serverId, onReady }: { now: n
           {chartData.cateList.map((cate, index) => (
             <div key={cate.id} className="server-monitor__chart">
               <div className="server-monitor__chart-label">
-                <div className="server-monitor-category" style={cateStyle(cate.color)} title={cate.title}>
-                  <span className="server-monitor-category__legend" />
-                  <span className="server-monitor-category__name" title={cate.name}>
-                    {cate.name}
-                  </span>
-                  <div className="server-monitor-category__metrics">
-                    <span className="server-monitor-category__metric server-monitor-category__metric--latency">
-                      <span className="server-monitor-category__metric-label">延时</span>
-                      <span className="server-monitor-category__metric-value">{formatLatency(cate.avg)}</span>
-                    </span>
-                    <span className="server-monitor-category__metric server-monitor-category__metric--loss">
-                      <span className="server-monitor-category__metric-label">丢包</span>
-                      <span className="server-monitor-category__metric-value">{formatPercent(cate.loss)}</span>
-                    </span>
-                  </div>
+                <div className="server-monitor-category" style={getServerMonitorCategoryStyle(cate.color)} title={cate.title}>
+                  <ServerMonitorCategoryContent name={cate.name} nameTitle={cate.name} metrics={getCategoryMetrics(cate)} />
                 </div>
               </div>
               <MiniLineChart seriesList={chartData.seriesByCate[index] || []} dateList={chartData.dateList} />
@@ -583,25 +517,12 @@ export default function ServerDetailMonitor({ now, serverId, onReady }: { now: n
                 className={cn("server-monitor-category", {
                   "server-monitor-category--disabled": showCates[cate.id] === false,
                 })}
-                style={cateStyle(cate.color)}
+                style={getServerMonitorCategoryStyle(cate.color)}
                 title={cate.title}
                 onClick={() => handleMultiCateClick(cate.id)}
                 aria-pressed={showCates[cate.id] !== false}
               >
-                <span className="server-monitor-category__legend" />
-                <span className="server-monitor-category__name" title={cate.name}>
-                  {cate.name}
-                </span>
-                <div className="server-monitor-category__metrics">
-                  <span className="server-monitor-category__metric server-monitor-category__metric--latency">
-                    <span className="server-monitor-category__metric-label">延时</span>
-                    <span className="server-monitor-category__metric-value">{formatLatency(cate.avg)}</span>
-                  </span>
-                  <span className="server-monitor-category__metric server-monitor-category__metric--loss">
-                    <span className="server-monitor-category__metric-label">丢包</span>
-                    <span className="server-monitor-category__metric-value">{formatPercent(cate.loss)}</span>
-                  </span>
-                </div>
+                <ServerMonitorCategoryContent name={cate.name} nameTitle={cate.name} metrics={getCategoryMetrics(cate)} />
               </button>
             ))}
           </div>

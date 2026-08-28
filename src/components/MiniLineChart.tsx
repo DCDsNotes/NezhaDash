@@ -1,3 +1,5 @@
+import { clampInteger, clampNumber, clampPercent } from "@/lib/number"
+import { normalizeTimestampMs } from "@/lib/time"
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 
 export type LineChartPoint = readonly [time: number, value: number | null]
@@ -26,13 +28,6 @@ type TooltipRow = {
   value: string
 }
 
-function normalizeTimestampMs(t: number) {
-  const n = Number(t)
-  if (!Number.isFinite(n)) return 0
-  if (n > 1e11) return n
-  return n * 1000
-}
-
 function buildPath(points: { x: number; y: number }[]) {
   if (points.length === 0) return ""
   return `M ${points.map((p) => `${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" L ")}`
@@ -53,22 +48,6 @@ function clamp01(x: number) {
   return x
 }
 
-function clamp(n: number, min: number, max: number) {
-  const v = Number(n)
-  if (!Number.isFinite(v)) return min
-  if (v < min) return min
-  if (v > max) return max
-  return v
-}
-
-function clampInt(n: number, min: number, max: number) {
-  const v = Math.floor(Number(n))
-  if (!Number.isFinite(v)) return min
-  if (v < min) return min
-  if (v > max) return max
-  return v
-}
-
 function niceStep(rawStep: number) {
   if (!Number.isFinite(rawStep) || rawStep <= 0) return 1
   const magnitude = 10 ** Math.floor(Math.log10(rawStep))
@@ -83,7 +62,7 @@ function niceStep(rawStep: number) {
 function buildTicks(max: number, targetLines = 5) {
   const m = Number(max)
   if (!Number.isFinite(m) || m <= 0) return [0, 1]
-  const lines = clampInt(targetLines, 2, 10)
+  const lines = clampInteger(targetLines, 2, 10)
   const rawStep = m / (lines - 1)
   const step = Math.max(1, niceStep(rawStep))
   const ticks: number[] = []
@@ -132,13 +111,6 @@ function findNearestIndex(sorted: number[], target: number) {
   const prev = sorted[lo - 1]
   const next = sorted[lo]
   return Math.abs(target - prev) <= Math.abs(next - target) ? lo - 1 : lo
-}
-
-function clampPercent(n: number) {
-  if (!Number.isFinite(n)) return 0
-  if (n < 0) return 0
-  if (n > 100) return 100
-  return n
 }
 
 function defaultYAxisLabelFormatter(value: number) {
@@ -274,7 +246,7 @@ export default function MiniLineChart({
     const hasExplicitTimeRange = !!timeRange && xRange.xMax > xRange.xMin
     if (normalizedDateList.length < 2 && !hasExplicitTimeRange) return [] as number[]
     const isMobile = viewWidth < 520
-    const maxTicks = isMobile ? 4 : clampInt(Math.floor((containerWidth || 1000) / 95), 6, 12)
+    const maxTicks = isMobile ? 4 : clampInteger(Math.floor((containerWidth || 1000) / 95), 6, 12)
     const { xMin, xMax } = xRange
     const span = xMax - xMin || 1
     const ticks: number[] = []
@@ -350,7 +322,7 @@ export default function MiniLineChart({
 
   const crosshairX = useMemo(() => {
     if (!hovering) return null
-    return clamp(hoverX, paddingLeft, paddingLeft + plotWidth)
+    return clampNumber(hoverX, paddingLeft, paddingLeft + plotWidth)
   }, [hoverX, hovering, paddingLeft, plotWidth])
 
   const tooltipData = useMemo(() => {
@@ -436,8 +408,8 @@ export default function MiniLineChart({
     const el = containerRef.current
     if (!el) return
     const rect = el.getBoundingClientRect()
-    const x = clamp(clientX - rect.left, 0, rect.width || 1)
-    const xInPlot = clamp(x, paddingLeft, paddingLeft + plotWidth)
+    const x = clampNumber(clientX - rect.left, 0, rect.width || 1)
+    const xInPlot = clampNumber(x, paddingLeft, paddingLeft + plotWidth)
     const ratio = clamp01((xInPlot - paddingLeft) / Math.max(plotWidth, 1))
     const { xMin, xMax } = xRange
     const t = xMin + ratio * (xMax - xMin)

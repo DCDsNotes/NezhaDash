@@ -397,7 +397,7 @@ export function getServerBillingViewModel(publicNote: string, now = Date.now()):
   return value
 }
 
-function createServerCardViewModel(now: number, server: NezhaServer) {
+function createServerStatusViewModel(now: number, server: NezhaServer, rings: ServerStatusRingViewModel[]) {
   const info = normalizeServer(now, server)
   const billing = getServerBillingViewModel(info.public_note, now)
   const billingTransfer = getServerTransferStatsCounter(server, "billing")
@@ -405,8 +405,12 @@ function createServerCardViewModel(now: number, server: NezhaServer) {
     info,
     billing,
     realtime: getServerRealtimeViewModel(server, billing.parsedData?.planDataMod?.trafficType, billingTransfer),
-    rings: getCardStatusRings(now, server),
+    rings,
   }
+}
+
+function createServerCardViewModel(now: number, server: NezhaServer) {
+  return createServerStatusViewModel(now, server, getCardStatusRings(now, server))
 }
 
 export function getServerCardViewModel(now: number, server: NezhaServer) {
@@ -419,15 +423,7 @@ export function getServerCardViewModel(now: number, server: NezhaServer) {
 }
 
 function createServerDetailStatusViewModel(now: number, server: NezhaServer) {
-  const info = normalizeServer(now, server)
-  const billing = getServerBillingViewModel(info.public_note, now)
-  const billingTransfer = getServerTransferStatsCounter(server, "billing")
-  return {
-    info,
-    billing,
-    realtime: getServerRealtimeViewModel(server, billing.parsedData?.planDataMod?.trafficType, billingTransfer),
-    rings: getDetailStatusRings(server),
-  }
+  return createServerStatusViewModel(now, server, getDetailStatusRings(server))
 }
 
 export function getServerDetailStatusViewModel(now: number, server: NezhaServer) {

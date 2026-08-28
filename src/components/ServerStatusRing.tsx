@@ -1,3 +1,4 @@
+import { clampPercent } from "@/lib/number"
 import { type CSSProperties, useMemo } from "react"
 
 type Colors =
@@ -6,13 +7,6 @@ type Colors =
       used?: string | string[]
       total?: string
     }
-
-function clampPercent(n: number) {
-  if (!Number.isFinite(n)) return 0
-  if (n < 0) return 0
-  if (n > 100) return 100
-  return n
-}
 
 function formatPercent(n: number) {
   const v = Math.round(n * 10) / 10

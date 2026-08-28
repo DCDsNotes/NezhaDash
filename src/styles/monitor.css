@@ -241,7 +241,7 @@
   border-radius: 6px;
   background: linear-gradient(100deg, #f2f5f6 20%, #ffffff 45%, #f2f5f6 70%);
   background-size: 220% 100%;
-  animation: monitor-skeleton-shimmer 1.4s ease-in-out infinite;
+  animation: probe-skeleton-shimmer 1.4s ease-in-out infinite;
   box-shadow: none;
 }
 
@@ -258,13 +258,8 @@
   border-radius: 10px;
   background: linear-gradient(100deg, #f5f8f8 20%, #ffffff 45%, #f5f8f8 70%);
   background-size: 220% 100%;
-  animation: monitor-skeleton-shimmer 1.4s ease-in-out infinite;
+  animation: probe-skeleton-shimmer 1.4s ease-in-out infinite;
   box-shadow: none;
-}
-
-@keyframes monitor-skeleton-shimmer {
-  from { background-position: 120% 0; }
-  to { background-position: -120% 0; }
 }
 
 .server-monitor__empty {

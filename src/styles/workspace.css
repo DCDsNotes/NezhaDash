@@ -282,17 +282,5 @@
   color: #087b59;
   box-shadow: 0 10px 28px rgba(26, 145, 106, 0.15);
   font-size: 12px;
-  animation: dashboard-toast-enter 180ms ease-out both;
-}
-
-@keyframes dashboard-toast-enter {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -8px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
+  animation: probe-toast-enter 180ms ease-out both;
 }
