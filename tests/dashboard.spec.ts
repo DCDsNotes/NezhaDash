@@ -218,9 +218,24 @@ async function mockBackend(
   })
 }
 
-test("favicon pulses and reflects offline server state", async ({ page }) => {
+test("status indicators pulse and reflect offline server state", async ({ page }) => {
   await mockBackend(page)
   await page.goto("/")
+
+  const heroPulse = page.locator(".status-hero__mark .ri-pulse-line")
+  await expect(heroPulse).toHaveCSS("animation-name", "status-pulse-breathe")
+
+  const pulseFrames = await heroPulse.evaluate(async (element) => {
+    const samples: string[] = []
+
+    for (let index = 0; index < 5; index += 1) {
+      samples.push(getComputedStyle(element).transform)
+      await new Promise((resolve) => window.setTimeout(resolve, 120))
+    }
+
+    return samples
+  })
+  expect(new Set(pulseFrames).size).toBeGreaterThan(1)
 
   const favicon = page.locator("#app-favicon")
   await expect(favicon).toHaveAttribute("data-status", "offline")
@@ -638,9 +653,7 @@ test("server billing survives a restored mobile browser session with an incomple
 
   const priority = page.locator(".probe-detail-priority")
   await expect(priority).toContainText("2027-01-01")
-  await expect
-    .poll(() => page.evaluate(() => Boolean(localStorage.getItem("nezha_public_notes_v1"))))
-    .toBe(true)
+  await expect.poll(() => page.evaluate(() => Boolean(localStorage.getItem("nezha_public_notes_v1")))).toBe(true)
 
   omitPublicNotes = true
   await page.evaluate(() => sessionStorage.clear())
@@ -745,10 +758,7 @@ test("network diagnostics keeps expensive checks manual and switches grouped tes
           ip === "203.0.113.20"
             ? { asn: 7018, org: "AT&T Internet", isp: "AT&T Internet" }
             : { asn: 4134, org: "China Telecom", isp: "China Telecom" },
-        timezone:
-          ip === "203.0.113.20"
-            ? { id: "America/Los_Angeles", utc: "-07:00" }
-            : { id: "Asia/Shanghai", utc: "+08:00" },
+        timezone: ip === "203.0.113.20" ? { id: "America/Los_Angeles", utc: "-07:00" } : { id: "Asia/Shanghai", utc: "+08:00" },
       }),
     })
   })

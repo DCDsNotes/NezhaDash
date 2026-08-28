@@ -1911,24 +1911,32 @@ html {
 }
 
 .status-hero__mark .ri-pulse-line {
+  display: block;
   width: 0.9em;
   height: 0.9em;
   border-radius: 50%;
-  background: var(--probe-accent);
+  background: currentColor;
   -webkit-mask: none;
   mask: none;
+  transform-origin: center;
+  will-change: transform, box-shadow;
   animation: status-pulse-breathe 1.15s ease-in-out infinite;
 }
 
 .status-hero__mark--offline {
   background: color-mix(in srgb, var(--probe-offline) 12%, #fff);
-}
-
-.status-hero__mark--offline .ri-pulse-line {
-  background: var(--probe-offline);
+  color: var(--probe-offline);
 }
 
 @keyframes status-pulse-breathe {
-  0%, 100% { transform: scale(0.82); }
-  50% { transform: scale(1.18); }
+  0%,
+  100% {
+    transform: scale(0.78);
+    box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 0%, transparent);
+  }
+
+  50% {
+    transform: scale(1.16);
+    box-shadow: 0 0 0 0.3em color-mix(in srgb, currentColor 22%, transparent);
+  }
 }
