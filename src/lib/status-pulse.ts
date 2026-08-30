@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react"
 
 export const STATUS_PULSE = {
-  cycleMs: 1_000,
+  cycleMs: 1_350,
   coreInset: "12%",
   coreMinScale: 0.86,
   coreMaxScale: 1.16,

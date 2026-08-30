@@ -251,7 +251,7 @@ test("status indicators pulse and reflect offline server state", async ({ page }
   }))
   expect(animations.core).toBe("status-pulse-core")
   expect(animations.ring).toBe("status-pulse-ring")
-  expect(animations.coreDuration).toBe("1s")
+  expect(animations.coreDuration).toBe("1.35s")
   expect(animations.ringDuration).toBe(animations.coreDuration)
   expect(animations.coreIterations).toBe("infinite")
   expect(animations.ringIterations).toBe("infinite")
@@ -259,7 +259,7 @@ test("status indicators pulse and reflect offline server state", async ({ page }
 
   const favicon = page.locator("#app-favicon")
   await expect(favicon).toHaveAttribute("data-status", "offline")
-  await expect(favicon).toHaveAttribute("data-pulse-cycle", "1000")
+  await expect(favicon).toHaveAttribute("data-pulse-cycle", "1350")
   await expect(favicon).toHaveAttribute("type", "image/png")
   await expect(favicon).toHaveAttribute("href", /^data:image\/png;base64,/)
   await expect(page.locator('link[rel~="icon"]')).toHaveCount(1)
@@ -283,6 +283,9 @@ test("homepage daily traffic uses the persisted daily API totals", async ({ page
 
   await expect(page.locator(".status-network__metric--down p")).toContainText("109.5 G")
   await expect(page.locator(".status-network__metric--up p")).toContainText("56.9 G")
+
+  const panelOrder = await page.locator(".status-panel h2").allTextContents()
+  expect(panelOrder.indexOf("资源使用")).toBeLessThan(panelOrder.indexOf("到期与续费"))
 })
 
 test("keeps the header visible through initial loading and completes progress once", async ({ page }) => {

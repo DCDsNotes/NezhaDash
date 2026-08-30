@@ -297,6 +297,23 @@ export default function Servers() {
         </button>
       </section>
 
+      <section className="status-panel status-resources" aria-labelledby="resource-title">
+        <div className="status-panel__header">
+          <div>
+            <h2 id="resource-title">资源使用</h2>
+            <p>当前在线节点的平均资源占用</p>
+          </div>
+        </div>
+        <div className="status-resources__grid">
+          {resourceSummaries.map((resource) => (
+            <div key={resource.type}>
+              <span>{resource.label}</span>
+              <strong>{resource.value}%</strong>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section className="status-panel status-billing" aria-labelledby="billing-title">
         <div className="status-panel__header">
           <div>
@@ -332,23 +349,6 @@ export default function Servers() {
               <strong>{billingOverview.perpetual}</strong>长期有效
             </span>
           </div>
-        </div>
-      </section>
-
-      <section className="status-panel status-resources" aria-labelledby="resource-title">
-        <div className="status-panel__header">
-          <div>
-            <h2 id="resource-title">资源使用</h2>
-            <p>当前在线节点的平均资源占用</p>
-          </div>
-        </div>
-        <div className="status-resources__grid">
-          {resourceSummaries.map((resource) => (
-            <div key={resource.type}>
-              <span>{resource.label}</span>
-              <strong>{resource.value}%</strong>
-            </div>
-          ))}
         </div>
       </section>
 
